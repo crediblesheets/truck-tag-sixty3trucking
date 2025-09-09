@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Manage Users — Sixty-3 Trucking</title>
+
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/admin.css">
+
+  <style>
+    /* Page-specific layout that mirrors tag-lists */
+    .page-wrap{ display:grid; grid-template-columns: 300px 1fr; gap:16px; align-items:start }
+    .sidebar{ position:sticky; top:16px }
+    .search-box{ display:block; width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px; box-sizing:border-box }
+
+    /* segmented filter chips */
+    .seg{ display:flex; gap:8px; margin-top:8px; flex-wrap:wrap }
+    .seg .chipbtn{
+      border:1px solid var(--border); background:#fff; border-radius:999px; padding:6px 10px; cursor:pointer;
+      font-size:12px; font-weight:600;
+    }
+    .chipbtn.active{ background:#eef2ff; border-color:#c7d2fe; }
+
+    /* grouped lists */
+    .stack{ display:flex; flex-direction:column; gap:12px; margin-top:10px }
+    .list-wrap{ border:1px solid var(--border); border-radius:12px; background:#fff; overflow:hidden; display:flex; flex-direction:column; max-height:34vh }
+    .list-wrap .meta{ padding:8px 10px; font-size:12px; color:#6b7280; border-bottom:1px solid #eef2f7; background:#f8fafc; display:flex; justify-content:space-between; align-items:center }
+    .list-items{ overflow:auto }
+    .user-btn{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      width:100%; padding:10px 12px; border:0; background:#fff; cursor:pointer; text-align:left;
+      border-bottom:1px solid #f1f5f9; font-weight:600;
+    }
+    .user-btn:hover{ background:#f8fafc }
+    .user-btn.active{ background:#eef2ff }
+    .user-sub{ font-size:12px; color:#6b7280; font-weight:400 }
+
+    /* detail side */
+    .detail-card{ padding:18px }
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
+    .grid4{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px }
+    label{ font-size:12px; color:#555; display:block; margin-bottom:6px }
+    input,select{ width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px; box-sizing:border-box }
+
+    /* table */
+    .table-card{ margin-top:12px }
+    .row-chk{ width:36px }
+
+    @media (max-width: 980px){
+      .page-wrap{ grid-template-columns: 1fr }
+      .sidebar{ position:static }
+      .grid2,.grid4{ grid-template-columns:1fr }
+      .list-wrap{ max-height:unset }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="site-header">
+    <div class="container header-inner" style="grid-template-columns:auto 1fr auto;">
+      <div class="brand">
+        <img src="/assets/img/logo.png" class="logo" alt="Sixty – 3 logo">
+        <span class="brand-text">Sixty – 3 Trucking Inc</span>
+      </div>
+      <div class="title-wrap" style="justify-content:flex-start;">
+        <h1 class="page-title">Manage Users</h1>
+        <p class="subtitle">Add admins/drivers, activate/deactivate, and bulk delete</p>
+      </div>
+      <div>
+        <a href="/admin" class="btn">← Back to Admin</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container" style="padding-bottom:28px;">
+    <div class="page-wrap">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="card admin-card">
+          <label for="userSearch">Search users</label>
+          <input id="userSearch" class="search-box" type="search" placeholder="Name, email, or role" autocomplete="off">
+
+          <div class="seg" role="tablist" aria-label="Filter users">
+            <button id="segAll" class="chipbtn active" role="tab" aria-selected="true">All <span class="muted-small" id="userCountAll">(0)</span></button>
+            <button id="segDrivers" class="chipbtn" role="tab" aria-selected="false">Drivers</button>
+            <button id="segAdmins" class="chipbtn" role="tab" aria-selected="false">Admins</button>
+          </div>
+
+          <div class="actions" style="justify-content:flex-start; margin-top:10px;">
+            <button id="addBtn" class="btn">➕ Add User</button>
+            <button id="bulkDeleteBtn" class="btn danger">🗑 Delete Selected</button>
+          </div>
+        </div>
+
+        <div class="stack">
+          <!-- Drivers group -->
+          <div class="list-wrap" aria-label="Drivers list">
+            <div class="meta">
+              <span>Drivers</span>
+              <span id="driverCount">0</span>
+            </div>
+            <div id="driverList" class="list-items">
+              <div class="muted-small" style="padding:12px;">No drivers.</div>
+            </div>
+          </div>
+
+          <!-- Admins group -->
+          <div class="list-wrap" aria-label="Admins list">
+            <div class="meta">
+              <span>Admins</span>
+              <span id="adminCount">0</span>
+            </div>
+            <div id="adminList" class="list-items">
+              <div class="muted-small" style="padding:12px;">No admins.</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Detail + table -->
+      <section class="card detail-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+          <h2 id="userHdr" style="margin:0;">User —</h2>
+          <div class="actions" style="margin:0;">
+            <button id="saveBtn" class="btn btn-primary">Save</button>
+          </div>
+        </div>
+
+        <div class="grid4" style="margin-top:8px;">
+          <div>
+            <label>Email (sign-in)</label>
+            <input id="f_email" type="email" placeholder="name@company.com">
+          </div>
+          <div>
+            <label>Full name</label>
+            <input id="f_fullName" type="text" placeholder="Jane Doe">
+          </div>
+          <div>
+            <label>Role</label>
+            <select id="f_role">
+              <option value="driver">Driver</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <div>
+            <label>Active</label>
+            <select id="f_active">
+              <option value="true">Yes (can sign in)</option>
+              <option value="false">No (disabled)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="actions" style="justify-content:flex-start;margin-top:10px;">
+          <button id="deleteBtn" class="btn danger">Delete</button>
+        </div>
+
+        <!-- Users table -->
+        <div class="table-card">
+          <div class="scroll-area">
+            <table class="data-table" aria-label="Users">
+              <thead>
+                <tr>
+                  <th class="row-chk"><input id="chkAll" type="checkbox" aria-label="Select all"></th>
+                  <th>Email</th>
+                  <th>Full name</th>
+                  <th>Role</th>
+                  <th>Active</th>
+                </tr>
+              </thead>
+              <tbody id="rows">
+                <tr><td colspan="5" class="muted-small" style="text-align:center;">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <small>© <span id="y"></span> Sixty – 3 Trucking Inc</small>
+    </div>
+  </footer>
+
+  <!-- Loading overlay -->
+  <div id="overlay" class="loading-overlay" aria-hidden="true">
+    <div class="loading-box" role="dialog" aria-live="polite">
+      <div class="spinner"></div>
+      <div id="overlayText" class="loading-text">Working…</div>
+    </div>
+  </div>
+
+  <script>
+    // Footer year
+    document.getElementById('y').textContent = new Date().getFullYear();
+
+    // ---------- helpers ----------
+    const $  = (s, root=document) => root.querySelector(s);
+    const $$ = (s, root=document) => Array.from(root.querySelectorAll(s));
+    const ltrim = v => String(v ?? '').trim().toLowerCase();
+
+    function showOverlay(msg='Working…'){ $('#overlayText').textContent = msg; $('#overlay').classList.add('show'); $('#overlay').setAttribute('aria-hidden','false'); }
+    function hideOverlay(){ $('#overlay').classList.remove('show'); $('#overlay').setAttribute('aria-hidden','true'); }
+
+    function toast(msg){ alert(msg); }
+
+    // ---------- state ----------
+    let ALL = [];           // [{email, full_name, role, active}]
+    let FILTER = 'all';     // 'all' | 'driver' | 'admin'
+    let CURRENT = null;     // {email,...}
+    let selectedEmails = new Set(); // table checkboxes
+    let searchQ = '';
+
+    // ---------- load users ----------
+    async function loadUsers(){
+      showOverlay('Loading users…');
+      try{
+        const r = await fetch('/api/admin/users?q=' + encodeURIComponent(searchQ));
+        if (r.status === 401 || r.status === 403) { location.href = '/'; return; }
+        const j = await r.json();
+        if (!j.ok && !Array.isArray(j.users)) throw new Error(j.message || 'Failed');
+        ALL = (j.users || []).map(u => ({
+          email: String(u.email||'').toLowerCase(),
+          full_name: u.full_name || '',
+          role: (u.role||'driver').toLowerCase()==='admin' ? 'admin' : 'driver',
+          active: !!u.active
+        }));
+        renderEverything();
+      }catch(e){
+        console.error(e);
+        toast('Failed to load users.');
+        ALL = [];
+        renderEverything();
+      }finally{
+        hideOverlay();
+      }
+    }
+
+    // ---------- renders ----------
+    function renderEverything(){
+      renderLists();
+      renderTable();
+      if (CURRENT){
+        const found = ALL.find(u => u.email === CURRENT.email);
+        if (found) fillForm(found); else clearForm();
+      }else{
+        clearForm();
+      }
+    }
+
+    function renderLists(){
+      const drivers = ALL.filter(u => u.role === 'driver');
+      const admins  = ALL.filter(u => u.role === 'admin');
+
+      // counts
+      $('#driverCount').textContent = drivers.length;
+      $('#adminCount').textContent  = admins.length;
+      $('#userCountAll').textContent = `(${ALL.length})`;
+
+      // helpers
+      const mkBtn = (u) => `
+        <button class="user-btn" data-email="${u.email.replace(/"/g,'&quot;')}">
+          <span>${u.full_name || u.email}</span>
+          <span class="user-sub">${u.email} • ${u.active ? 'Active' : 'Disabled'}</span>
+        </button>`;
+
+      // drivers
+      const dl = $('#driverList');
+      dl.innerHTML = drivers.length
+        ? drivers.map(mkBtn).join('')
+        : `<div class="muted-small" style="padding:12px;">No drivers.</div>`;
+
+      // admins
+      const al = $('#adminList');
+      al.innerHTML = admins.length
+        ? admins.map(mkBtn).join('')
+        : `<div class="muted-small" style="padding:12px;">No admins.</div>`;
+
+      // active state on side buttons
+      $$('#driverList .user-btn, #adminList .user-btn').forEach(btn => {
+        btn.classList.toggle('active', CURRENT && btn.dataset.email === CURRENT.email);
+      });
+    }
+
+    function renderTable(){
+      const rows = $('#rows');
+      let view = ALL;
+      if (FILTER === 'driver') view = view.filter(u => u.role === 'driver');
+      if (FILTER === 'admin')  view = view.filter(u => u.role === 'admin');
+
+      if (!view.length){
+        rows.innerHTML = `<tr><td colspan="5" class="muted-small" style="text-align:center;">No users.</td></tr>`;
+        return;
+      }
+
+      rows.innerHTML = view.map(u => `
+        <tr data-email="${u.email}">
+          <td class="row-chk"><input type="checkbox" class="rowChk" ${selectedEmails.has(u.email)?'checked':''}></td>
+          <td><a href="#" class="rowLink">${u.email}</a></td>
+          <td>${u.full_name || '-'}</td>
+          <td>${u.role === 'admin' ? 'Admin' : 'Driver'}</td>
+          <td>${u.active ? '<span class="badge badge-done">Active</span>' : '<span class="badge badge-other">Disabled</span>'}</td>
+        </tr>
+      `).join('');
+    }
+
+    // ---------- form ----------
+    function fillForm(u){
+      CURRENT = u;
+      $('#userHdr').textContent = u.full_name ? u.full_name : u.email;
+      $('#f_email').value = u.email;
+      $('#f_fullName').value = u.full_name || '';
+      $('#f_role').value = u.role === 'admin' ? 'admin' : 'driver';
+      $('#f_active').value = u.active ? 'true' : 'false';
+
+      // highlight in lists
+      $$('#driverList .user-btn, #adminList .user-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.email === u.email);
+      });
+    }
+    function clearForm(){
+      CURRENT = null;
+      $('#userHdr').textContent = 'User —';
+      $('#f_email').value = '';
+      $('#f_fullName').value = '';
+      $('#f_role').value = 'driver';
+      $('#f_active').value = 'true';
+      $$('#driverList .user-btn, #adminList .user-btn').forEach(btn => btn.classList.remove('active'));
+    }
+
+    // ---------- actions ----------
+    async function saveCurrent(){
+      const email = ltrim($('#f_email').value);
+      const fullName = $('#f_fullName').value.trim();
+      const role = $('#f_role').value;
+      const active = $('#f_active').value === 'true';
+
+      if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ toast('Valid email is required.'); $('#f_email').focus(); return; }
+      if (!['driver','admin'].includes(role)){ toast('Role must be driver or admin.'); return; }
+
+      const payload = { email, fullName, role, active };
+      try{
+        showOverlay(CURRENT ? 'Saving user…' : 'Adding user…');
+        if (!CURRENT){
+          // add
+          const r = await fetch('/api/admin/users', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+          const j = await r.json();
+          if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to add');
+        } else {
+          // update — PUT /:email (key is the original email)
+          const key = encodeURIComponent(CURRENT.email);
+          const r = await fetch(`/api/admin/users/${key}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ fullName, role, active }) });
+          const j = await r.json();
+          if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to update');
+        }
+        await loadUsers();
+        const justSaved = ALL.find(u => u.email === email);
+        if (justSaved) fillForm(justSaved);
+        toast('Saved.');
+      }catch(e){
+        console.error(e);
+        toast(e.message || 'Save failed.');
+      }finally{
+        hideOverlay();
+      }
+    }
+
+    async function deleteCurrent(){
+      if (!CURRENT) { toast('No user selected.'); return; }
+      if (!confirm(`Delete user ${CURRENT.email}?`)) return;
+      try{
+        showOverlay('Deleting user…');
+        const r = await fetch('/api/admin/users', { method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emails:[CURRENT.email] }) });
+        const j = await r.json();
+        if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to delete');
+        selectedEmails.delete(CURRENT.email);
+        clearForm();
+        await loadUsers();
+        toast('User deleted.');
+      }catch(e){
+        console.error(e);
+        toast(e.message || 'Delete failed.');
+      }finally{
+        hideOverlay();
+      }
+    }
+
+    async function bulkDelete(){
+      const list = Array.from(selectedEmails);
+      if (!list.length){ toast('Select one or more rows first.'); return; }
+      if (!confirm(`Delete ${list.length} user(s)?`)) return;
+      try{
+        showOverlay('Deleting users…');
+        const r = await fetch('/api/admin/users', { method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emails:list }) });
+        const j = await r.json();
+        if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to delete');
+        selectedEmails.clear();
+        clearForm();
+        await loadUsers();
+        toast('Users deleted.');
+      }catch(e){
+        console.error(e);
+        toast(e.message || 'Bulk delete failed.');
+      }finally{
+        hideOverlay();
+      }
+    }
+
+    // ---------- events ----------
+    // segmented filter
+    $('#segAll').addEventListener('click', () => { FILTER='all'; $('#segAll').classList.add('active'); $('#segDrivers').classList.remove('active'); $('#segAdmins').classList.remove('active'); renderTable(); });
+    $('#segDrivers').addEventListener('click', () => { FILTER='driver'; $('#segDrivers').classList.add('active'); $('#segAll').classList.remove('active'); $('#segAdmins').classList.remove('active'); renderTable(); });
+    $('#segAdmins').addEventListener('click', () => { FILTER='admin'; $('#segAdmins').classList.add('active'); $('#segAll').classList.remove('active'); $('#segDrivers').classList.remove('active'); renderTable(); });
+
+    // sidebar list click -> open
+    $('#driverList').addEventListener('click', (e) => {
+      const btn = e.target.closest('.user-btn'); if (!btn) return;
+      const u = ALL.find(x => x.email === btn.dataset.email); if (u) fillForm(u);
+    });
+    $('#adminList').addEventListener('click', (e) => {
+      const btn = e.target.closest('.user-btn'); if (!btn) return;
+      const u = ALL.find(x => x.email === btn.dataset.email); if (u) fillForm(u);
+    });
+
+    // table: select row / open
+    $('#rows').addEventListener('click', (e) => {
+      const tr = e.target.closest('tr'); if (!tr) return;
+      const email = tr.dataset.email;
+
+      if (e.target.classList.contains('rowChk')){
+        if (e.target.checked) selectedEmails.add(email); else selectedEmails.delete(email);
+        return;
+      }
+      const link = e.target.closest('.rowLink');
+      if (link){
+        e.preventDefault();
+        const u = ALL.find(x => x.email === email);
+        if (u) fillForm(u);
+      }
+    });
+
+    // select-all
+    $('#chkAll').addEventListener('change', (e) => {
+      const on = e.target.checked;
+      const viewEmails = Array.from($('#rows').querySelectorAll('tr[data-email]')).map(tr => tr.dataset.email);
+      viewEmails.forEach(em => { if (on) selectedEmails.add(em); else selectedEmails.delete(em); });
+      renderTable();
+    });
+
+    // search
+    $('#userSearch').addEventListener('input', async (e) => {
+      searchQ = e.target.value;
+      await loadUsers(); // server-side filtering
+    });
+
+    // add user (clear form to "new")
+    $('#addBtn').addEventListener('click', () => { clearForm(); $('#f_email').focus(); });
+
+    // save / delete / bulk
+    $('#saveBtn').addEventListener('click', saveCurrent);
+    $('#deleteBtn').addEventListener('click', deleteCurrent);
+    $('#bulkDeleteBtn').addEventListener('click', bulkDelete);
+
+    // boot
+    loadUsers();
+  </script>
+</body>
+</html>

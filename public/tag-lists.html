@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Tag Lists — Sixty-3 Trucking</title>
+
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./admin.css">
+
+  <style>
+    /* Layout */
+    .page-wrap{ display:grid; grid-template-columns: 280px 1fr; gap:16px; align-items:start }
+    .sidebar{ position:sticky; top:16px }
+    .search-box{ display:block; width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px; box-sizing:border-box }
+    .ticket-list{ margin-top:10px; border:1px solid var(--border); border-radius:12px; background:#fff; overflow:hidden; max-height:70vh; display:flex; flex-direction:column }
+    .ticket-list .meta{ padding:8px 10px; font-size:12px; color:#6b7280; border-bottom:1px solid #eef2f7; background:#f8fafc }
+    .ticket-items{ overflow:auto }
+    .ticket-btn{
+      display:flex; align-items:center; justify-content:space-between;
+      width:100%; padding:10px 12px; border:0; background:#fff; cursor:pointer; text-align:left;
+      border-bottom:1px solid #f1f5f9; font-weight:600;
+    }
+    .ticket-btn:hover{ background:#f8fafc }
+    .ticket-btn.active{ background:#eef2ff }
+    .ticket-sub{ font-size:12px; color:#6b7280; font-weight:400 }
+
+    /* Content card */
+    .detail-card{ padding:18px }
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
+    .grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px }
+    label{ font-size:12px; color:#555; display:block; margin-bottom:6px }
+    input,select,textarea{ width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px; box-sizing:border-box }
+    .actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:12px }
+    .warn{ background:#f59e0b !important; color:#fff !important; border-color:#f59e0b !important }
+    .danger{ background:#ef4444 !important; color:#fff !important; border-color:#ef4444 !important }
+    .muted{ color:#6b7280 }
+
+    /* Scale table */
+    .table-card{ border:1px solid var(--border); border-radius:12px; overflow:hidden; background:#fff; box-shadow:var(--shadow); margin-top:12px }
+    .scroll-area{ max-height:220px; overflow:auto }
+
+    /* Proof card */
+    .proof-card{ border:1px solid var(--border); border-radius:12px; background:#fff; box-shadow:var(--shadow); margin-top:12px; }
+    .proof-body{ padding:12px; display:flex; gap:12px; align-items:flex-start; }
+    .proof-thumb{
+      width:220px; max-height:160px; object-fit:contain;
+      border:1px solid var(--border); border-radius:10px; background:#fff; cursor:pointer;
+    }
+    .proof-actions{ display:flex; gap:8px; margin-top:8px }
+
+    /* Loading overlay */
+    .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; z-index:1200 }
+    .overlay.show{ display:flex }
+    .spinner{
+      width:56px; height:56px; border-radius:50%;
+      border:5px solid #fff; border-top-color: transparent; animation:spin 1s linear infinite
+    }
+    @keyframes spin{ to{ transform: rotate(360deg) } }
+
+    /* Lightbox for full image */
+    .lightbox{ position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; z-index:1400; align-items:center; justify-content:center; }
+    .lightbox.show{ display:flex; }
+    .lightbox img{ max-width:92vw; max-height:92vh; border-radius:8px; }
+    .lightbox .close{ position:absolute; top:14px; right:18px; font-size:26px; color:#fff; background:transparent; border:0; cursor:pointer }
+
+    @media (max-width: 980px){
+      .page-wrap{ grid-template-columns: 1fr }
+      .sidebar{ position:static }
+      .ticket-list{ max-height:unset }
+      .grid2,.grid3{ grid-template-columns:1fr }
+      .proof-body{ flex-direction:column; }
+      .proof-thumb{ width:100%; max-height:240px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner" style="grid-template-columns:auto 1fr auto;">
+      <div class="brand">
+        <img src="./assets/img/logo.png" class="logo" alt="Sixty – 3 logo">
+        <span class="brand-text">Sixty – 3 Trucking Inc</span>
+      </div>
+      <div class="title-wrap" style="justify-content:flex-start;">
+        <h1 class="page-title">Tag Lists</h1>
+        <p class="subtitle">Browse tickets and edit Admin Tag details</p>
+      </div>
+      <div>
+        <a href="/admin" class="btn">← Back to Admin</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container" style="padding-bottom:28px;">
+    <div class="page-wrap">
+      <!-- Sidebar: Search + tickets -->
+      <aside class="sidebar">
+        <div class="card admin-card">
+          <label for="q">Search ticket</label>
+          <input id="q" class="search-box" type="search" placeholder="Ticket # or driver name">
+        </div>
+
+        <div class="ticket-list" aria-label="Ticket numbers">
+          <div class="meta"><span id="count">0</span> tickets</div>
+          <div id="list" class="ticket-items"></div>
+        </div>
+      </aside>
+
+      <!-- Single combined form (top ticket fields + driver tags + scale tags) -->
+      <section class="card detail-card">
+        <div style="display:flex;align-items:baseline;gap:10px;justify-content:space-between;margin-bottom:6px;">
+          <div>
+            <h2 id="hdr" style="margin:0;">Ticket —</h2>
+            <div class="muted" id="hint">Select a ticket on the left.</div>
+          </div>
+          <div class="muted" id="statusChip" style="font-size:12px;"></div>
+        </div>
+
+        <form id="form" autocomplete="off">
+          <!-- ===== Admin ticket fields ===== -->
+          <div class="grid3">
+            <div><label>Date</label><input type="date" name="date" required disabled></div>
+            <div><label>Ticket No</label><input type="text" name="ticketNo" required disabled></div>
+            <div>
+              <label>Driver Name</label>
+              <select name="driverName" id="driverSel" required disabled>
+                <option value="">Loading…</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="grid3" style="margin-top:10px;">
+            <div><label>Truck Start</label><input type="text" name="truckStart" disabled></div>
+            <div><label>Truck No</label><input type="text" name="truckNo" disabled></div>
+            <div>
+              <label>Trailer Type</label>
+              <select name="trailerType" id="trailerSel" disabled><option value="">Loading…</option></select>
+            </div>
+          </div>
+
+          <div class="grid2" style="margin-top:10px;">
+            <div><label>Sub Hauler</label><input type="text" name="subHauler" disabled></div>
+            <div><label>Prime Carrier</label><input type="text" name="primeCarrier" disabled></div>
+          </div>
+
+          <div class="grid2" style="margin-top:10px;">
+            <div><label>Shipper</label><input type="text" name="shipper" disabled></div>
+            <div><label>Point of Origin</label><input type="text" name="origin" disabled></div>
+          </div>
+
+          <div class="grid3" style="margin-top:10px;">
+            <div><label>Origin City</label><input type="text" name="originCity" disabled></div>
+            <div><label>PO No</label><input type="text" name="poNo" disabled></div>
+            <div><label>Job Name</label><input type="text" name="jobName" disabled></div>
+          </div>
+
+          <div class="grid3" style="margin-top:10px;">
+            <div><label>Job No</label><input type="text" name="jobNo" disabled></div>
+            <div><label>Destination</label><input type="text" name="destination" disabled></div>
+            <div><label>Destination City</label><input type="text" name="city" disabled></div>
+          </div>
+
+          <!-- ===== Driver tags (read-only; filled if present) ===== -->
+          <div class="grid3" style="margin-top:16px;">
+            <div><label>Bridgefare</label><input id="ds_bridgefare" type="text" disabled></div>
+            <div><label>Signed Out Loaded</label><input id="ds_signedOutLoaded" type="text" disabled></div>
+            <div><label>How Many Tons/Loads</label><input id="ds_howMany" type="text" disabled></div>
+          </div>
+
+          <div class="grid3" style="margin-top:10px;">
+            <div><label>Downtime & Lunch</label><input id="ds_downtimeLunch" type="text" disabled></div>
+            <div><label>Sign Out Time</label><input id="ds_signOutTime" type="time" disabled></div>
+            <div><label>Received by</label><input id="ds_receivedBy" type="text" disabled></div>
+          </div>
+
+          <div class="grid2" style="margin-top:10px;">
+            <div style="grid-column:1/-1;">
+              <label>Notes</label>
+              <textarea id="ds_notes" disabled></textarea>
+            </div>
+            <div style="grid-column:1/-1;">
+              <label>Driver Signature</label>
+              <input id="ds_driverSignature" type="text" disabled>
+            </div>
+          </div>
+
+          <!-- ===== Proof of Ticket (image) ===== -->
+          <div id="proofCard" class="proof-card" style="display:none;">
+            <div class="proof-body">
+              <img id="proofThumb" class="proof-thumb" alt="Proof image preview">
+              <div>
+                <div class="muted" id="proofMeta">No file attached.</div>
+                <div class="proof-actions">
+                  <a id="proofOpen" class="btn" href="#" target="_blank" rel="noopener" style="display:none">Open full size</a>
+                  <a id="proofDownload" class="btn btn-primary" href="#" download style="display:none">Download</a>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          
+
+          <!-- ===== Scale tags (read-only table) ===== -->
+          <div class="table-card" id="scaleTable" style="display:none;">
+            <div class="scroll-area">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Scale Tag No</th>
+                    <th>Yard/Weight</th>
+                    <th>Material</th>
+                    <th>Yard Arr</th>
+                    <th>Yard Leave</th>
+                    <th>Site Arr</th>
+                    <th>Site Leave</th>
+                  </tr>
+                </thead>
+                <tbody id="ds_items">
+                  <tr><td colspan="7" class="muted" style="text-align:center;">No scale tags.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="actions">
+            <button type="button" id="pdfBtn" class="btn" style="display:none">Convert to PDF</button>
+            <button type="button" id="deleteBtn" class="btn danger" style="display:none">Delete</button>
+            <span style="flex:1"></span>
+            <button type="button" id="editBtn" class="btn warn" style="display:none">Edit</button>
+            <button type="submit" id="saveBtn" class="btn btn-primary" style="display:none">Save</button>
+            <button type="button" id="cancelBtn" class="btn" style="display:none">Cancel</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <small>© <span id="y"></span> Sixty – 3 Trucking Inc</small>
+    </div>
+  </footer>
+
+  <!-- loading overlay -->
+  <div id="overlay" class="overlay" aria-hidden="true">
+    <div class="spinner" role="status" aria-label="Loading"></div>
+  </div>
+
+  <!-- Lightbox for image preview -->
+  <div id="lightbox" class="lightbox" aria-hidden="true">
+    <button class="close" aria-label="Close preview">&times;</button>
+    <img id="lightboxImg" alt="Full-size proof">
+  </div>
+
+  <script>
+  // Footer year
+  document.getElementById('y').textContent = new Date().getFullYear();
+
+  // ---------- helpers ----------
+  const $  = (s,root=document) => root.querySelector(s);
+  const $$ = (s,root=document) => Array.from(root.querySelectorAll(s));
+  const ltrim = v => String(v ?? '').trim().toLowerCase();
+
+  function showOverlay(on=true){
+    const el = $('#overlay');
+    el.classList.toggle('show', on);
+    el.setAttribute('aria-hidden', on ? 'false' : 'true');
+  }
+
+  function toISODate(s){
+    if (!s) return '';
+    const d = new Date(s);
+    if (!isNaN(d)) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const m = String(s).match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if (m) { const [_, mm, dd, yyyy] = m; return `${yyyy.padStart(4,'20')}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; }
+    return '';
+  }
+  function v(obj, ...keys){
+    for (const k of keys){
+      const val = obj?.[k];
+      if (val !== undefined && String(val).trim() !== '') return String(val);
+    }
+    return '';
+  }
+  function setSelectValue(sel, value){
+    if (!sel) return;
+    const val = String(value || '');
+    const has = Array.from(sel.options).some(o => o.value === val);
+    if (val && !has){
+      const opt = document.createElement('option');
+      opt.value = val; opt.textContent = val;
+      sel.appendChild(opt);
+    }
+    sel.value = val;
+  }
+  function lockForm(lock){
+    $$('#form input, #form select, #form textarea').forEach(el => el.disabled = lock);
+    $('#form').ticketNo.disabled = true; // never editable
+
+    $('#editBtn').style.display   = lock && CURRENT ? 'inline-flex' : 'none';
+    $('#saveBtn').style.display   = lock ? 'none' : 'inline-flex';
+    $('#cancelBtn').style.display = lock ? 'none' : 'inline-flex';
+    $('#deleteBtn').style.display = CURRENT ? 'inline-flex' : 'none';
+    $('#pdfBtn').style.display = CURRENT ? 'inline-flex' : 'none';
+
+  }
+
+  // ---------- state ----------
+  let ALL = [];           // from /api/admin/tags
+  let VIEW = [];          // filtered
+  let CURRENT = null;     // current ticket object
+  let SELECTED_ID = null; // ticket id / number
+
+  // ---------- meta dropdowns ----------
+  async function loadMeta(){
+    try {
+      const r = await fetch('/api/admin/meta');
+      if (r.status === 401 || r.status === 403) { location.href = '/'; return; }
+      const j = await r.json();
+      const drivers = Array.isArray(j.drivers) ? j.drivers : [];
+      const types = Array.isArray(j.trailerTypes) ? j.trailerTypes : [];
+
+      const dSel = $('#driverSel');
+      const tSel = $('#trailerSel');
+      dSel.innerHTML = `<option value="">Select driver…</option>` + drivers.map(n => `<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('');
+      tSel.innerHTML = `<option value="">Select type…</option>` + types.map(n => `<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('');
+    } catch {}
+  }
+
+  // ---------- list & selection ----------
+  function sortTickets(a,b){
+    const ax = Number(a.ticketNo||a.id||0), bx = Number(b.ticketNo||b.id||0);
+    if (!isNaN(ax) && !isNaN(bx)) return ax - bx;
+    return String(a.ticketNo||a.id||'').localeCompare(String(b.ticketNo||b.id||''));
+  }
+
+  function renderList(){
+    const wrap = $('#list');
+    if (!VIEW.length){
+      wrap.innerHTML = `<div class="muted" style="padding:12px;">No tickets.</div>`;
+      $('#count').textContent = 0;
+      return;
+    }
+    $('#count').textContent = VIEW.length;
+
+    wrap.innerHTML = VIEW.map(row => {
+      const id = row.ticketNo || row.id || '';
+      const driver = row.driverName || '';
+      const st = (row.status || '').toString();
+      const sub = [driver, st ? `• ${st}` : ''].filter(Boolean).join(' ');
+      return `
+        <button class="ticket-btn" data-id="${String(id).replace(/"/g,'&quot;')}">
+          <span>Ticket ${id}</span>
+          <span class="ticket-sub">${sub}</span>
+        </button>
+      `;
+    }).join('');
+
+    $$('.ticket-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.id === SELECTED_ID);
+    });
+  }
+
+  function applyFilter(){
+    const q = ltrim($('#q').value);
+    VIEW = ALL.filter(r => {
+      if (!q) return true;
+      const hay = [
+        r.ticketNo || r.id || '',
+        r.driverName || '',
+        r.email || '',
+        r.status || '',
+      ].join(' ').toLowerCase();
+      return hay.includes(q);
+    }).sort(sortTickets);
+
+    renderList();
+  }
+
+  $('#q').addEventListener('input', applyFilter);
+
+  $('#list').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.ticket-btn');
+    if (!btn) return;
+    SELECTED_ID = btn.dataset.id;
+    $$('.ticket-btn').forEach(b => b.classList.toggle('active', b === btn));
+    await openTicket(SELECTED_ID);
+  });
+
+  // ---------- load all ----------
+  async function loadAll(){
+    showOverlay(true);
+    try {
+      const r = await fetch('/api/admin/tags');
+      if (r.status === 401 || r.status === 403) { location.href = '/'; return; }
+      const j = await r.json();
+
+      ALL = (j.tags || []).map(t => ({
+        id: t.id || t.ticketNo || t['Ticket No'] || '',
+        ticketNo: t.ticketNo || t['Ticket No'] || t.id || '',
+        driverName: t.driverName || t['Driver Name'] || '',
+        email: t.email || t.Email || '',
+        status: t.status || t.Status || '',
+        updatedAt: t.updatedAt || t.UpdatedAt || ''
+      })).sort(sortTickets);
+
+      applyFilter();
+
+      // auto-open first if exists
+      if (VIEW.length){
+        SELECTED_ID = VIEW[0].ticketNo || VIEW[0].id;
+        $$('.ticket-btn')[0]?.classList.add('active');
+        await openTicket(SELECTED_ID);
+      } else {
+        clearFormUI();
+        clearDriverScaleUI();
+        clearProofUI();
+      }
+    } catch (e){
+      console.error(e);
+      alert('Failed to load tickets.');
+    } finally {
+      showOverlay(false);
+    }
+  }
+
+  // ---------- ticket detail ----------
+  function clearFormUI(){
+    $('#hdr').textContent = 'Ticket —';
+    $('#hint').textContent = 'Select a ticket on the left.';
+    $('#statusChip').textContent = '';
+    $('#form').reset();
+    lockForm(true);
+    CURRENT = null;
+    $('#deleteBtn').style.display = 'none';
+    $('#editBtn').style.display = 'none';
+    $('#pdfBtn').style.display = 'none';
+
+  }
+
+  function clearDriverScaleUI(){
+    $('#ds_bridgefare').value = '';
+    $('#ds_signedOutLoaded').value = '';
+    $('#ds_howMany').value = '';
+    $('#ds_downtimeLunch').value = '';
+    $('#ds_signOutTime').value = '';
+    $('#ds_receivedBy').value = '';
+    $('#ds_notes').value = '';
+    $('#ds_driverSignature').value = '';
+    $('#ds_items').innerHTML = `<tr><td colspan="7" class="muted" style="text-align:center;">No scale tags.</td></tr>`;
+    $('#scaleTable').style.display = 'none';
+  }
+
+  function clearProofUI(){
+    const card = $('#proofCard');
+    $('#proofThumb').src = '';
+    $('#proofOpen').style.display = 'none';
+    $('#proofDownload').style.display = 'none';
+    $('#proofMeta').textContent = 'No file attached.';
+    card.style.display = 'none';
+  }
+
+  async function openTicket(id){
+    showOverlay(true);
+    try {
+      await loadMeta();
+
+      const r = await fetch(`/api/admin/tickets/${encodeURIComponent(id)}`);
+      if (r.status === 401 || r.status === 403) { location.href = '/'; return; }
+      const j = await r.json();
+      if (!j.ok) { alert(j.message || 'Not found'); return; }
+
+      CURRENT = j.ticket || {};
+      fillForm(CURRENT);
+
+      $('#hdr').textContent = `Ticket ${id}`;
+      const st = (ALL.find(x => String(x.ticketNo||x.id) === String(id))?.status || '').toString();
+      $('#statusChip').textContent = st ? `Driver Status: ${st}` : '';
+      $('#hint').textContent = '';
+
+      lockForm(true);
+
+      // Fill driver tags + scale items + proof
+      fillDriverFieldsFromObject(CURRENT);
+      await loadDriverByTicketId(id);
+      await loadScaleItems(id);
+      await loadProof(id);
+      
+    } catch (e){
+      console.error(e);
+      alert('Failed to load ticket.');
+    } finally {
+      showOverlay(false);
+    }
+  }
+
+  function fillForm(t = {}){
+    const f = $('#form');
+
+    f.date.value        = toISODate(v(t, 'Date'));
+    f.ticketNo.value    = v(t, 'Ticket No', 'Ticket No.');
+    setSelectValue($('#driverSel'), v(t, 'Driver Name', 'Driver'));
+
+    f.truckStart.value  = v(t, 'Truck Start');
+    f.truckNo.value     = v(t, 'Truck No');
+    setSelectValue($('#trailerSel'), v(t, 'Trailer Type','Trailer type','Trailer'));
+
+    f.subHauler.value   = v(t, 'Sub Hauler');
+    f.primeCarrier.value= v(t, 'Prime Carrier');
+    f.shipper.value     = v(t, 'Shipper');
+    f.origin.value      = v(t, 'Point of Origin');
+
+    f.originCity.value  = v(t, 'Origin City','City');
+    f.poNo.value        = v(t, 'PO No','PO#','PO no');
+    f.jobName.value     = v(t, 'Job Name');
+    f.jobNo.value       = v(t, 'Job No');
+    f.destination.value = v(t, 'Destination');
+    f.city.value        = v(t, 'City');
+
+    $('#editBtn').style.display = 'inline-flex';
+    $('#deleteBtn').style.display = 'inline-flex';
+  }
+
+  // ===== normalize time -> "HH:MM"
+  function toHHMM(s){
+    if (!s) return '';
+    const str = String(s).trim();
+    const m = str.match(/^(\d{2}):(\d{2})(?::\d{2})?/);
+    if (m) return `${m[1]}:${m[2]}`;
+    const apm = str.match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i);
+    if (apm){
+      let hh = parseInt(apm[1],10), mm = apm[2], ap = (apm[3]||'').toUpperCase();
+      if (ap === 'AM' && hh === 12) hh = 0;
+      if (ap === 'PM' && hh < 12) hh += 12;
+      return `${String(hh).padStart(2,'0')}:${mm}`;
+    }
+    return '';
+  }
+
+  function fillDriverFieldsFromObject(obj = {}){
+    const bridgefare       = obj.bridgefare ?? obj.Bridgefare ?? '';
+    const signedOutLoaded  = obj.signedOutLoaded ?? obj['Signed Out Loaded'] ?? '';
+    const howMany          = obj.howMany ?? obj['How Many Tons/Loads'] ?? obj.howManyTonsLoads ?? '';
+    const downtimeLunch    = obj.downtimeLunch ?? obj['Downtime & Lunch'] ?? '';
+    const notes            = obj.notes ?? obj.Notes ?? '';
+    const signOutTimeRaw   = obj.signOutTime ?? obj['Sign Out Time'] ?? '';
+    const receivedBy       = obj.receivedBy ?? obj['Received by'] ?? '';
+    const driverSignature  = obj.driverSignature ?? obj['Driver Signature'] ?? '';
+
+    $('#ds_bridgefare').value      = bridgefare;
+    $('#ds_signedOutLoaded').value = signedOutLoaded;
+    $('#ds_howMany').value         = howMany;
+    $('#ds_downtimeLunch').value   = downtimeLunch;
+    $('#ds_notes').value           = notes;
+    $('#ds_signOutTime').value     = toHHMM(signOutTimeRaw);
+    $('#ds_receivedBy').value      = receivedBy;
+    $('#ds_driverSignature').value = driverSignature;
+  }
+
+  async function loadDriverByTicketId(id){
+    try{
+      const r = await fetch(`/api/tags/${encodeURIComponent(id)}/driver`);
+      const j = await r.json().catch(()=> ({}));
+
+      let obj = {};
+      if (Array.isArray(j)) obj = j[0] || {};
+      else if (j.driver) obj = j.driver;
+      else if (j.data) obj = j.data;
+      else obj = j;
+
+      fillDriverFieldsFromObject(obj);
+    }catch(e){
+      console.warn('driver fetch failed', e);
+    }
+  }
+
+  // ===== Proof image (thumbnail + actions) =====
+async function loadProof(id){
+  clearProofUI();
+  const card = $('#proofCard');
+  try{
+    // 1) Get the "view" URL (inline)
+    const rView = await fetch(`/api/tags/${encodeURIComponent(id)}/proof-url`);
+    const jView = await rView.json().catch(()=> ({}));
+    const viewUrl = jView?.url || null;
+
+    if (!viewUrl){
+      card.style.display = 'none';
+      return;
+    }
+
+    // 2) Get the "download" URL (attachment)
+    const rDl = await fetch(`/api/tags/${encodeURIComponent(id)}/proof-url?download=1`);
+    const jDl = await rDl.json().catch(()=> ({}));
+    const downloadUrl = jDl?.url || viewUrl; // fallback just in case
+
+    // 3) Render UI
+    $('#proofThumb').src = viewUrl;
+    $('#proofOpen').href = viewUrl;
+    $('#proofOpen').style.display = 'inline-flex';
+
+    // Give a nice filename for the download
+    const niceName = `ticket-${id}-proof`;
+
+    const dlBtn = $('#proofDownload');
+    dlBtn.style.display = 'inline-flex';
+    dlBtn.removeAttribute('target'); // ensure no new tab
+    dlBtn.setAttribute('rel', 'noopener');
+    dlBtn.setAttribute('download', niceName);
+
+    // Important: don’t rely on <a download> for cross-origin;
+    // programmatically click an <a> with the signed "attachment" URL.
+    dlBtn.onclick = (ev) => {
+      ev.preventDefault();
+      const a = document.createElement('a');
+      a.href = downloadUrl;          // has Content-Disposition: attachment
+      a.download = niceName;         // nice filename if browser honors it
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    };
+
+    $('#proofMeta').textContent = 'Click the image to preview, or use the buttons to open/download.';
+    card.style.display = 'block';
+  }catch(e){
+    console.warn('proof fetch failed', e);
+    clearProofUI();
+  }
+}
+
+
+  // Lightbox behavior
+  const lb = $('#lightbox');
+  const lbImg = $('#lightboxImg');
+  function openLightbox(src){
+    lbImg.src = src;
+    lb.classList.add('show');
+    lb.setAttribute('aria-hidden','false');
+  }
+  function closeLightbox(){
+    lb.classList.remove('show');
+    lb.setAttribute('aria-hidden','true');
+    lbImg.src = '';
+  }
+  $('#proofThumb').addEventListener('click', () => {
+    const src = $('#proofThumb').src;
+    if (src) openLightbox(src);
+  });
+  $('#lightbox .close').addEventListener('click', closeLightbox);
+  $('#lightbox').addEventListener('click', (e) => {
+    if (e.target === lb) closeLightbox();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeLightbox();
+  });
+
+  // ===== Scale items =====
+  async function loadScaleItems(id){
+    let items = [];
+    try {
+      const r = await fetch(`/api/tags/${encodeURIComponent(id)}/scale-items`);
+      const j = await r.json();
+      items = Array.isArray(j.items) ? j.items : [];
+    } catch { items = []; }
+
+    const tbody = $('#ds_items');
+    if (!items.length){
+      tbody.innerHTML = `<tr><td colspan="7" class="muted" style="text-align:center;">No scale tags.</td></tr>`;
+      $('#scaleTable').style.display = 'block';
+      return;
+    }
+    tbody.innerHTML = items.map(it => `
+      <tr>
+        <td>${it.scaleTagNo || '-'}</td>
+        <td>${it.yardOrWeight || '-'}</td>
+        <td>${it.material || '-'}</td>
+        <td>${it.yardArrival || '-'}</td>
+        <td>${it.yardLeave || '-'}</td>
+        <td>${it.siteArrival || '-'}</td>
+        <td>${it.siteLeave || '-'}</td>
+      </tr>
+    `).join('');
+    $('#scaleTable').style.display = 'block';
+  }
+
+  // ===== edit & save admin ticket fields =====
+  $('#editBtn').addEventListener('click', () => lockForm(false));
+  $('#cancelBtn').addEventListener('click', () => {
+    lockForm(true);
+    if (SELECTED_ID) openTicket(SELECTED_ID);
+  });
+
+  $('#form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!SELECTED_ID) return;
+
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    if (!body.date || !body.driverName) { alert('Date and Driver Name are required.'); return; }
+
+    showOverlay(true);
+    try {
+      const r = await fetch(`/api/admin/tickets/${encodeURIComponent(SELECTED_ID)}`, {
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(body)
+      });
+      const j = await r.json();
+      if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to update');
+
+      await loadAll();
+      await openTicket(SELECTED_ID);
+      alert('Ticket updated.');
+    } catch (err){
+      console.error(err);
+      alert(err.message || 'Could not save.');
+    } finally {
+      showOverlay(false);
+    }
+  });
+
+  // ===== delete =====
+  $('#deleteBtn').addEventListener('click', async () => {
+    if (!SELECTED_ID) return;
+    if (!confirm(`Delete ticket ${SELECTED_ID}? This also removes its Driver stub.`)) return;
+
+    showOverlay(true);
+    try {
+      const r = await fetch(`/api/admin/tickets/${encodeURIComponent(SELECTED_ID)}`, { method:'DELETE' });
+      const j = await r.json();
+      if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to delete');
+
+      ALL = ALL.filter(x => String(x.ticketNo||x.id) !== String(SELECTED_ID));
+      applyFilter();
+      clearFormUI();
+      clearDriverScaleUI();
+      clearProofUI();
+      alert('Ticket deleted.');
+    } catch (err){
+      console.error(err);
+      alert(err.message || 'Could not delete.');
+    } finally {
+      showOverlay(false);
+    }
+  });
+
+async function getProofUrl(id, mode /* 'view' | 'download' */ = 'view'){
+  try{
+    const r = await fetch(`/api/tags/${encodeURIComponent(id)}/proof-url${mode==='download' ? '?download=1' : ''}`);
+    const j = await r.json().catch(()=> ({}));
+    return j?.url || null;
+  }catch{ return null; }
+}
+
+async function showProofBlock(id){
+  const viewUrl = await getProofUrl(id, 'view');
+  const card = $('#proofCard');
+  if (!viewUrl){
+    card.style.display = 'none';
+    return;
+  }
+  $('#proofThumb').src = viewUrl;    // show thumbnail/full (browser will scale)
+  card.style.display = 'block';
+
+  $('#viewProofBtn').onclick = async () => {
+    const u = await getProofUrl(id, 'view');
+    if (u) window.open(u, '_blank', 'noopener');
+  };
+  $('#downloadProofBtn').onclick = async () => {
+    const u = await getProofUrl(id, 'download'); // has Content-Disposition: attachment
+    if (!u) return;
+    // Trigger download without opening a tab
+    const a = document.createElement('a');
+    a.href = u;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+}
+
+  // ===== convert to PDF & download =====
+$('#pdfBtn').addEventListener('click', () => {
+  if (!SELECTED_ID) return;
+  window.open(`/api/tags/${encodeURIComponent(SELECTED_ID)}/pdf?download=1`, '_blank');
+});
+
+
+
+  // go!
+  loadAll();
+  </script>
+
+</body>
+</html>

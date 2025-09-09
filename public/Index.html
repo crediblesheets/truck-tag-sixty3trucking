@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Truck Tag — Driver Login</title>
+
+  <link rel="stylesheet" href="./styles.css"/>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body class="auth-body">
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <img src="./assets/img/logo.png" class="logo" alt="Sixty – 3 logo">
+        <span class="brand-text">Sixty – 3 Trucking Inc</span>
+      </div>
+      <div class="title-wrap">
+        <h1 class="page-title">Truck Tag</h1>
+        <p class="subtitle">Driver sign-in</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="auth-hero">
+      <!-- Left: headline + points -->
+      <div class="auth-copy">
+        <span class="pill">Secure SSO</span>
+        <h2>Fast, simple tagging for drivers</h2>
+        <p class="lead">
+          Sign in with your company Google account to access your assigned tags and submit scale details in seconds.
+        </p>
+        <ul class="benefits">
+          <li><span class="chk" aria-hidden="true"></span> One-click Google sign-in</li>
+          <li><span class="chk" aria-hidden="true"></span> Only your pending tags</li>
+          <li><span class="chk" aria-hidden="true"></span> Mobile-friendly form</li>
+        </ul>
+      </div>
+
+      <!-- Right: login card -->
+      <div class="auth-card card">
+        <h3 class="center">Driver Login</h3>
+        <p class="muted center">Use your work email. Your account must be marked <b>Active</b> in the <i>Users</i> sheet.</p>
+
+        <div id="gsi" class="gsi-wrap" aria-live="polite"></div>
+        <div id="msg" class="auth-msg" role="status" aria-live="polite"></div>
+
+        <div class="tiny muted center">
+          Trouble signing in? Contact dispatch or email <a href="mailto:it@sixty3trucking.com">IT support</a>.
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <small>© <span id="y"></span> Sixty – 3 Trucking Inc</small>
+    </div>
+  </footer>
+
+  <script>
+  // Footer year
+  document.getElementById('y').textContent = new Date().getFullYear();
+
+  // Small helper to show messages on the login card
+  const msgEl = document.getElementById('msg');
+  function setMsg(text = '', kind = '') {
+    msgEl.textContent = text;
+    msgEl.className = 'auth-msg ' + (kind ? kind : (text ? 'ok' : ''));
+  }
+
+  // If already logged in (cookie set), bounce straight to the right place
+  (async () => {
+    try {
+      const r = await fetch('/api/me');
+      if (!r.ok) return;
+      const j = await r.json();
+      if (j.ok && j.profile) {
+        const role = (j.profile.role || '').toLowerCase();
+        location.replace(role === 'admin' ? '/admin' : '/dashboard.html');
+      }
+    } catch {}
+  })();
+
+  async function handleCredential(credential) {
+    setMsg('Verifying…');
+    try {
+      const r = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: credential })
+      });
+      const d = await r.json();
+
+      if (!r.ok || d.ok === false) {
+        setMsg(d.message || 'Not authorized. Please contact admin.', 'error');
+        return;
+      }
+
+      const role = (d.role || '').toLowerCase();
+      location.href = role === 'admin' ? '/admin' : '/dashboard.html';
+    } catch (err) {
+      console.error(err);
+      setMsg('Sign-in failed. Check your connection and try again.', 'error');
+    }
+  }
+
+  // Initialize Google Sign-In button
+  window.onload = function () {
+    const wrap = document.getElementById('gsi');
+    if (!window.google || !google.accounts || !google.accounts.id) {
+      setMsg('Google Sign-In failed to load. Refresh this page.', 'error');
+      return;
+    }
+
+    google.accounts.id.initialize({
+      client_id: '311826021672-76354i9jdm3sk6c68srh6pnlme079k7o.apps.googleusercontent.com',
+      callback: (resp) => handleCredential(resp.credential)
+    });
+
+    google.accounts.id.renderButton(wrap, {
+      theme: 'filled_blue',
+      size: 'large',
+      shape: 'pill',
+      width: 320,
+      text: 'continue_with',
+      logo_alignment: 'left'
+    });
+  };
+</script>
+
+
+</body>
+</html>

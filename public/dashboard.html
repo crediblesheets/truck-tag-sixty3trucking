@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Truck Tag — Driver Dashboard</title>
+  <link rel="stylesheet" href="./styles.css"/>
+  <style>
+    .tickets{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+    .ticket-link{
+      display:block;padding:14px 16px;border:1px solid var(--border);border-radius:12px;background:#fff;
+      text-decoration:none;font-weight:600;text-align:center;box-shadow:var(--shadow)
+    }
+    .ticket-link:hover{box-shadow:0 6px 20px rgba(2, 8, 23, 0.08)}
+    .muted-small{color:#6b7280;font-size:12px;margin-top:4px;text-align:center}
+    .card.center{text-align:center}
+    
+  </style>
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="brand">
+        <img src="./assets/img/logo.png" alt="Logo" class="logo">
+        <span class="brand-text">Sixty – 3 Trucking Inc</span>
+      </div>
+      <div class="title-wrap">
+        <h1 class="page-title">Driver Dashboard</h1>
+        <p class="subtitle">Pending tags assigned to you</p>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="card intro">
+      <h2 id="driverName">Welcome, …</h2>
+      <p class="muted">Click a ticket below to open and fill it.</p>
+    </section>
+
+    <section id="tagsWrap" class="card">
+      <div id="tags" class="tickets"></div>
+      <div id="empty" class="muted-small" style="display:none">No pending tags 🎉</div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <small>© <span id="y"></span> Sixty – 3 Trucking Inc</small>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById('y').textContent = new Date().getFullYear();
+
+    let TAGS = [];
+    let CURRENT_EMAIL = null;
+
+    const $  = s => document.querySelector(s);
+
+    function guessTags(data){
+      if (Array.isArray(data?.pending)) return data.pending;
+      if (Array.isArray(data?.tags)) return data.tags;
+      for (const k in (data||{})) {
+        const v = data[k];
+        if (Array.isArray(v) && v.length && typeof v[0]==='object' &&
+            ('Status' in v[0] || 'status' in v[0] || 'Ticket No' in v[0] || 'ticketNo' in v[0])) {
+          return v;
+        }
+      }
+      return [];
+    }
+
+    const getId     = t => t.id ?? t.ticketNo ?? t.TicketNo ?? t['Ticket No'] ?? t.Ticket ?? '';
+    const getStatus = t => String(t.status ?? t.Status ?? '').trim().toLowerCase();
+    const getEmail  = t => String(t.email ?? t.Email ?? t.assigneeEmail ?? '').trim().toLowerCase();
+
+    function onlyPendingForMe(list, email){
+      const em = String(email||'').toLowerCase();
+      const hasStatus = (list||[]).some(t => String(t.status ?? t.Status ?? ''));
+      const hasEmail  = (list||[]).some(t => String(t.email ?? t.Email ?? t.assigneeEmail ?? ''));
+      if (!hasStatus && !hasEmail) return list;
+      return (list||[]).filter(t => (hasStatus ? getStatus(t)==='pending' : true) &&
+                                    (em ? (hasEmail ? getEmail(t)===em : true) : true));
+    }
+
+    function render(list){
+      const wrap = $('#tags');
+      if (!list.length){
+        $('#empty').style.display = 'block';
+        wrap.innerHTML = '';
+        return;
+      }
+      $('#empty').style.display = 'none';
+      wrap.innerHTML = list.map(t => {
+        const id = getId(t);
+        const updatedRaw = t.updatedAt || t.UpdatedAt || '';
+        const updated = fmtMMDDYYYY(updatedRaw);
+        const url = `/driver-ticket.html?id=${encodeURIComponent(id)}`;
+        return `
+          <a class="ticket-link" href="${url}">
+            Ticket ${id || '(no id)'}
+            ${updated ? `<div class="muted-small">Updated ${updated}</div>` : ``}
+          </a>`;
+      }).join('');
+    }
+
+    function updateSubtitle(count){
+      const el = document.querySelector('.subtitle');
+      if (!el) return;
+      el.textContent = count > 0
+        ? `Pending tags assigned to you (${count})`
+        : `You're all caught up — no pending tags 🎉`;
+    }
+
+    function fmtMMDDYYYY(s){
+      if (!s) return '';
+      const d = new Date(s);
+      if (isNaN(d)) return '';
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const dd = String(d.getDate()).padStart(2,'0');
+      const yyyy = d.getFullYear();
+      return `${mm}-${dd}-${yyyy}`;
+    }
+
+    // Initial load
+    (async () => {
+      try {
+        const r = await fetch('/api/me');
+        const data = await r.json();
+        if (!data.ok) { location.href = '/'; return; }
+        const profile = data.profile || {};
+        const name = profile.fullName || profile.name || profile.email || 'Driver';
+        CURRENT_EMAIL = (profile.email || '').toLowerCase();
+        $('#driverName').textContent = `Welcome, ${name}`;
+
+        TAGS = guessTags(data);
+        const visible = onlyPendingForMe(TAGS, CURRENT_EMAIL);
+        updateSubtitle(visible.length);
+        render(visible);
+      } catch (e){
+        location.href = '/';
+      }
+    })();
+  </script>
+</body>
+</html>

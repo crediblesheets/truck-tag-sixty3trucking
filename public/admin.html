@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Admin Console — Sixty-3 Trucking</title>
+
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./admin.css">
+
+  <style>
+    .admin-card{padding:18px}
+    .table-card{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-top:10px}
+    .table-card table{width:100%;border-collapse:collapse;background:#fff}
+    .table-card thead{background:#f8fafc}
+    .table-card th,.table-card td{padding:12px 14px;border-bottom:1px solid #eef2f7;font-size:14px}
+    .table-card tbody tr:hover{background:#fafcff}
+    .scroll-area{max-height:60vh;overflow:auto}
+    .col-ticket{width:120px;white-space:nowrap}
+    .col-email{width:260px}
+    .col-updated{width:200px;white-space:nowrap}
+
+    .badge{display:inline-flex;align-items:center;font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid transparent}
+    .badge-pending{background:#fff7ed;color:#9a3412;border-color:#fed7aa}
+    .badge-done{background:#ecfdf5;color:#065f46;border-color:#bbf7d0}
+    .badge-other{background:#eef2ff;color:#3730a3;border-color:#c7d2fe}
+
+    .toolbar{display:flex;gap:10px;justify-content:flex-end}
+    .pill-btn{border:1px solid var(--border);background:#fff;border-radius:999px;padding:6px 10px;cursor:pointer}
+    .menu{position:relative}
+    .menu-btn{border:1px solid var(--border);background:#fff;border-radius:10px;padding:8px 10px;cursor:pointer}
+    .menu-list{position:absolute;right:0;top:42px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);min-width:200px;display:none;z-index:20}
+    .menu.open .menu-list{display:block}
+    .menu-list button{display:block;width:100%;text-align:left;padding:10px 12px;border:0;background:transparent;cursor:pointer}
+    .menu-list button:hover{background:#f8fafc}
+
+    /* Modals (add/view) */
+    .modal{position:fixed;inset:0;display:none;z-index:1000}
+    .modal.show{display:block}
+    .modal .backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+    .modal .sheet{position:relative;max-width:920px;margin:4vh auto;background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:20px 22px}
+    .modal .close{position:absolute;right:10px;top:10px;border:0;background:transparent;font-size:24px;cursor:pointer}
+
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+    label{font-size:12px;color:#555;display:block;margin-bottom:6px}
+    input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;box-sizing:border-box}
+    .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+    .muted-small{color:#6b7280;font-size:12px}
+    .danger{background:#ef4444!important;color:#fff!important;border-color:#ef4444!important}
+    .warn{background:#f59e0b!important;color:#fff!important;border-color:#f59e0b!important}
+    @media (max-width:900px){.grid2,.grid3{grid-template-columns:1fr}}
+
+    /* Loading overlay (used for CSV import and long ops) */
+    #loading{position:fixed;inset:0;display:none;z-index:2000}
+    #loading.show{display:flex}
+    #loading .backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+    #loading .panel{
+      position:relative;margin:auto;background:#fff;border-radius:12px;min-width:280px;
+      padding:18px 20px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25)
+    }
+    .spinner{width:28px;height:28px;border-radius:50%;border:3px solid #e5e7eb;border-top-color:#3b82f6;margin:0 auto 10px;animation:spin 0.8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner" style="grid-template-columns:auto 1fr;">
+      <div class="brand">
+        <img src="./assets/img/logo.png" class="logo" alt="Sixty – 3 logo">
+        <span class="brand-text">Sixty – 3 Trucking Inc</span>
+      </div>
+      <nav class="title-wrap" style="justify-content:flex-start;">
+        <h1 class="page-title" style="margin-right:8px;">Admin Console</h1>
+        <span class="subtitle">Manage driver tags</span>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" style="padding-bottom:28px;">
+    <section class="card admin-card" style="margin-top:22px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+        <div>
+          <h2 id="adminName" style="margin:0 0 6px;">Welcome, …</h2>
+          <p class="muted" style="margin:0;">Use filters to review Driver Tags. Click a Ticket # to preview/edit Admin Ticket data.</p>
+        </div>
+
+        <div class="toolbar">
+          <button id="refreshBtn" class="pill-btn" title="Refresh">↻ Refresh</button>
+          <div class="menu" id="kebab">
+            <button class="menu-btn" aria-haspopup="true" aria-expanded="false" title="More">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                  stroke-width="1.5" stroke="currentColor" class="icon">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                      d="M3.75 6.75h16.5M3.75 12h16.5M12 17.25h8.25" />
+              </svg>
+            </button>
+
+            <div class="menu-list" role="menu" aria-label="Admin actions">
+  <button type="button" id="openAdd" role="menuitem">
+    <!-- Plus Circle -->
+    <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+    </svg>
+    Add ticket
+  </button>
+
+  <button type="button" id="openUpload" role="menuitem">
+    <!-- Arrow Up Tray -->
+    <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M16 12l-4-4m0 0l-4 4m4-4v12" />
+    </svg>
+    Upload CSV
+  </button>
+
+  <button type="button" id="openTagLists" role="menuitem">
+    <!-- Clipboard Document List -->
+    <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M9 5h6M9 3h6a2 2 0 012 2v1H7V5a2 2 0 012-2zM7 9h10M7 13h10M7 17h10" />
+    </svg>
+    Tag Lists
+  </button>
+
+  <button type="button" id="openUsers" role="menuitem">
+    <!-- User -->
+    <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M5.121 17.804A9 9 0 1112 21a9 9 0 01-6.879-3.196zM15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+    Manage Users
+  </button>
+</div>
+
+
+
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card admin-card" style="margin-top:16px;">
+      <div style="display:grid;grid-template-columns:220px 1fr;gap:12px;align-items:end;">
+        <div>
+          <label for="statusSel">Status</label>
+          <select id="statusSel">
+            <option value="all">All</option>
+            <option value="pending" selected>Pending</option>
+            <option value="done">Done</option>
+          </select>
+        </div>
+        <div>
+          <label for="searchBox">Search (ticket, driver, email, material)</label>
+          <input id="searchBox" type="search" placeholder="Search…">
+        </div>
+      </div>
+      <!-- Date range filter -->
+        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;margin-top:8px;">
+          <div>
+            <label for="startDate">Start date (Updated)</label>
+            <input id="startDate" type="date" />
+          </div>
+          <div>
+            <label for="endDate">End date (Updated)</label>
+            <input id="endDate" type="date" />
+          </div>
+          <div>
+            <label style="visibility:hidden">Clear</label>
+            <button id="clearDates" type="button" class="pill-btn" title="Clear dates">Clear dates</button>
+          </div>
+        </div>
+
+
+      <div id="resultMeta" class="muted" style="margin:10px 0 6px;font-size:13px;">Showing 0 results</div>
+
+      <div class="table-card">
+        <div class="scroll-area">
+          <table aria-label="Driver tags table">
+            <thead>
+              <tr>
+                <th class="col-ticket">Ticket</th>
+                <th>Driver</th>
+                <th class="col-email">Email</th>
+                <th>Status</th>
+                <th class="col-updated">Updated</th>
+              </tr>
+            </thead>
+            <tbody id="rows">
+              <tr><td colspan="5" class="muted-small" style="text-align:center;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <small>© <span id="y"></span> Sixty – 3 Trucking Inc</small>
+    </div>
+  </footer>
+
+  <!-- Add Ticket Modal -->
+  <div id="addModal" class="modal" aria-hidden="true">
+    <div class="backdrop" data-close></div>
+    <div class="sheet">
+      <button class="close" data-close aria-label="Close">&times;</button>
+      <h3 style="margin:0 0 12px;">Add Ticket</h3>
+
+      <form id="addForm" autocomplete="off">
+        <div class="grid3">
+          <div>
+            <label>Date</label>
+            <input type="date" name="date" required>
+          </div>
+          <div>
+            <label>Ticket No</label>
+            <input type="text" name="ticketNo" required placeholder="e.g., 49250">
+          </div>
+          <div>
+            <label>Driver Name</label>
+            <select name="driverName" id="driverSel" required>
+              <option value="">Loading…</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid3" style="margin-top:10px;">
+          <div>
+            <label>Truck Start</label>
+            <input type="text" name="truckStart" placeholder="e.g., 7:00 AM">
+          </div>
+          <div>
+            <label>Truck No</label>
+            <input type="text" name="truckNo" placeholder="e.g., 21">
+          </div>
+          <div>
+            <label>Trailer Type</label>
+            <select name="trailerType" id="trailerSel">
+              <option value="">Loading…</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid2" style="margin-top:10px;">
+          <div>
+            <label>Sub Hauler</label>
+            <input type="text" name="subHauler">
+          </div>
+          <div>
+            <label>Prime Carrier</label>
+            <input type="text" name="primeCarrier" value="Sixty-3 Trucking">
+          </div>
+        </div>
+
+        <div class="grid2" style="margin-top:10px;">
+          <div>
+            <label>Shipper</label>
+            <input type="text" name="shipper">
+          </div>
+          <div>
+            <label>Point of Origin</label>
+            <input type="text" name="origin">
+          </div>
+        </div>
+
+        <div class="grid3" style="margin-top:10px;">
+          <div>
+            <label>Origin City</label>
+            <input type="text" name="originCity" placeholder="e.g., San Francisco">
+          </div>
+          <div>
+            <label>PO No</label>
+            <input type="text" name="poNo">
+          </div>
+          <div>
+            <label>Job Name</label>
+            <input type="text" name="jobName">
+          </div>
+        </div>
+
+        <div class="grid3" style="margin-top:10px;">
+          <div>
+            <label>Job No</label>
+            <input type="text" name="jobNo">
+          </div>
+          <div>
+            <label>Destination</label>
+            <input type="text" name="destination" placeholder="e.g., (Unloaded at) 5">
+          </div>
+          <div>
+            <label>Destination City</label>
+            <input type="text" name="city" placeholder="e.g., San Francisco">
+          </div>
+        </div>
+
+        <p class="muted-small" style="margin:8px 0 0;">Note: Email is linked to the driver’s account automatically.</p>
+
+        <div class="actions">
+          <button type="button" class="btn" data-close>Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Ticket</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- View/Edit Ticket Modal -->
+  <div id="viewModal" class="modal" aria-hidden="true">
+    <div class="backdrop" data-close></div>
+    <div class="sheet">
+      <button class="close" data-close aria-label="Close">&times;</button>
+      <h3 style="margin:0 0 12px;">Ticket <span id="viewId">—</span></h3>
+
+      <form id="viewForm" autocomplete="off">
+        <div class="grid3">
+          <div>
+            <label>Date</label>
+            <input type="date" name="date" required disabled>
+          </div>
+          <div>
+            <label>Ticket No</label>
+            <input type="text" name="ticketNo" required disabled>
+          </div>
+          <div>
+            <label>Driver Name</label>
+            <select name="driverName" id="viewDriverSel" required disabled>
+              <option value="">Loading…</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid3" style="margin-top:10px;">
+          <div>
+            <label>Truck Start</label>
+            <input type="text" name="truckStart" disabled>
+          </div>
+          <div>
+            <label>Truck No</label>
+            <input type="text" name="truckNo" disabled>
+          </div>
+          <div>
+            <label>Trailer Type</label>
+            <select name="trailerType" id="viewTrailerSel" disabled>
+              <option value="">Loading…</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid2" style="margin-top:10px;">
+          <div>
+            <label>Sub Hauler</label>
+            <input type="text" name="subHauler" disabled>
+          </div>
+          <div>
+            <label>Prime Carrier</label>
+            <input type="text" name="primeCarrier" disabled>
+          </div>
+        </div>
+
+        <div class="grid2" style="margin-top:10px;">
+          <div>
+            <label>Shipper</label>
+            <input type="text" name="shipper" disabled>
+          </div>
+          <div>
+            <label>Point of Origin</label>
+            <input type="text" name="origin" disabled>
+          </div>
+        </div>
+
+        <div class="grid3" style="margin-top:10px;">
+          <div>
+            <label>Origin City</label>
+            <input type="text" name="originCity" disabled>
+          </div>
+          <div>
+            <label>PO No</label>
+            <input type="text" name="poNo" disabled>
+          </div>
+          <div>
+            <label>Job Name</label>
+            <input type="text" name="jobName" disabled>
+          </div>
+        </div>
+
+        <div class="grid3" style="margin-top:10px;">
+          <div>
+            <label>Job No</label>
+            <input type="text" name="jobNo" disabled>
+          </div>
+          <div>
+            <label>Destination</label>
+            <input type="text" name="destination" disabled>
+          </div>
+          <div>
+            <label>Destination City</label>
+            <input type="text" name="city" disabled>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" id="deleteBtn" class="btn danger">Delete</button>
+          <span style="flex:1"></span>
+          <button type="button" id="editBtn" class="btn warn">Edit</button>
+          <button type="submit" id="saveBtn" class="btn btn-primary" style="display:none">Save</button>
+          <button type="button" id="cancelEditBtn" class="btn" style="display:none">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Loading overlay -->
+  <div id="loading" aria-hidden="true">
+    <div class="backdrop"></div>
+    <div class="panel" role="dialog" aria-live="polite">
+      <div class="spinner"></div>
+      <div id="loadingMsg" class="muted-small">Working…</div>
+    </div>
+  </div>
+
+  <!-- Hidden file input for CSV -->
+  <input id="csvInput" type="file" accept=".csv,text/csv" style="display:none" />
+
+  <script>
+    document.getElementById('y').textContent = new Date().getFullYear();
+
+    // ---------- tiny helpers ----------
+    const $  = (s, root=document) => root.querySelector(s);
+    const $$ = (s, root=document) => Array.from(root.querySelectorAll(s));
+    const ltrim = (v) => String(v ?? '').trim().toLowerCase();
+
+    function fmtDateTime(t){
+      if (!t) return '';
+      const d = new Date(t);
+      if (isNaN(d)) return String(t);
+      return d.toLocaleString([], {year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+    }
+    function toISODate(s){
+      if (!s) return '';
+      const d = new Date(s);
+      if (!isNaN(d)) {
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      }
+      const m = String(s).match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+      if (m) { const [_, mm, dd, yyyy] = m; return `${yyyy.padStart(4,'20')}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; }
+      return '';
+    }
+    function statusBadge(s){
+      const k = ltrim(s);
+      const cls = k==='pending' ? 'badge-pending' : k==='done' ? 'badge-done' : 'badge-other';
+      return `<span class="badge ${cls}">${s || '-'}</span>`;
+    }
+    function setOpen(modal, on=true){
+      modal.classList.toggle('show', on);
+      modal.setAttribute('aria-hidden', on ? 'false' : 'true');
+    }
+    function v(obj, ...keys){
+      for (const k of keys){
+        const val = obj?.[k];
+        if (val !== undefined && String(val).trim() !== '') return String(val);
+      }
+      return '';
+    }
+    function setSelectValue(sel, value){
+      if (!sel) return;
+      const val = String(value || '');
+      const has = Array.from(sel.options).some(o => o.value === val);
+      if (val && !has){
+        const opt = document.createElement('option');
+        opt.value = val; opt.textContent = val;
+        sel.appendChild(opt);
+      }
+      sel.value = val;
+    }
+
+    // Loading overlay helpers
+    function showLoading(msg='Working…'){
+      $('#loadingMsg').textContent = msg;
+      $('#loading').classList.add('show');
+      $('#loading').setAttribute('aria-hidden','false');
+    }
+    function hideLoading(){
+      $('#loading').classList.remove('show');
+      $('#loading').setAttribute('aria-hidden','true');
+    }
+
+    // ---------- state ----------
+    let TAGS = [];
+    let VIEW = [];
+    let CURRENT_TICKET = null;
+
+    // ---------- filters & table ----------
+    function applyFilters(){
+  const q  = ltrim($('#searchBox').value);
+  const st = $('#statusSel').value;
+
+  const startTS = toMidnightTS($('#startDate').value); // may be null
+  const endTS   = endOfDayTS($('#endDate').value);     // may be null
+
+  VIEW = TAGS.filter(row => {
+    // status
+    const statusOk = st === 'all' ? true : (ltrim(row.status) === st);
+    if (!statusOk) return false;
+
+    // search text (ticket/driver/email/material)
+    if (q){
+      const hay = [
+        row.ticketNo || row.id || '',
+        row.driverName || '',
+        row.email || '',
+        row.material || '',
+      ].join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+
+    // date window (uses updatedAt; keep rows with no updatedAt if no dates set)
+    const u = row.updatedAt || row.UpdatedAt || '';
+    if (startTS != null || endTS != null){
+      const ts = isNaN(new Date(u)) ? null : new Date(u).getTime();
+      if (ts == null) return false; // if filtering by date, skip rows without a valid date
+      if (startTS != null && ts < startTS) return false;
+      if (endTS   != null && ts > endTS)   return false;
+    }
+
+    return true;
+  });
+
+  renderRows();
+}
+
+    function toMidnightTS(iso){ // "YYYY-MM-DD" -> timestamp at 00:00 local
+        if (!iso) return null;
+        const d = new Date(iso + 'T00:00:00');
+        return isNaN(d) ? null : d.getTime();
+      }
+      function endOfDayTS(iso){  // inclusive end-of-day
+        const t = toMidnightTS(iso);
+        return t == null ? null : (t + 24*60*60*1000 - 1);
+      }
+
+
+    function renderRows(){
+      const tb = $('#rows');
+      if (!VIEW.length){
+        tb.innerHTML = `<tr><td colspan="5" class="muted-small" style="text-align:center;">No results.</td></tr>`;
+        $('#resultMeta').textContent = 'Showing 0 results';
+        return;
+      }
+      tb.innerHTML = VIEW.map(r => `
+        <tr>
+          <td class="col-ticket"><a href="#" class="ticket-link" data-id="${(r.ticketNo||r.id||'').toString().replace(/"/g,'&quot;')}">${r.ticketNo || r.id || '-'}</a></td>
+          <td>${r.driverName || '-'}</td>
+          <td class="col-email">${r.email || '-'}</td>
+          <td class="status-cell">${statusBadge(r.status || '-')}</td>
+          <td class="col-updated">${fmtDateTime(r.updatedAt || r.UpdatedAt || '')}</td>
+        </tr>
+      `).join('');
+      $('#resultMeta').textContent = `Showing ${VIEW.length} result${VIEW.length>1?'s':''}`;
+    }
+
+    async function loadTable(){
+      try {
+        showLoading('Loading data…');
+        const r = await fetch('/api/admin/tags');
+        if (r.status === 401 || r.status === 403) { location.href = '/'; return; }
+        const j = await r.json();
+        const p = j.profile || {};
+        $('#adminName').textContent = `Welcome, ${p.fullName || p.name || p.email || 'Admin'}`;
+
+        TAGS = Array.isArray(j.tags) ? j.tags.map(t => ({
+          id: t.id || t.ticketNo || t['Ticket No'] || '',
+          ticketNo: t.ticketNo || t['Ticket No'] || t.id || '',
+          driverName: t.driverName || t['Driver Name'] || t.Driver || '',
+          email: t.email || t.Email || '',
+          material: t.material || t['Type of Material'] || '',
+          status: t.status || t.Status || '',
+          updatedAt: t.updatedAt || t.UpdatedAt || '',
+        })) : [];
+
+        $('#statusSel').value = 'pending';
+        applyFilters();
+      } catch (e){
+        console.error(e);
+        alert('Failed to load table.');
+      } finally {
+        hideLoading();
+      }
+    }
+
+    // ---------- meta dropdowns ----------
+    async function loadMeta(selectIds = {driver:'#driverSel', trailer:'#trailerSel'}){
+      const r = await fetch('/api/admin/meta');
+      if (r.status === 401 || r.status === 403) { location.href = '/'; return; }
+      const j = await r.json();
+      const drivers = Array.isArray(j.drivers) ? j.drivers : [];
+      const types   = Array.isArray(j.trailerTypes) ? j.trailerTypes : [];
+
+      const dSel = $(selectIds.driver);
+      const tSel = $(selectIds.trailer);
+
+      if (dSel) {
+        dSel.innerHTML = `<option value="">Select driver…</option>` +
+          drivers.map(n => `<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('');
+      }
+      if (tSel) {
+        tSel.innerHTML = `<option value="">Select type…</option>` +
+          types.map(n => `<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('');
+      }
+    }
+
+    // ---------- menu & open add ----------
+    const kebab = $('#kebab');
+    kebab.querySelector('.menu-btn').addEventListener('click', () => {
+      kebab.classList.toggle('open');
+      kebab.querySelector('.menu-btn').setAttribute('aria-expanded', kebab.classList.contains('open') ? 'true' : 'false');
+    });
+    document.addEventListener('click', (e) => { if (!kebab.contains(e.target)) kebab.classList.remove('open'); });
+
+    $('#openAdd').addEventListener('click', async () => {
+      kebab.classList.remove('open');
+      await loadMeta({driver:'#driverSel', trailer:'#trailerSel'});
+      $('#addForm').reset();
+      const d = new Date();
+      const yyyy = d.getFullYear(), mm = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+      $('#addForm').date.value = `${yyyy}-${mm}-${dd}`;
+      setOpen($('#addModal'), true);
+    });
+
+    $$('#addModal [data-close]').forEach(el => el.addEventListener('click', () => setOpen($('#addModal'), false)));
+
+    $('#addForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const body = Object.fromEntries(fd.entries());
+      if (!body.date || !body.ticketNo || !body.driverName) { alert('Date, Ticket No and Driver Name are required.'); return; }
+
+      try {
+        showLoading('Saving ticket…');
+        const r = await fetch('/api/admin/tickets', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        const j = await r.json();
+        if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to add ticket');
+        setOpen($('#addModal'), false);
+        await loadTable();
+        alert('Ticket added.');
+      } catch (err) {
+        console.error(err);
+        alert(err.message || 'Could not add ticket.');
+      } finally {
+        hideLoading();
+      }
+    });
+
+    document.getElementById('openTagLists').addEventListener('click', () => {
+    kebab.classList.remove('open');
+    location.href = '/tag-lists';
+  });
+  document.getElementById('openUsers').addEventListener('click', () => {
+  kebab.classList.remove('open');
+  location.href = '/admin/users';
+});
+
+
+    // ---------- click ticket → view/edit ----------
+    $('#rows').addEventListener('click', async (e) => {
+      const a = e.target.closest('.ticket-link');
+      if (!a) return;
+      e.preventDefault();
+      await openView(a.dataset.id);
+    });
+
+    async function openView(ticketId){
+      CURRENT_TICKET = ticketId;
+      await loadMeta({driver:'#viewDriverSel', trailer:'#viewTrailerSel'});
+      const r = await fetch(`/api/admin/tickets/${encodeURIComponent(ticketId)}`);
+      if (r.status === 401 || r.status === 403) { location.href = '/'; return; }
+      const j = await r.json();
+      if (!j.ok) { alert(j.message || 'Not found'); return; }
+      $('#viewId').textContent = ticketId;
+      fillViewForm(j.ticket);
+      setViewMode(true);
+      setOpen($('#viewModal'), true);
+    }
+
+    function fillViewForm(t = {}){
+      const f = $('#viewForm');
+      f.date.value        = toISODate(v(t,'Date'));
+      f.ticketNo.value    = v(t,'Ticket No','Ticket No.');
+      setSelectValue($('#viewDriverSel'), v(t,'Driver Name','Driver'));
+
+      f.truckStart.value  = v(t,'Truck Start');
+      f.truckNo.value     = v(t,'Truck No');
+      setSelectValue($('#viewTrailerSel'), v(t,'Trailer Type','Trailer type','Trailer'));
+
+      f.subHauler.value   = v(t,'Sub Hauler');
+      f.primeCarrier.value= v(t,'Prime Carrier');
+      f.shipper.value     = v(t,'Shipper');
+      f.origin.value      = v(t,'Point of Origin');
+
+      f.originCity.value  = v(t,'Origin City','City');
+      f.poNo.value        = v(t,'PO No','PO#','PO no');
+      f.jobName.value     = v(t,'Job Name');
+      f.jobNo.value       = v(t,'Job No');
+      f.destination.value = v(t,'Destination');
+      f.city.value        = v(t,'City');
+    }
+
+    function setViewMode(locked){
+      $$('#viewForm input, #viewForm select').forEach(el => { el.disabled = locked; });
+      $('#viewForm').ticketNo.disabled = true;
+      $('#editBtn').style.display = locked ? 'inline-flex' : 'none';
+      $('#saveBtn').style.display = locked ? 'none' : 'inline-flex';
+      $('#cancelEditBtn').style.display = locked ? 'none' : 'inline-flex';
+    }
+
+    $('#editBtn').addEventListener('click', () => setViewMode(false));
+    $('#cancelEditBtn').addEventListener('click', () => { setViewMode(true); if (CURRENT_TICKET) openView(CURRENT_TICKET); });
+    $$('#viewModal [data-close]').forEach(el => el.addEventListener('click', () => setOpen($('#viewModal'), false)));
+
+    $('#viewForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!CURRENT_TICKET) return;
+      const fd = new FormData(e.target);
+      const body = Object.fromEntries(fd.entries());
+      if (!body.date || !body.driverName) { alert('Date and Driver Name are required.'); return; }
+
+      try {
+        showLoading('Updating ticket…');
+        const r = await fetch(`/api/admin/tickets/${encodeURIComponent(CURRENT_TICKET)}`, {
+          method: 'PUT',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify(body)
+        });
+        const j = await r.json();
+        if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to update ticket');
+        await loadTable();
+        alert('Ticket updated.');
+        setViewMode(true);
+        setOpen($('#viewModal'), false);
+      } catch (err) {
+        console.error(err);
+        alert(err.message || 'Could not update ticket.');
+      } finally {
+        hideLoading();
+      }
+    });
+
+    $('#deleteBtn').addEventListener('click', async () => {
+      if (!CURRENT_TICKET) return;
+      if (!confirm(`Delete ticket ${CURRENT_TICKET}? This also removes its Driver stub.`)) return;
+      try {
+        showLoading('Deleting…');
+        const r = await fetch(`/api/admin/tickets/${encodeURIComponent(CURRENT_TICKET)}`, { method:'DELETE' });
+        const j = await r.json();
+        if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to delete');
+        setOpen($('#viewModal'), false);
+        await loadTable();
+        alert('Ticket deleted.');
+      } catch (err) {
+        console.error(err);
+        alert(err.message || 'Could not delete ticket.');
+      } finally {
+        hideLoading();
+      }
+    });
+
+    // ---------- CSV upload ----------
+    $('#openUpload').addEventListener('click', () => {
+      kebab.classList.remove('open');
+      $('#csvInput').value = '';
+      $('#csvInput').click();
+    });
+
+    $('#csvInput').addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (!/\.csv$/i.test(file.name) && file.type !== 'text/csv') {
+        if (!confirm('File is not .csv — try importing anyway?')) return;
+      }
+      try {
+        showLoading('Uploading & importing CSV…');
+        const text = await file.text();
+        const r = await fetch('/api/admin/import-csv', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ csv: text })
+        });
+        const j = await r.json();
+        if (!r.ok || j.ok === false) throw new Error(j.message || 'Import failed.');
+        const s = j.summary || {};
+        alert(`Import complete.\nAdded: ${s.added||0}\nUpdated: ${s.updated||0}\nSkipped (Carrier present): ${s.skippedCarrier||0}\nInvalid rows: ${s.invalid||0}`);
+        await loadTable();
+      } catch (err) {
+        console.error(err);
+        alert(err.message || 'Could not import CSV.');
+      } finally {
+        hideLoading();
+      }
+    });
+
+    // ---------- misc ----------
+    $('#statusSel').addEventListener('change', applyFilters);
+    $('#searchBox').addEventListener('input', applyFilters);
+    $('#refreshBtn').addEventListener('click', loadTable);
+
+
+    $('#startDate').addEventListener('change', applyFilters);
+    $('#endDate').addEventListener('change', applyFilters);
+    $('#clearDates').addEventListener('click', () => {
+      $('#startDate').value = '';
+      $('#endDate').value = '';
+      applyFilters();
+    });
+
+
+    
+
+
+    // go!
+    loadTable();
+  </script>
+</body>
+</html>

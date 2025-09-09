@@ -1,0 +1,916 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Driver Ticket — Sixty-3 Trucking</title>
+  <link rel="stylesheet" href="./styles.css"/>
+
+  <style>
+    .layout{ display:grid; grid-template-columns: 320px 1fr; gap:16px; align-items:start; }
+    .sidebar-card{ position:sticky; top:16px; }
+    .kv{ margin:0; padding:0; list-style:none; display:grid; gap:10px; }
+    .kv li{ padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; }
+    .kv .k{ font-size:12px; color:var(--muted); display:block; margin-bottom:4px; }
+    .kv .v{ font-weight:600; }
+
+    .section-title{ margin:18px 0 8px; font-size:16px; font-weight:700 }
+    .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
+    .form-grid label{font-size:12px;color:#555;display:block;margin-bottom:6px}
+    .form-grid input,.form-grid textarea{ width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid var(--border); border-radius:10px; }
+    .form-grid textarea{ min-height:90px; grid-column: 1/-1; }
+    .muted-small{ color:#6b7280; font-size:12px }
+
+    /* mini scale form + table */
+    .mini-form{
+      display:grid;
+      grid-template-columns: 1.6fr 1.6fr 1.6fr 140px;
+      grid-template-areas:
+        "tag weight material actions"
+        "times times  times    actions";
+      gap:10px;
+      align-items:end;
+    }
+    .mini-form label{font-size:12px;color:#555;display:block;margin-bottom:6px}
+    .mini-form input{ width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:10px }
+    .mf-tag{grid-area:tag}
+    .mf-weight{grid-area:weight}
+    .mf-mat{grid-area:material}
+    .mf-actions{
+      grid-area:actions; display:flex; gap:8px; justify-content:flex-end; align-items:flex-end
+    }
+    .time-row{
+      grid-area:times; display:grid; grid-template-columns: repeat(4, minmax(90px, 1fr)); gap:10px;
+    }
+    .time-row .time label{font-size:11px;margin-bottom:4px}
+    .time-row .time input{padding:8px 10px;min-width:0}
+    .time-row .time input[type="time"]{max-width:140px}
+
+    .table-wrap{ margin-top:10px; border:1px solid var(--border); border-radius:12px; overflow:hidden; }
+    table{ width:100%; border-collapse:collapse }
+    thead{ background:#f8fafc }
+    th,td{ padding:10px 12px; border-bottom:1px solid #eef2f7; text-align:left; font-size:14px }
+    tbody tr:last-child td{ border-bottom:none }
+    .scroll-area{ max-height:240px; overflow:auto }
+    .row-actions{ display:flex; gap:8px }
+    .btn.link{ background:none; border:none; color:#2563eb; cursor:pointer; padding:0 }
+
+    /* proof */
+    .proof-help{ margin-top:6px }
+    #proofPreview{ max-height:140px; border:1px solid var(--border); border-radius:10px; padding:4px; }
+
+    /* signature chips */
+    .sig-row{ display:flex; gap:10px; align-items:center }
+    .sig-chip{
+      display:inline-flex; align-items:center; gap:8px;
+      border:1px dashed #cbd5e1; background:#fff; padding:6px 8px; border-radius:10px;
+    }
+    .sig-chip img{ height:28px; max-width:160px; object-fit:contain; }
+    .sig-chip .remove{ border:0; background:transparent; color:#ef4444; cursor:pointer; font-size:12px }
+
+    /* signature modal */
+    .sig-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; z-index:1600 }
+    .sig-overlay.show{ display:flex }
+    .sig-modal{
+      width:min(92vw,680px); background:#fff; border-radius:16px; border:1px solid var(--border);
+      box-shadow:0 10px 30px rgba(0,0,0,.25); padding:16px; display:flex; flex-direction:column; gap:12px
+    }
+    .sig-head{ display:flex; align-items:center; justify-content:space-between }
+    .sig-title{ font-weight:700; }
+    .sig-canvas-wrap{
+      background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;
+    }
+    #sigCanvas{ display:block; width:100%; height:260px; background:transparent; cursor:crosshair }
+    .sig-actions{ display:flex; gap:10px; justify-content:flex-end }
+
+    @media (max-width: 980px){
+      .layout{ grid-template-columns: 1fr; }
+      .sidebar-card{ position:static; }
+      .mini-form{
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas:
+          "tag tag"
+          "weight material"
+          "times times"
+          "actions actions";
+      }
+      .mf-actions{ justify-content:flex-start }
+      .time-row{ grid-template-columns: repeat(2, minmax(90px,1fr)) }
+    }
+  </style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner" style="grid-template-columns:auto 1fr auto;">
+      <div class="brand">
+        <img src="./assets/img/logo.png" class="logo" alt="Sixty – 3 logo">
+        <span class="brand-text">Sixty – 3 Trucking Inc</span>
+      </div>
+      <div class="title-wrap" style="justify-content:flex-start;">
+        <h1 class="page-title">Driver Ticket</h1>
+        <p class="subtitle">Fill and submit your tag</p>
+      </div>
+      <div>
+        <a href="/dashboard.html" class="btn">← Back to Dashboard</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container" style="padding-bottom:28px;">
+    <div class="layout">
+      <!-- LEFT: Admin ticket details -->
+      <aside class="card admin-card sidebar-card">
+        <h3 id="hdr" style="margin-top:0;margin-bottom:10px;">Ticket —</h3>
+        <ul class="kv" id="kv"></ul>
+      </aside>
+
+      <!-- RIGHT: Driver form -->
+      <section class="card">
+        <form id="tagForm" autocomplete="off">
+          <div class="form-grid">
+            <div>
+              <label>Bridgefare</label>
+              <input name="bridgefare" type="number" step="any" placeholder="0.00">
+            </div>
+            <div>
+              <label>Signed Out Loaded</label>
+              <input name="signedOutLoaded" type="text" placeholder="Yes / No" required>
+            </div>
+            <div>
+              <label>How Many Tons/Loads</label>
+              <input name="howMany" type="text" placeholder="e.g., 12 tons / 2 loads" required>
+            </div>
+            <div>
+              <label>Downtime &amp; Lunch</label>
+              <input name="downtimeLunch" type="text" placeholder="e.g., 00:30">
+            </div>
+
+            <div style="grid-column:1/-1;">
+              <label>Notes</label>
+              <textarea name="notes" placeholder="Notes"></textarea>
+            </div>
+
+            <div>
+              <label>Sign Out Time</label>
+              <input name="signOutTime" type="time" step="60" lang="en-US" required>
+            </div>
+            <div>
+              <label>Received by</label>
+              <div class="sig-row">
+                <input name="receivedBy" id="receivedBy" type="text" placeholder="Dispatcher / Receiver" required style="flex:1">
+                <button type="button" id="addSigReceived" class="btn">Add signature</button>
+                <span class="sig-chip" id="chipReceived" style="display:none">
+                  <img id="imgSigReceived" alt="Received signature">
+                  <button type="button" class="remove" id="rmSigReceived">Remove</button>
+                </span>
+              </div>
+            </div>
+
+            <div style="grid-column:1/-1;">
+              <label>Driver Signature (type full name)</label>
+              <div class="sig-row">
+                <input name="driverSignature" id="driverSignature" type="text" placeholder="Type full name" required style="flex:1">
+                <button type="button" id="addSigDriver" class="btn">Add signature</button>
+                <span class="sig-chip" id="chipDriver" style="display:none">
+                  <img id="imgSigDriver" alt="Driver signature">
+                  <button type="button" class="remove" id="rmSigDriver">Remove</button>
+                </span>
+              </div>
+            </div>
+
+            <!-- Proof upload -->
+            <div style="grid-column:1/-1;">
+              <label>Proof of Ticket (image)</label>
+              <input name="proofFile" id="proofFile" type="file" accept="image/*">
+              <div class="muted-small proof-help">Accepted: JPG/PNG/HEIC, up to ~10MB.</div>
+              <div id="proofInfo" class="muted-small" style="display:none"></div>
+              <div id="proofPreviewWrap" style="margin-top:8px; display:none;">
+                <img id="proofPreview" alt="Preview">
+              </div>
+            </div>
+          </div>
+
+          <div class="section-title">Scale Tags</div>
+          <!-- Mini add form -->
+          <div class="mini-form" id="itemForm">
+            <div class="mf-tag">
+              <label>Scale Tag No</label>
+              <input id="f_scaleTagNo" placeholder="e.g., 1002345">
+            </div>
+            <div class="mf-weight">
+              <label>Yard or Weight</label>
+              <input id="f_yardOrWeight" placeholder="e.g., 12,500 kg">
+            </div>
+            <div class="mf-mat">
+              <label>Type of Material</label>
+              <input id="f_material" placeholder="e.g., Gravel">
+            </div>
+            <div class="mf-actions">
+              <button type="button" id="addItem" class="btn btn-primary">Add item</button>
+              <button type="button" id="cancelEdit" class="btn" style="display:none">Cancel edit</button>
+            </div>
+            <div class="time-row">
+              <div class="time">
+                <label>Yard Arrival</label>
+                <input id="f_yardArrival" type="time" step="60" lang="en-US">
+              </div>
+              <div class="time">
+                <label>Yard Leave</label>
+                <input id="f_yardLeave" type="time" step="60" lang="en-US">
+              </div>
+              <div class="time">
+                <label>Site Arrival</label>
+                <input id="f_siteArrival" type="time" step="60" lang="en-US">
+              </div>
+              <div class="time">
+                <label>Site Leave</label>
+                <input id="f_siteLeave" type="time" step="60" lang="en-US">
+              </div>
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <div class="scroll-area">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Scale Tag No</th>
+                    <th>Yard/Weight</th>
+                    <th>Material</th>
+                    <th>Yard Arr</th>
+                    <th>Yard Leave</th>
+                    <th>Site Arr</th>
+                    <th>Site Leave</th>
+                    <th style="width:90px;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="itemsBody">
+                  <tr><td colspan="8" class="muted-small">No scale tags yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="formErr" class="form-error" role="alert" style="display:none"></div>
+          <div class="actions" style="margin-top:12px;">
+            <a id="openPdf" class="btn" href="#" target="_blank" rel="noopener" hidden>Preview PDF</a>
+            <span style="flex:1"></span>
+            <button id="submitBtn" type="submit" class="btn btn-primary" disabled>Submit</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <small>© <span id="y"></span> Sixty – 3 Trucking Inc</small>
+    </div>
+  </footer>
+
+  <!-- Signature modal -->
+  <div id="sigOverlay" class="sig-overlay" aria-hidden="true">
+    <div class="sig-modal" role="dialog" aria-modal="true" aria-labelledby="sigTitle">
+      <div class="sig-head">
+        <div class="sig-title" id="sigTitle">Add signature</div>
+        <button type="button" id="closeSig" class="btn">✕</button>
+      </div>
+      <div class="sig-canvas-wrap">
+        <canvas id="sigCanvas" width="1200" height="400"></canvas>
+      </div>
+      <div class="sig-actions">
+        <button type="button" id="clearSig" class="btn">Clear</button>
+        <button type="button" id="saveSig" class="btn btn-primary">Save signature</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('y').textContent = new Date().getFullYear();
+
+    // ------ state
+    let TICKET_ID = null;
+    let SCALE_ITEMS = [];
+    let EDIT_INDEX = null;
+
+    // Signature modal state
+    let SIG_WHO = null; // 'driver'|'received'
+    let drawing = false;
+    let ctx, canvas;
+    let hasStroke = false;
+
+    // ------ helpers
+    const $  = (s) => document.querySelector(s);
+    const $$ = (s) => Array.from(document.querySelectorAll(s));
+    const getTrim = (v) => String(v ?? '').trim();
+
+    function qParam(name){
+      const u = new URL(location.href);
+      return u.searchParams.get(name);
+    }
+
+    function showErr(msg=''){
+      const box = $('#formErr');
+      box.textContent = msg;
+      box.style.display = msg ? 'block' : 'none';
+    }
+
+    function itemsAreComplete(){
+      if (SCALE_ITEMS.length === 0) return false;
+      return SCALE_ITEMS.every(it =>
+        it.scaleTagNo && it.yardOrWeight && it.material &&
+        it.yardArrival && it.yardLeave && it.siteArrival && it.siteLeave
+      );
+    }
+
+    function setSubmitState(){
+      const formOk  = $('#tagForm').checkValidity();
+      const itemsOk = itemsAreComplete();
+      $('#submitBtn').disabled = !(formOk && itemsOk);
+      showErr(itemsOk ? '' : 'Add at least one complete Scale Tag item.');
+    }
+    $('#tagForm').addEventListener('input', setSubmitState);
+
+    function toISODate(s){
+      if (!s) return '';
+      const d = new Date(s);
+      if (!isNaN(d)) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      return '';
+    }
+
+    // ------ left admin card
+    function renderAdminCard(t = {}){
+      $('#hdr').textContent = `Ticket ${t['Ticket No'] || t.ticket_no || TICKET_ID || '—'}`;
+      const rows = [
+        ['Date', toISODate(t.Date || t.date)],
+        ['Driver Name', t['Driver Name'] || t.driver_name || ''],
+        ['Truck Start', t['Truck Start'] || t.truck_start || ''],
+        ['Truck No', t['Truck No'] || t.truck_no || ''],
+        ['Trailer Type', t['Trailer Type'] || t.trailer_type || ''],
+        ['Sub Hauler', t['Sub Hauler'] || t.sub_hauler || ''],
+        ['Prime Carrier', t['Prime Carrier'] || t.prime_carrier || ''],
+        ['Shipper', t.Shipper || t.shipper || ''],
+        ['Point of Origin', t['Point of Origin'] || t.origin || ''],
+        ['Origin City', t['Origin City'] || t.origin_city || ''],
+        ['PO No', t['PO No'] || t.po_no || ''],
+        ['Job Name', t['Job Name'] || t.job_name || ''],
+        ['Job No', t['Job No'] || t.job_no || ''],
+        ['Destination', t.Destination || t.destination || ''],
+        ['City', t.City || t.city || ''],
+      ];
+      $('#kv').innerHTML = rows.map(([k, v]) => `
+        <li>
+          <span class="k">${k}</span>
+          <span class="v">${getTrim(v) || '-'}</span>
+        </li>
+      `).join('');
+    }
+
+    // ------ scale mini form
+    function readMiniForm(){
+      return {
+        scaleTagNo: $('#f_scaleTagNo').value.trim(),
+        yardOrWeight: $('#f_yardOrWeight').value.trim(),
+        material: $('#f_material').value.trim(),
+        yardArrival: $('#f_yardArrival').value,
+        yardLeave: $('#f_yardLeave').value,
+        siteArrival: $('#f_siteArrival').value,
+        siteLeave: $('#f_siteLeave').value,
+      };
+    }
+    function fillMiniForm(it = {}){
+      $('#f_scaleTagNo').value = it.scaleTagNo ?? '';
+      $('#f_yardOrWeight').value = it.yardOrWeight ?? '';
+      $('#f_material').value = it.material ?? '';
+      $('#f_yardArrival').value = it.yardArrival ?? '';
+      $('#f_yardLeave').value = it.yardLeave ?? '';
+      $('#f_siteArrival').value = it.siteArrival ?? '';
+      $('#f_siteLeave').value = it.siteLeave ?? '';
+    }
+    function clearMiniForm(){ fillMiniForm({}); }
+
+    function renderItemsTable(){
+      const tbody = $('#itemsBody');
+
+      if (!SCALE_ITEMS.length){
+        tbody.innerHTML = `<tr><td colspan="8" class="muted-small">No scale tags yet.</td></tr>`;
+        setSubmitState();
+        return;
+      }
+
+      tbody.innerHTML = SCALE_ITEMS.map((it,i)=>`
+        <tr data-i="${i}">
+          <td>${it.scaleTagNo || '-'}</td>
+          <td>${it.yardOrWeight || '-'}</td>
+          <td>${it.material || '-'}</td>
+          <td>${it.yardArrival || '-'}</td>
+          <td>${it.yardLeave || '-'}</td>
+          <td>${it.siteArrival || '-'}</td>
+          <td>${it.siteLeave || '-'}</td>
+          <td class="row-actions">
+            <button type="button" class="btn link" data-edit="${i}">Edit</button>
+            <button type="button" class="btn link" data-remove="${i}">Remove</button>
+          </td>
+        </tr>
+      `).join('');
+
+      setSubmitState();
+    }
+
+    $('#addItem').addEventListener('click', () => {
+      const data = readMiniForm();
+
+      ['#f_scaleTagNo','#f_yardOrWeight','#f_material','#f_yardArrival','#f_yardLeave','#f_siteArrival','#f_siteLeave']
+        .forEach(sel => $(sel).classList.remove('input-invalid'));
+
+      let ok = true;
+      if (!data.scaleTagNo)   { $('#f_scaleTagNo').classList.add('input-invalid'); ok=false; }
+      if (!data.yardOrWeight) { $('#f_yardOrWeight').classList.add('input-invalid'); ok=false; }
+      if (!data.material)     { $('#f_material').classList.add('input-invalid'); ok=false; }
+      if (!data.yardArrival)  { $('#f_yardArrival').classList.add('input-invalid'); ok=false; }
+      if (!data.yardLeave)    { $('#f_yardLeave').classList.add('input-invalid'); ok=false; }
+      if (!data.siteArrival)  { $('#f_siteArrival').classList.add('input-invalid'); ok=false; }
+      if (!data.siteLeave)    { $('#f_siteLeave').classList.add('input-invalid'); ok=false; }
+
+      if (!ok){
+        alert('Please complete all Scale Tag fields before saving the item.');
+        return;
+      }
+
+      if (EDIT_INDEX === null){
+        SCALE_ITEMS.push(data);
+      } else {
+        SCALE_ITEMS[EDIT_INDEX] = data;
+        EDIT_INDEX = null;
+        $('#addItem').textContent = 'Add item';
+        $('#cancelEdit').style.display = 'none';
+      }
+      renderItemsTable();
+      clearMiniForm();
+      $('#f_scaleTagNo').focus();
+      setSubmitState();
+    });
+
+    $('#cancelEdit').addEventListener('click', () => {
+      EDIT_INDEX = null; clearMiniForm();
+      $('#addItem').textContent = 'Add item';
+      $('#cancelEdit').style.display = 'none';
+    });
+
+    $('#itemsBody').addEventListener('click', (e) => {
+      const del = e.target.getAttribute('data-remove');
+      const ed  = e.target.getAttribute('data-edit');
+      if (del != null){
+        SCALE_ITEMS.splice(Number(del),1);
+        renderItemsTable();
+        setSubmitState();
+      } else if (ed != null){
+        EDIT_INDEX = Number(ed);
+        fillMiniForm(SCALE_ITEMS[EDIT_INDEX]);
+        $('#addItem').textContent = 'Save item';
+        $('#cancelEdit').style.display = 'inline-flex';
+      }
+    });
+
+    async function loadScaleItems(id) {
+      try {
+        const r = await fetch(`/api/tags/${encodeURIComponent(id)}/scale-items`);
+        const j = await r.json();
+        SCALE_ITEMS = Array.isArray(j.items) ? j.items : [];
+      } catch { SCALE_ITEMS = []; }
+      renderItemsTable();
+      clearMiniForm();
+      EDIT_INDEX = null;
+      $('#addItem').textContent = 'Add item';
+      $('#cancelEdit').style.display = 'none';
+      setSubmitState();
+    }
+
+    // ---- Proof picker preview
+    $('#proofFile').addEventListener('change', () => {
+      const f = $('#proofFile').files[0];
+      const info = $('#proofInfo');
+      const wrap = $('#proofPreviewWrap');
+      const img = $('#proofPreview');
+      if (!f){ info.style.display='none'; wrap.style.display='none'; img.src=''; return; }
+      info.textContent = `${f.name} — ${Math.round(f.size/1024)} KB`;
+      info.style.display = 'block';
+      if (f.type.startsWith('image/')){
+        const reader = new FileReader();
+        reader.onload = e => { img.src = e.target.result; wrap.style.display = 'block'; };
+        reader.readAsDataURL(f);
+      } else {
+        wrap.style.display = 'none';
+        img.src = '';
+      }
+    });
+
+    // ------ data loading (driver + admin)
+    async function loadAdminTicket(id){
+      const r = await fetch(`/api/tickets/${encodeURIComponent(id)}`);
+      const j = await r.json();
+      if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to load ticket');
+      return j.ticket || {};
+    }
+    async function loadDriverTag(id){
+      const r = await fetch(`/api/tags/${encodeURIComponent(id)}/driver`);
+      const j = await r.json().catch(()=> ({}));
+      return j.driver || {};
+    }
+    function prefillDriverForm(d){
+      const f = $('#tagForm');
+      f.bridgefare.value      = d.bridgefare ?? '';
+      f.signedOutLoaded.value = d.signedOutLoaded ?? '';
+      f.howMany.value         = d.howManyTonsLoads ?? '';
+      f.downtimeLunch.value   = d.downtimeLunch ?? '';
+      f.notes.value           = d.notes ?? '';
+      f.signOutTime.value     = (d.signOutTime || '').slice(0,5);
+      $('#receivedBy').value  = d.receivedBy ?? '';
+      $('#driverSignature').value = d.driverSignature ?? '';
+      setSubmitState();
+    }
+
+    // ------ signature utils
+    function openSigModal(who){
+      SIG_WHO = who; // 'driver'|'received'
+      $('#sigTitle').textContent = who === 'driver' ? 'Add Driver signature' : 'Add Receiver signature';
+      $('#sigOverlay').classList.add('show');
+      $('#sigOverlay').setAttribute('aria-hidden','false');
+      hasStroke = false;
+      resizeCanvasForDPR(); // ensure crispness
+    }
+    function closeSigModal(){
+      $('#sigOverlay').classList.remove('show');
+      $('#sigOverlay').setAttribute('aria-hidden','true');
+      SIG_WHO = null;
+    }
+
+    function resizeCanvasForDPR(){
+  const wrap = $('#sigCanvas').parentElement;
+  const rect = wrap.getBoundingClientRect();
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+  // reset any prior transform before resizing
+  ctx.setTransform(1,0,0,1,0,0);
+
+  canvas.width  = Math.floor(rect.width * dpr);
+  canvas.height = Math.floor(260 * dpr);
+  canvas.style.width  = rect.width + 'px';
+  canvas.style.height = '260px';
+
+  // scale for HiDPI, then clear (transparent)
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // drawing style
+  ctx.strokeStyle = '#111827';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+}
+
+
+
+
+    function pointerPos(evt){
+      const rect = canvas.getBoundingClientRect();
+      const e = evt.touches ? evt.touches[0] : evt;
+      return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    }
+
+    function startDraw(e){
+      drawing = true;
+      hasStroke = true;
+      const p = pointerPos(e);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+    }
+    function moveDraw(e){
+      if (!drawing) return;
+      const p = pointerPos(e);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    }
+    function endDraw(){ drawing = false; }
+
+    function clearSignature(){
+  // keep the canvas transparent (no white fill)
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  hasStroke = false;
+}
+
+
+    async function uploadSignatureBlob(blob, who){
+      const fd = new FormData();
+      fd.append('file', blob, 'signature.png');
+      const r = await fetch(`/api/tags/${encodeURIComponent(TICKET_ID)}/signature/${who}`, {
+        method:'POST',
+        body: fd
+      });
+      const j = await r.json().catch(()=> ({}));
+      if (!r.ok || j.ok === false) throw new Error(j.message || 'Signature upload failed');
+      return true;
+    }
+
+    async function loadSignaturePreview(who){
+      const r = await fetch(`/api/tags/${encodeURIComponent(TICKET_ID)}/signature-url/${who}`);
+      const j = await r.json().catch(()=> ({}));
+      const url = j?.url || null;
+      if (who === 'driver'){
+        const chip = $('#chipDriver'), img = $('#imgSigDriver');
+        if (url){ img.src = url; chip.style.display = 'inline-flex'; }
+        else { chip.style.display = 'none'; img.removeAttribute('src'); }
+      } else {
+        const chip = $('#chipReceived'), img = $('#imgSigReceived');
+        if (url){ img.src = url; chip.style.display = 'inline-flex'; }
+        else { chip.style.display = 'none'; img.removeAttribute('src'); }
+      }
+    }
+
+    function stripWhiteToTransparent(srcCanvas, threshold = 252){
+        // copy to offscreen
+        const off = document.createElement('canvas');
+        off.width = srcCanvas.width;
+        off.height = srcCanvas.height;
+        const octx = off.getContext('2d');
+        octx.drawImage(srcCanvas, 0, 0);
+
+        const img = octx.getImageData(0, 0, off.width, off.height);
+        const d = img.data;
+
+        // remove white & near-white pixels (by luminance)
+        // anything brighter than ~98.5% → fully transparent
+        for (let i = 0; i < d.length; i += 4) {
+            const r = d[i], g = d[i+1], b = d[i+2];
+            // quick check for very bright RGB
+            if (r >= threshold && g >= threshold && b >= threshold) { d[i+3] = 0; continue; }
+            // anti-alias fringe cleanup using luminance
+            const lum = 0.2126*r + 0.7152*g + 0.0722*b; // 0..255
+            if (lum > 250) d[i+3] = 0;
+        }
+        octx.putImageData(img, 0, 0);
+
+        // --- auto-crop to bounding box of non-transparent pixels ---
+        const id = octx.getImageData(0, 0, off.width, off.height).data;
+        let minX = off.width, minY = off.height, maxX = -1, maxY = -1;
+        for (let y = 0; y < off.height; y++) {
+            for (let x = 0; x < off.width; x++) {
+            const a = id[(y*off.width + x)*4 + 3];
+            if (a > 0) {
+                if (x < minX) minX = x;
+                if (y < minY) minY = y;
+                if (x > maxX) maxX = x;
+                if (y > maxY) maxY = y;
+            }
+            }
+        }
+        if (maxX < 0 || maxY < 0) return off; // empty signature
+
+        const w = maxX - minX + 1;
+        const h = maxY - minY + 1;
+
+        const cropped = document.createElement('canvas');
+        cropped.width = w;
+        cropped.height = h;
+        const cctx = cropped.getContext('2d');
+        cctx.drawImage(off, minX, minY, w, h, 0, 0, w, h);
+        return cropped;
+    }
+
+
+// find tight bounding box around non-transparent pixels
+function cropToInk(srcCanvas){
+  const w = srcCanvas.width, h = srcCanvas.height;
+  const ctx2 = document.createElement('canvas').getContext('2d');
+  ctx2.canvas.width = w; ctx2.canvas.height = h;
+  ctx2.drawImage(srcCanvas, 0, 0);
+  const { data } = ctx2.getImageData(0, 0, w, h);
+
+  let minX = w, minY = h, maxX = -1, maxY = -1;
+  for (let y = 0; y < h; y++){
+    for (let x = 0; x < w; x++){
+      const i = (y*w + x) * 4;
+      const a = data[i+3];
+      if (a > 5){ // any visible ink
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX < minX || maxY < minY) return null; // nothing drawn
+
+  const pad = 12; // tiny breathing room
+  minX = Math.max(0, minX - pad);
+  minY = Math.max(0, minY - pad);
+  maxX = Math.min(w-1, maxX + pad);
+  maxY = Math.min(h-1, maxY + pad);
+
+  const cw = maxX - minX + 1;
+  const ch = maxY - minY + 1;
+
+  const out = document.createElement('canvas');
+  out.width = cw; out.height = ch;
+  out.getContext('2d').drawImage(ctx2.canvas, minX, minY, cw, ch, 0, 0, cw, ch);
+  return out;
+}
+
+function stripWhiteToTransparent(srcCanvas, threshold = 248){
+  const off = document.createElement('canvas');
+  off.width = srcCanvas.width;
+  off.height = srcCanvas.height;
+  const octx = off.getContext('2d');
+  octx.drawImage(srcCanvas, 0, 0);
+  const img = octx.getImageData(0, 0, off.width, off.height);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4){
+    const r = d[i], g = d[i+1], b = d[i+2];
+    if (r >= threshold && g >= threshold && b >= threshold) d[i+3] = 0;
+  }
+  octx.putImageData(img, 0, 0);
+  return off;
+}
+
+
+
+    // open / close modal
+    $('#addSigDriver').addEventListener('click', () => openSigModal('driver'));
+    $('#addSigReceived').addEventListener('click', () => openSigModal('received'));
+    $('#closeSig').addEventListener('click', closeSigModal);
+
+    // canvas wiring
+    canvas = document.getElementById('sigCanvas');
+    ctx = canvas.getContext('2d');
+
+    // initial paint
+    resizeCanvasForDPR();
+
+    // mouse
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', moveDraw);
+    window.addEventListener('mouseup', endDraw);
+    // touch
+    canvas.addEventListener('touchstart', (e)=>{ e.preventDefault(); startDraw(e); }, {passive:false});
+    canvas.addEventListener('touchmove',  (e)=>{ e.preventDefault(); moveDraw(e); }, {passive:false});
+    canvas.addEventListener('touchend',   (e)=>{ e.preventDefault(); endDraw(); }, {passive:false});
+
+    window.addEventListener('resize', () => {
+      if ($('#sigOverlay').classList.contains('show')) resizeCanvasForDPR();
+    });
+
+    $('#clearSig').addEventListener('click', clearSignature);
+
+    // REPLACE your existing '#saveSig' click handler with this:
+    $('#saveSig').addEventListener('click', async () => {
+    if (!SIG_WHO) return;
+    if (!hasStroke) {
+        alert('Please draw your signature first.');
+        return;
+    }
+
+    // 1) make near-white fully transparent (gets rid of the white box & halo)
+    //    use a fairly strict threshold; bump to 255 if you still see glow
+    const alphaFixed = stripWhiteToTransparent(canvas, 254);
+
+    // 2) tight-crop to ink after transparency is applied
+    const cropped = cropToInk(alphaFixed);
+    if (!cropped) {
+        alert('Signature is empty.');
+        return;
+    }
+
+    // 3) optional downscale (keeps PNG crisp but not huge)
+    const MAX_W = 2000;
+    let toUpload = cropped;
+    if (cropped.width > MAX_W) {
+        const scale = MAX_W / cropped.width;
+        const tmp = document.createElement('canvas');
+        tmp.width = Math.round(cropped.width * scale);
+        tmp.height = Math.round(cropped.height * scale);
+        const tctx = tmp.getContext('2d');
+        tctx.imageSmoothingEnabled = true;
+        tctx.imageSmoothingQuality = 'high';
+        tctx.drawImage(cropped, 0, 0, tmp.width, tmp.height);
+        toUpload = tmp;
+    }
+
+    // 4) export as PNG (preserves transparency) and upload
+    toUpload.toBlob(async (blob) => {
+        try {
+        await uploadSignatureBlob(blob, SIG_WHO);
+        await loadSignaturePreview(SIG_WHO);
+        closeSigModal();
+        } catch (err) {
+        console.error(err);
+        alert(err.message || 'Could not save signature.');
+        }
+    }, 'image/png');
+    });
+
+
+
+    // remove signature (server keeps last one you uploaded; here we just hide chip if you want UI-only)
+    async function removeSignature(who){
+      // If you later want a delete endpoint, call it here. For now, just hide the chip.
+      if (who === 'driver'){ $('#chipDriver').style.display = 'none'; $('#imgSigDriver').removeAttribute('src'); }
+      else { $('#chipReceived').style.display = 'none'; $('#imgSigReceived').removeAttribute('src'); }
+      alert('To actually remove the stored image, we can add a DELETE endpoint later if needed.');
+    }
+    $('#rmSigDriver').addEventListener('click', () => removeSignature('driver'));
+    $('#rmSigReceived').addEventListener('click', () => removeSignature('received'));
+
+    // ------ submit
+    $('#tagForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!TICKET_ID) return;
+
+      if (!$('#tagForm').reportValidity()) { setSubmitState(); return; }
+      if (!itemsAreComplete()){ showErr('Add at least one complete Scale Tag item.'); setSubmitState(); return; }
+      showErr('');
+
+      const form = new FormData(e.target);
+      const driverPayload = {
+        bridgefare: form.get('bridgefare') ?? '',
+        signedOutLoaded: form.get('signedOutLoaded') ?? '',
+        howManyTonsLoads: form.get('howMany') ?? '',
+        downtimeLunch: form.get('downtimeLunch') ?? '',
+        notes: form.get('notes') ?? '',
+        signOutTime: form.get('signOutTime') ?? '',
+        receivedBy: form.get('receivedBy') ?? '',
+        driverSignature: form.get('driverSignature') ?? '',
+        status: 'Done'
+      };
+
+      try {
+        // 1) proof upload (optional)
+        const proof = $('#proofFile').files[0];
+        if (proof){
+          const fd = new FormData();
+          fd.append('file', proof);
+          const u = await fetch(`/api/tags/${encodeURIComponent(TICKET_ID)}/proof`, { method:'POST', body: fd });
+          const uj = await u.json().catch(()=> ({}));
+          if (!u.ok || uj.ok === false) throw new Error(uj.message || 'Proof upload failed');
+        }
+
+        // 2) save scale items
+        const r1 = await fetch(`/api/tags/${encodeURIComponent(TICKET_ID)}/scale-items`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: SCALE_ITEMS })
+        });
+        const j1 = await r1.json().catch(()=>({}));
+        if (!r1.ok || j1.ok === false) throw new Error(j1.message || 'Scale items save failed');
+
+        // 3) save driver form (marks Done)
+        const r2 = await fetch(`/api/tags/${encodeURIComponent(TICKET_ID)}/driver`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(driverPayload)
+        });
+        const j2 = await r2.json().catch(() => ({}));
+        if (!r2.ok || j2.ok === false) throw new Error(j2.message || 'Save failed');
+
+        alert('Submitted. Ticket marked as Done.');
+        location.href = '/dashboard.html';
+      } catch (err){
+        console.error(err);
+        alert(err.message || 'Could not submit. Please try again.');
+      }
+    });
+
+    // ------ PDF preview (kept hidden by default, we set URL though)
+    $('#openPdf').addEventListener('click', (e) => {
+      e.preventDefault();
+      if (!TICKET_ID) return;
+      window.open(`/api/tags/${encodeURIComponent(TICKET_ID)}/pdf?download=0`, '_blank', 'noopener');
+    });
+
+    // ------ boot
+    (async () => {
+      TICKET_ID = qParam('id');
+      if (!TICKET_ID) { location.href = '/dashboard.html'; return; }
+
+      try {
+        const [admin, driver] = await Promise.all([
+          loadAdminTicket(TICKET_ID),
+          loadDriverTag(TICKET_ID),
+        ]);
+        renderAdminCard(admin);
+        prefillDriverForm(driver);
+        await loadScaleItems(TICKET_ID);
+        // load signature previews if present
+        await Promise.all([ loadSignaturePreview('driver'), loadSignaturePreview('received') ]);
+      } catch (e){
+        console.error(e);
+        alert('Failed to load ticket.');
+        location.href = '/dashboard.html';
+      }
+
+      // set PDF URL even if link is hidden
+      $('#openPdf').href = `/api/tags/${encodeURIComponent(TICKET_ID)}/pdf?download=0`;
+    })();
+  </script>
+</body>
+</html>
