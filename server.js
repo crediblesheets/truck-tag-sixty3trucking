@@ -2,7 +2,7 @@ import fs from 'fs';
 import PDFDocument from 'pdfkit';
 import multer from 'multer';
 const upload = multer({ limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB
-const formPath = path.resolve('public/assets/forms/blank-ticket.jpg');
+
 // add near other consts (after multer/upload, etc.)
 const SIGN_BUCKET = 'ticket-signatures';
 
@@ -11,6 +11,7 @@ const SIGN_BUCKET = 'ticket-signatures';
 import 'dotenv/config';
 import express from 'express';
 import path from 'path';
+const formPath = path.resolve('public/assets/forms/blank-ticket.jpg');
 import cookieParser from 'cookie-parser';
 import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
@@ -1394,8 +1395,16 @@ app.get('*', (_req, res) => {
   res.sendFile(path.resolve('public/index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`🚚 server running at http://localhost:${PORT}`);
-});
+
+
+// Only listen locally; on Vercel the API route will use the exported app.
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚚 server running at http://localhost:${PORT}`);
+  });
+}
+
+// 👇 add this export so Vercel can use your Express app
+export default app;
 
 

@@ -89,7 +89,8 @@
       const r = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken: credential })
+        body: JSON.stringify({ idToken: credential }),
+        
       });
       const d = await r.json();
 
