@@ -105,6 +105,11 @@ const TABLE_X_BY_COL = {
   siteLeave:    COORD.tbl_siteLeave.x,
 };
 
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, env: process.env.NODE_ENV, time: new Date().toISOString() });
+});
+
+
 function drawText(doc, s, xpx, ypx, opts = {}) {
   if (s === undefined || s === null || String(s).trim() === '') return;
   doc.text(String(s), X(xpx), Y(ypx), { lineBreak: false, ...opts });
