@@ -1,5 +1,4 @@
 // server.js — Email/Password auth + your existing APIs
-
 import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
@@ -10,10 +9,8 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import PDFDocument from 'pdfkit';
 import multer from 'multer';
-
 import {
-  sb,
-  // meta + lists
+  sb, // meta + lists
   getActiveDriverNames,
   getTrailerTypes,
   // admin tickets
@@ -55,7 +52,6 @@ const COORD = {
   dateMonth: { x: 509, y: 895 },
   dateDay: { x: 1068, y: 878 },
   dateYear: { x: 1483, y: 878 },
-
   truckNo: { x: 1144, y: 1039 },
   trailerType: { x: 3981, y: 1132 },
   subHauler: { x: 1220, y: 1403 },
@@ -68,7 +64,6 @@ const COORD = {
   jobNo: { x: 3448, y: 1733 },
   destination: { x: 3414, y: 1903 },
   city: { x: 3371, y: 2055 },
-
   // table col centers (row 1)
   tbl_scaleTagNo: { x: 1102, y: 2504 },
   tbl_yardOrWeight: { x: 2017, y: 2513 },
@@ -77,24 +72,17 @@ const COORD = {
   tbl_timeLeave: { x: 3812, y: 2513 },
   tbl_siteArrival: { x: 4134, y: 2513 },
   tbl_siteLeave: { x: 4506, y: 2504 },
-
   truckStart: { x: 704, y: 4663 },
   bridgefare: { x: 3863, y: 4663 },
-
   signedOutLoadedYes: { x: 2220, y: 4824 },
   signedOutLoadedNo: { x: 2203, y: 4833 },
-
   howManyTonsLoads: { x: 3625, y: 4833 },
-
   startTime: { x: 1127, y: 5028 },
   downtimeLunch: { x: 2262, y: 5028 },
   notes_mid: { x: 3236, y: 5045 },
-
   signOutTime: { x: 2059, y: 5222 },
-
   driverName: { x: 1441, y: 5485 },
   receivedBy: { x: 3956, y: 5485 },
-
   notes_big: { x: 831, y: 5866 },
 };
 
@@ -117,6 +105,7 @@ function drawText(doc, s, xpx, ypx, opts = {}) {
   if (s === undefined || s === null || String(s).trim() === '') return;
   doc.text(String(s), X(xpx), Y(ypx), { lineBreak: false, ...opts });
 }
+
 function toMDY(value) {
   if (!value) return { m: '', d: '', y: '' };
   const d = new Date(value);
@@ -127,12 +116,14 @@ function toMDY(value) {
     y: String(d.getFullYear()).slice(-2),
   };
 }
+
 function hhmm(s) {
   if (!s) return '';
   const m = String(s).match(/^(\d{1,2}):(\d{2})/);
   if (m) return `${m[1].padStart(2, '0')}:${m[2]}`;
   return String(s);
 }
+
 async function sbDataToBuffer(data) {
   if (!data) return null;
   if (Buffer.isBuffer(data)) return data;
@@ -156,7 +147,10 @@ async function sbDataToBuffer(data) {
 const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
-app.use(cors({ origin: false }));
+app.use(cors({ 
+  origin: process.env.FRONTEND_URL || false,
+  credentials: true 
+}));
 app.use(express.static(path.resolve('public')));
 
 // health
@@ -166,9 +160,11 @@ app.get('/api/health', (_req, res) => {
 
 // ---------- auth/session helpers ----------
 const ltrim = (v) => String(v ?? '').trim().toLowerCase();
+
 function signSession(payload) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '2h' });
 }
+
 function verifySession(req, res, next) {
   const tok = req.cookies['t'];
   if (!tok) return res.status(401).json({ ok: false, message: 'No session' });
@@ -179,6 +175,7 @@ function verifySession(req, res, next) {
     return res.status(401).json({ ok: false, message: 'Invalid session' });
   }
 }
+
 async function ensureActiveUser(req, res, next) {
   try {
     const email = String(req.user?.email || '').toLowerCase();
@@ -191,6 +188,7 @@ async function ensureActiveUser(req, res, next) {
       .maybeSingle();
 
     if (error) throw error;
+
     if (!u || !u.active) {
       return res.status(403).json({ ok: false, message: 'Email not authorized or inactive.' });
     }
@@ -203,10 +201,22 @@ async function ensureActiveUser(req, res, next) {
     return res.status(500).json({ ok: false, message: 'User check failed.' });
   }
 }
+
 function requireAdmin(req, res, next) {
   const role = String(req.user?.role || '').toLowerCase();
   if (role === 'admin') return next();
   return res.status(403).json({ ok: false, message: 'Admins only.' });
+}
+
+function validatePassword(pw) {
+  // At least 8 chars, at least one letter and one number
+  if (typeof pw !== 'string' || pw.length < 8) {
+    return 'Password must be at least 8 characters.';
+  }
+  if (!/[A-Za-z]/.test(pw) || !/\d/.test(pw)) {
+    return 'Use letters and at least one number.';
+  }
+  return null;
 }
 
 // Email + password login
@@ -227,12 +237,14 @@ app.post('/api/auth/login', async (req, res) => {
       .maybeSingle();
 
     if (error) throw error;
+
     if (!u || !u.active) {
       return res.status(403).json({ ok: false, message: 'Email not authorized or inactive.' });
     }
 
     // If no password on record and the user submitted an empty password → prompt to set one
     const hasPw = !!(u.password_hash && String(u.password_hash).trim());
+
     if (!hasPw && pw.length === 0) {
       return res
         .status(409)
@@ -266,17 +278,6 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-function validatePassword(pw) {
-  // At least 8 chars, at least one letter and one number
-  if (typeof pw !== 'string' || pw.length < 8) {
-    return 'Password must be at least 8 characters.';
-  }
-  if (!/[A-Za-z]/.test(pw) || !/\d/.test(pw)) {
-    return 'Use letters and at least one number.';
-  }
-  return null;
-}
-
 // First-time password setup (only allowed when account has no password yet)
 app.post('/api/auth/set-password', async (req, res) => {
   try {
@@ -284,6 +285,7 @@ app.post('/api/auth/set-password', async (req, res) => {
     const newPw = String(req.body?.newPassword || '');
 
     if (!em) return res.status(400).json({ ok: false, message: 'Email is required.' });
+
     const v = validatePassword(newPw);
     if (v) return res.status(400).json({ ok: false, message: v });
 
@@ -294,6 +296,7 @@ app.post('/api/auth/set-password', async (req, res) => {
       .maybeSingle();
 
     if (error) throw error;
+
     if (!u || !u.active) {
       return res.status(403).json({ ok: false, message: 'Email not authorized or inactive.' });
     }
@@ -304,11 +307,11 @@ app.post('/api/auth/set-password', async (req, res) => {
     }
 
     const hash = await bcrypt.hash(newPw, 10);
-
     const { error: updErr } = await sb
       .from('users')
       .update({ password_hash: hash, updated_at: new Date().toISOString() })
       .eq('email', em);
+
     if (updErr) throw updErr;
 
     // Log them in right away
@@ -329,8 +332,6 @@ app.post('/api/auth/set-password', async (req, res) => {
   }
 });
 
-
-
 app.post('/api/auth/logout', (req, res) => {
   try {
     res.clearCookie('t', { path: '/' });
@@ -349,6 +350,7 @@ app.get('/api/me', verifySession, ensureActiveUser, async (req, res) => {
       .from('driver_tags')
       .select('ticket_no, email, status, updated_at')
       .eq('status', 'Pending');
+
     if (e1) throw e1;
 
     if (!tags?.length) {
@@ -356,22 +358,23 @@ app.get('/api/me', verifySession, ensureActiveUser, async (req, res) => {
     }
 
     const ticketNos = tags.map((t) => t.ticket_no);
-
     const { data: at, error: e2 } = await sb
       .from('admin_tickets')
       .select('ticket_no, driver_name')
       .in('ticket_no', ticketNos);
+
     if (e2) throw e2;
 
     const byTicket = new Map(at.map((r) => [r.ticket_no, r.driver_name || '']));
-
     const names = Array.from(new Set(at.map((r) => r.driver_name).filter(Boolean)));
+
     let byDriverEmail = new Map();
     if (names.length) {
       const { data: us, error: e3 } = await sb
         .from('users')
         .select('full_name, email')
         .in('full_name', names);
+
       if (e3) throw e3;
       byDriverEmail = new Map(us.map((u) => [u.full_name, String(u.email || '').toLowerCase()]));
     }
@@ -411,6 +414,7 @@ app.get('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, res
       .maybeSingle();
 
     if (error) throw error;
+
     if (!data) {
       return res.status(404).json({ ok: false, message: 'Driver tag not found' });
     }
@@ -454,6 +458,7 @@ app.post(
         contentType: req.file.mimetype || 'application/octet-stream',
         upsert: true,
       });
+
       if (upErr) throw upErr;
 
       const { error: dbErr } = await sb
@@ -465,6 +470,7 @@ app.post(
           updated_at: new Date().toISOString(),
         })
         .eq('ticket_no', ticketNo);
+
       if (dbErr) throw dbErr;
 
       return res.json({ ok: true, key });
@@ -485,9 +491,11 @@ app.post(
     try {
       const ticketNo = String(req.params.id);
       const who = String(req.params.who || '').toLowerCase(); // 'driver' | 'received'
+
       if (!['driver', 'received'].includes(who)) {
         return res.status(400).json({ ok: false, message: 'Invalid signature type' });
       }
+
       if (!req.file) return res.status(400).json({ ok: false, message: 'No file uploaded' });
 
       const key = `tickets/${ticketNo}/sig-${who}-${Date.now()}.png`;
@@ -496,22 +504,22 @@ app.post(
         contentType: 'image/png',
         upsert: true,
       });
+
       if (upErr) throw upErr;
 
-      const patch =
-        who === 'driver'
-          ? {
-              signature_driver_key: key,
-              signature_driver_mime: 'image/png',
-              signature_driver_size: req.file.size || null,
-              updated_at: new Date().toISOString(),
-            }
-          : {
-              signature_received_key: key,
-              signature_received_mime: 'image/png',
-              signature_received_size: req.file.size || null,
-              updated_at: new Date().toISOString(),
-            };
+      const patch = who === 'driver'
+        ? {
+            signature_driver_key: key,
+            signature_driver_mime: 'image/png',
+            signature_driver_size: req.file.size || null,
+            updated_at: new Date().toISOString(),
+          }
+        : {
+            signature_received_key: key,
+            signature_received_mime: 'image/png',
+            signature_received_size: req.file.size || null,
+            updated_at: new Date().toISOString(),
+          };
 
       const { error: dbErr } = await sb.from('driver_tags').update(patch).eq('ticket_no', ticketNo);
       if (dbErr) throw dbErr;
@@ -528,14 +536,14 @@ app.post(
 app.get('/api/tags/:id/proof-url', verifySession, ensureActiveUser, async (req, res) => {
   try {
     const ticketNo = String(req.params.id);
-    const wantDownload =
-      req.query.download === '1' || req.query.download === 'true' || req.query.download === 'yes';
+    const wantDownload = req.query.download === '1' || req.query.download === 'true' || req.query.download === 'yes';
 
     const { data, error } = await sb
       .from('driver_tags')
       .select('proof_key')
       .eq('ticket_no', ticketNo)
       .maybeSingle();
+
     if (error) throw error;
 
     const key = data?.proof_key || null;
@@ -546,6 +554,7 @@ app.get('/api/tags/:id/proof-url', verifySession, ensureActiveUser, async (req, 
     const { data: sign, error: sErr } = await sb.storage
       .from('ticket-proofs')
       .createSignedUrl(key, 60 * 60 * 24 * 7, wantDownload ? { download: filename } : undefined);
+
     if (sErr) throw sErr;
 
     return res.json({ ok: true, url: sign.signedUrl });
@@ -564,6 +573,7 @@ app.get(
     try {
       const ticketNo = String(req.params.id);
       const who = String(req.params.who || '').toLowerCase();
+
       if (!['driver', 'received'].includes(who)) {
         return res.status(400).json({ ok: false, message: 'Invalid signature type' });
       }
@@ -573,18 +583,19 @@ app.get(
         .select('signature_driver_key, signature_received_key')
         .eq('ticket_no', ticketNo)
         .maybeSingle();
+
       if (error) throw error;
 
       const key = who === 'driver' ? data?.signature_driver_key : data?.signature_received_key;
       if (!key) return res.json({ ok: true, url: null });
 
       const filename = key.split('/').pop() || `ticket-${ticketNo}-sig-${who}.png`;
-      const wantDownload =
-        req.query.download === '1' || req.query.download === 'true' || req.query.download === 'yes';
+      const wantDownload = req.query.download === '1' || req.query.download === 'true' || req.query.download === 'yes';
 
       const { data: sign, error: sErr } = await sb.storage
         .from(SIGN_BUCKET)
         .createSignedUrl(key, 60 * 60 * 24 * 7, wantDownload ? { download: filename } : undefined);
+
       if (sErr) throw sErr;
 
       return res.json({ ok: true, url: sign.signedUrl });
@@ -599,11 +610,13 @@ app.get(
 app.get('/api/tags/:id/scale-items', verifySession, ensureActiveUser, async (req, res) => {
   try {
     const ticketNo = String(req.params.id);
+
     const { data, error } = await sb
       .from('scale_tags')
       .select('id, ticket_no, scale_tag_no, yard_or_weight, material, yard_arrival, yard_leave, site_arrival, site_leave')
       .eq('ticket_no', ticketNo)
       .order('id', { ascending: true });
+
     if (error) throw error;
 
     const items = (data || []).map((r) => ({
@@ -640,6 +653,7 @@ app.post('/api/tags/:id/scale-items', verifySession, ensureActiveUser, async (re
         !it.siteArrival ||
         !it.siteLeave
     );
+
     if (bad) {
       return res.status(400).json({ ok: false, message: 'All scale tag fields are required.' });
     }
@@ -680,6 +694,7 @@ app.post('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, re
       .select('ticket_no')
       .eq('ticket_no', ticketNo)
       .maybeSingle();
+
     if (e0) throw e0;
     if (!stub) return res.status(404).json({ ok: false, message: 'Ticket not found for this driver' });
 
@@ -725,10 +740,12 @@ app.post('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, re
 app.get('/api/admin/users', verifySession, ensureActiveUser, requireAdmin, async (req, res) => {
   try {
     const q = String(req.query.q || '').trim().toLowerCase();
+
     const { data, error } = await sb
       .from('users')
       .select('email, full_name, role, active')
       .order('full_name', { ascending: true });
+
     if (error) throw error;
 
     const rows = (data || []).filter((r) => {
@@ -749,17 +766,21 @@ app.post('/api/admin/users', verifySession, ensureActiveUser, requireAdmin, asyn
     const { email, fullName, role, active } = req.body || {};
     const em = String(email || '').toLowerCase().trim();
     const rn = ltrim(role);
+
     if (!em || !rn || !['admin', 'driver'].includes(rn)) {
       return res.status(400).json({ ok: false, message: 'email and role (admin|driver) are required.' });
     }
+
     const row = {
       email: em,
       full_name: fullName || em,
       role: rn,
       active: Boolean(active),
     };
+
     const { error } = await sb.from('users').upsert(row, { onConflict: 'email' });
     if (error) throw error;
+
     res.json({ ok: true });
   } catch (e) {
     console.error('POST /api/admin/users', e);
@@ -775,12 +796,16 @@ app.put('/api/admin/users/:email', verifySession, ensureActiveUser, requireAdmin
       role: req.body?.role ? ltrim(req.body.role) : undefined,
       active: typeof req.body?.active === 'boolean' ? req.body.active : undefined,
     };
+
     Object.keys(patch).forEach((k) => patch[k] === undefined && delete patch[k]);
+
     if (!Object.keys(patch).length) {
       return res.status(400).json({ ok: false, message: 'No fields to update.' });
     }
+
     const { error } = await sb.from('users').update(patch).eq('email', email);
     if (error) throw error;
+
     res.json({ ok: true });
   } catch (e) {
     console.error('PUT /api/admin/users/:email', e);
@@ -792,9 +817,12 @@ app.delete('/api/admin/users', verifySession, ensureActiveUser, requireAdmin, as
   try {
     const emails = Array.isArray(req.body?.emails) ? req.body.emails : [];
     const list = emails.map((e) => String(e || '').toLowerCase()).filter(Boolean);
+
     if (!list.length) return res.status(400).json({ ok: false, message: 'No emails provided.' });
+
     const { error } = await sb.from('users').delete().in('email', list);
     if (error) throw error;
+
     res.json({ ok: true, deleted: list.length });
   } catch (e) {
     console.error('DELETE /api/admin/users', e);
@@ -809,15 +837,18 @@ app.get('/api/admin/tags', verifySession, ensureActiveUser, requireAdmin, async 
       .from('driver_tags')
       .select('ticket_no, email, status, updated_at')
       .order('updated_at', { ascending: false });
+
     if (error) throw error;
 
     const tickets = (rows || []).map((r) => r.ticket_no);
     let names = new Map();
+
     if (tickets.length) {
       const { data: at, error: e2 } = await sb
         .from('admin_tickets')
         .select('ticket_no, driver_name')
         .in('ticket_no', tickets);
+
       if (e2) throw e2;
       names = new Map(at.map((x) => [x.ticket_no, x.driver_name || '']));
     }
@@ -851,9 +882,11 @@ app.get('/api/admin/meta', verifySession, ensureActiveUser, requireAdmin, async 
 app.post('/api/admin/tickets', verifySession, ensureActiveUser, requireAdmin, async (req, res) => {
   try {
     const p = req.body || {};
+
     if (!p.ticketNo || !p.driverName || !p.date) {
       return res.status(400).json({ ok: false, message: 'date, ticketNo and driverName are required.' });
     }
+
     const result = await upsertAdminTicket(p);
     return res.json({ ok: true, ...result });
   } catch (e) {
@@ -866,7 +899,9 @@ app.get('/api/admin/tickets/:id', verifySession, ensureActiveUser, requireAdmin,
   try {
     const id = String(req.params.id || '').trim();
     const t = await getAdminTicketByTicketNo(id);
+
     if (!t) return res.status(404).json({ ok: false, message: 'Not found' });
+
     return res.json({
       ok: true,
       ticket: {
@@ -898,6 +933,7 @@ app.put('/api/admin/tickets/:id', verifySession, ensureActiveUser, requireAdmin,
   try {
     const ticketNo = String(req.params.id || '').trim();
     const b = req.body || {};
+
     const patch = {
       date: b.date ?? undefined,
       driver_name: b.driverName ?? undefined,
@@ -915,6 +951,7 @@ app.put('/api/admin/tickets/:id', verifySession, ensureActiveUser, requireAdmin,
       destination: b.destination ?? undefined,
       city: (b.city ?? b.destCity) ?? undefined,
     };
+
     Object.keys(patch).forEach((k) => patch[k] === undefined && delete patch[k]);
 
     const { data: upd, error: updErr } = await sb
@@ -922,6 +959,7 @@ app.put('/api/admin/tickets/:id', verifySession, ensureActiveUser, requireAdmin,
       .update(patch)
       .eq('ticket_no', ticketNo)
       .select('ticket_no');
+
     if (updErr) throw updErr;
 
     if (!upd || upd.length === 0) {
@@ -959,6 +997,7 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
       let row = [],
         cur = '',
         inQ = false;
+
       for (let i = 0; i < text.length; i++) {
         const c = text[i];
         if (inQ) {
@@ -992,8 +1031,8 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
     }
 
     const rows = parseCSV(csv);
-
     const canon = (s) => String(s || '').toLowerCase().replace(/[^\w#]+/g, '');
+
     const ALIAS = new Map([
       ['date', 'date'],
       ['ticket#', 'ticket'],
@@ -1032,6 +1071,7 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
     let headerRow = -1,
       headerIdx = {};
     const needSome = ['date', 'ticket', 'driver'];
+
     for (let i = 0; i < Math.min(rows.length, 50); i++) {
       const r = rows[i] || [];
       const map = {};
@@ -1045,6 +1085,7 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
         break;
       }
     }
+
     if (headerRow < 0) {
       return res
         .status(400)
@@ -1121,6 +1162,7 @@ app.get('/api/tickets/:id', verifySession, ensureActiveUser, async (req, res) =>
   try {
     const ticketNo = String(req.params.id || '').trim();
     const t = await getAdminTicketByTicketNo(ticketNo);
+
     if (!t) return res.status(404).json({ ok: false, message: 'Not found' });
 
     return res.json({
@@ -1158,23 +1200,19 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     dateMonth: { x: 518, y: 887 },
     dateDay: { x: 1077, y: 887 },
     dateYear: { x: 1491, y: 887 },
-
     truckNo: { x: 924, y: 1039 },
     trailerTypeLeft: { x: 941, y: 1217 },
     trailerTypeRight: { x: 3668, y: 1132 },
-
     subHauler: { x: 933, y: 1403 },
     primeCarrier: { x: 924, y: 1564 },
     shipper: { x: 941, y: 1717 },
     origin: { x: 950, y: 1903 },
     originCity: { x: 933, y: 2064 },
-
     poNo: { x: 3236, y: 1395 },
     jobName: { x: 3253, y: 1556 },
     jobNo: { x: 3244, y: 1725 },
     destination: { x: 3253, y: 1886 },
     city: { x: 3236, y: 2055 },
-
     tbl_scaleTagNo_r1: { x: 831, y: 2504 },
     tbl_yardOrWeight: { x: 1822, y: 2496 },
     tbl_material_guess: { x: 2584, y: 2504 },
@@ -1182,9 +1220,7 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     tbl_timeLeave: { x: 3778, y: 2496 },
     tbl_siteArrival: { x: 4125, y: 2513 },
     tbl_siteLeave: { x: 4506, y: 2496 },
-
     tbl_scaleTagNo_r2: { x: 789, y: 2623 },
-
     bridgefare: { x: 4023, y: 4630 },
     signedOutLoadedYes: { x: 1940, y: 4833 },
     signedOutLoadedNo: { x: 1949, y: 4833 },
@@ -1194,7 +1230,6 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     downtimeLunch: { x: 1940, y: 5036 },
     notes_mid: { x: 2990, y: 5028 },
     signOutTime: { x: 1915, y: 5222 },
-
     driverName: { x: 1009, y: 5485 },
     receivedBy: { x: 3507, y: 5476 },
   };
@@ -1216,41 +1251,49 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     if (!fs.existsSync(formPath)) {
       return res.status(500).json({ ok: false, message: 'Blank form not found' });
     }
+
     const bgBuffer = fs.readFileSync(formPath);
 
-    const [{ data: admin, error: e1 }, { data: driver, error: e2 }, { data: scale, error: e3 }] = await Promise.all([
+    const [
+      { data: admin, error: e1 },
+      { data: driver, error: e2 },
+      { data: scale, error: e3 }
+    ] = await Promise.all([
       sb.from('admin_tickets').select('*').eq('ticket_no', ticketNo).maybeSingle(),
       sb.from('driver_tags').select('*').eq('ticket_no', ticketNo).maybeSingle(),
       sb.from('scale_tags').select('*').eq('ticket_no', ticketNo).order('id', { ascending: true }),
     ]);
+
     if (e1 || e2 || e3) throw (e1 || e2 || e3);
     if (!admin) return res.status(404).json({ ok: false, message: 'Ticket not found' });
 
     const dl = req.query.download === '1' || req.query.download === 'true';
 
     const doc = new PDFDocument({ size: 'LETTER', margin: 0 });
+
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `${dl ? 'attachment' : 'inline'}; filename="ticket-${ticketNo}.pdf"`);
+
     doc.on('error', (err) => {
       console.error('pdfkit error', err);
       try {
         res.end();
       } catch {}
     });
+
     doc.pipe(res);
-
     doc.image(bgBuffer, 0, 0, { width: PDF_W, height: PDF_H });
-
     doc.fontSize(8).fillColor('#000');
 
     const mdy = toMDY(admin.date || admin.Date);
+
     doc.fontSize(10);
     drawText(doc, ticketNo, COORD_PDF.ticketNo.x, COORD_PDF.ticketNo.y);
+
     doc.fontSize(8);
     drawText(doc, mdy.m, COORD_PDF.dateMonth.x, COORD_PDF.dateMonth.y);
     drawText(doc, mdy.d, COORD_PDF.dateDay.x, COORD_PDF.dateDay.y);
     drawText(doc, mdy.y, COORD_PDF.dateYear.x, COORD_PDF.dateYear.y);
-
     drawText(doc, admin.truck_no, COORD_PDF.truckNo.x, COORD_PDF.truckNo.y);
     drawText(doc, admin.trailer_type, COORD_PDF.trailerTypeLeft.x, COORD_PDF.trailerTypeLeft.y);
     drawText(doc, admin.trailer_type, COORD_PDF.trailerTypeRight.x, COORD_PDF.trailerTypeRight.y);
@@ -1259,7 +1302,6 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     drawText(doc, admin.shipper, COORD_PDF.shipper.x, COORD_PDF.shipper.y);
     drawText(doc, admin.origin, COORD_PDF.origin.x, COORD_PDF.origin.y);
     drawText(doc, admin.origin_city, COORD_PDF.originCity.x, COORD_PDF.originCity.y);
-
     drawText(doc, admin.po_no, COORD_PDF.poNo.x, COORD_PDF.poNo.y);
     drawText(doc, admin.job_name, COORD_PDF.jobName.x, COORD_PDF.jobName.y);
     drawText(doc, admin.job_no, COORD_PDF.jobNo.x, COORD_PDF.jobNo.y);
@@ -1293,7 +1335,6 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     drawText(doc, driver?.downtime_lunch, COORD_PDF.downtimeLunch.x, COORD_PDF.downtimeLunch.y);
     drawText(doc, driver?.notes, COORD_PDF.notes_mid.x, COORD_PDF.notes_mid.y);
     drawText(doc, hhmm(driver?.sign_out_time), COORD_PDF.signOutTime.x, COORD_PDF.signOutTime.y);
-
     drawText(doc, admin.driver_name, COORD_PDF.driverName.x, COORD_PDF.driverName.y);
     drawText(doc, driver?.received_by, COORD_PDF.receivedBy.x, COORD_PDF.receivedBy.y);
 
@@ -1303,6 +1344,7 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     async function placeSig(key, name, nameCoordPx) {
       try {
         if (!key) return;
+
         const { data: file, error: sigErr } = await sb.storage.from(SIGN_BUCKET).download(key);
         if (sigErr || !file) return;
 
@@ -1313,7 +1355,6 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
         const nameWidthPt = doc.widthOfString(String(name || ''));
         const nameStartXPt = X(nameCoordPx.x);
         const nameCenterPt = nameStartXPt + nameWidthPt / 2;
-
         const xPt = nameCenterPt - SIG_PT_WIDTH / 2;
         const yPt = Y(nameCoordPx.y) + Y(SIG_Y_OFFSET);
 
@@ -1340,12 +1381,15 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
 app.get('/driver-ticket', verifySession, ensureActiveUser, (_req, res) => {
   res.sendFile(path.resolve('public/driver-ticket.html'));
 });
+
 app.get('/admin', verifySession, ensureActiveUser, requireAdmin, (_req, res) => {
   res.sendFile(path.resolve('public/admin.html'));
 });
+
 app.get('/tag-lists', verifySession, ensureActiveUser, requireAdmin, (_req, res) => {
   res.sendFile(path.resolve('public/tag-lists.html'));
 });
+
 app.get('/admin/users', verifySession, ensureActiveUser, requireAdmin, (_req, res) => {
   res.sendFile(path.resolve('public/admin-users.html'));
 });
@@ -1363,3 +1407,5 @@ if (!process.env.VERCEL) {
 }
 
 export default app;
+
+

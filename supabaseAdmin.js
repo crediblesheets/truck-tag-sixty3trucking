@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 
 const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
+
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env');
 }
@@ -15,13 +16,14 @@ export const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 
 /* ========= Small DB helpers (used by server.js routes) ========= */
 
-/** Drivers dropdown = active users who are NOT admins */
+/* Drivers dropdown = active users who are NOT admins */
 export async function getActiveDriverNames() {
   const { data, error } = await sb
     .from('users')
     .select('full_name, role, active')
     .eq('active', true)
     .neq('role', 'admin');
+
   if (error) throw error;
 
   return (data || [])
@@ -30,37 +32,39 @@ export async function getActiveDriverNames() {
     .sort((a, b) => a.localeCompare(b));
 }
 
-/** Trailer types dropdown */
+/* Trailer types dropdown */
 export async function getTrailerTypes() {
   const { data, error } = await sb
     .from('trailer_types')
     .select('name')
     .order('name', { ascending: true });
+
   if (error) throw error;
 
   return (data || []).map((t) => t.name);
 }
 
-/** Driver stubs table (used for the Admin list view similar to “Driver Tags”) */
+/* Driver stubs table (used for the Admin list view similar to "Driver Tags") */
 export async function listDriverTags() {
   const { data, error } = await sb
     .from('driver_tags')
     .select('ticket_no, email, status, updated_at')
     .order('updated_at', { ascending: false });
+
   if (error) throw error;
 
   // Normalize to the shape your frontend already expects
   return (data || []).map((r) => ({
     id: r.ticket_no,
     ticketNo: r.ticket_no,
-    driverName: '',         // not stored in driver_tags; available in admin_tickets
+    driverName: '', // not stored in driver_tags; available in admin_tickets
     email: r.email || '',
     status: r.status || 'Pending',
     updatedAt: r.updated_at,
   }));
 }
 
-/** Read one admin ticket by Ticket # */
+/* Read one admin ticket by Ticket # */
 export async function getAdminTicketByTicketNo(ticketNo) {
   const t = String(ticketNo || '').trim();
   const { data, error } = await sb
@@ -68,12 +72,14 @@ export async function getAdminTicketByTicketNo(ticketNo) {
     .select('*')
     .eq('ticket_no', t)
     .maybeSingle();
+
   if (error) throw error;
   return data || null;
 }
 
-
-/** Upsert into admin_tickets; also ensure a driver_tags stub exists */
+/**
+ * Upsert into admin_tickets; also ensure a driver_tags stub exists
+ */
 export async function upsertAdminTicket(p) {
   const row = {
     date: p.date || null,
@@ -98,6 +104,7 @@ export async function upsertAdminTicket(p) {
   const { error: upErr } = await sb
     .from('admin_tickets')
     .upsert(row, { onConflict: 'ticket_no' });
+
   if (upErr) throw upErr;
 
   // Ensure driver stub
@@ -106,30 +113,34 @@ export async function upsertAdminTicket(p) {
     .select('ticket_no')
     .eq('ticket_no', row.ticket_no)
     .maybeSingle();
+
   if (selErr) throw selErr;
 
   if (!stub) {
     const { error: insErr } = await sb
       .from('driver_tags')
       .insert({ ticket_no: row.ticket_no, status: 'Pending' });
+
     if (insErr) throw insErr;
     return { added: true, updated: false };
   }
+
   return { added: false, updated: true };
 }
 
-/** Update fields of an existing admin ticket */
+/* Update fields of an existing admin ticket */
 export async function updateAdminTicket(ticketNo, patch = {}) {
   // Never allow changing ticket_no via update filter
   const { error } = await sb
     .from('admin_tickets')
     .update(patch)
     .eq('ticket_no', String(ticketNo));
+
   if (error) throw error;
   return true;
 }
 
-/** Delete admin ticket + any driver stubs */
+/* Delete admin ticket + any driver stubs */
 export async function deleteAdminTicketAndStub(ticketNo) {
   const t = String(ticketNo);
 
@@ -142,7 +153,7 @@ export async function deleteAdminTicketAndStub(ticketNo) {
   return true;
 }
 
-/** Bulk upsert admin tickets (used by CSV import). Returns {added, updated}. */
+/* Bulk upsert admin tickets (used by CSV import). Returns {added, updated}. */
 export async function bulkUpsertAdminTickets(items = []) {
   if (!items.length) return { added: 0, updated: 0 };
 
@@ -170,16 +181,23 @@ export async function bulkUpsertAdminTickets(items = []) {
     .from('admin_tickets')
     .upsert(rows, { onConflict: 'ticket_no' })
     .select('ticket_no'); // returns the affected keys
+
   if (error) throw error;
 
   // Ensure stubs for any new tickets (insert ignore via upsert on conflict)
-  const stubs = rows.map((r) => ({ ticket_no: r.ticket_no, status: 'Pending' }));
+  const stubs = rows.map((r) => ({
+    ticket_no: r.ticket_no,
+    status: 'Pending',
+  }));
+
   const { error: stubErr } = await sb
     .from('driver_tags')
     .upsert(stubs, { onConflict: 'ticket_no', ignoreDuplicates: true });
+
   if (stubErr) throw stubErr;
 
-  // We can’t precisely know added vs updated without a pre-check;
+  // We can't precisely know added vs updated without a pre-check;
   // if you need exact counts, do a select beforehand and compare.
   return { added: undefined, updated: undefined };
 }
+
