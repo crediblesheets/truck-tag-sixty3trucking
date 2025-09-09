@@ -8,17 +8,14 @@
     "dev": "node --watch server.js"
   },
   "dependencies": {
-    "@heroicons/react": "^2.2.0",
-    "@heroicons/vue": "^2.2.0",
-    "@supabase/supabase-js": "^2.56.0",
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.5",
-    "dotenv": "^16.6.1",
-    "express": "^4.19.2",
-    "google-auth-library": "^9.15.1",
-    "googleapis": "^144.0.0",
-    "jsonwebtoken": "^9.0.2",
-    "multer": "^2.0.2",
-    "pdfkit": "^0.17.2"
-  }
+  "@supabase/supabase-js": "^2.56.0",
+  "cookie-parser": "^1.4.7",
+  "cors": "^2.8.5",
+  "dotenv": "^16.6.1",
+  "express": "^4.19.2",
+  "google-auth-library": "^9.15.1",
+  "jsonwebtoken": "^9.0.2",
+  "multer": "1.4.5-lts.1",
+  "pdfkit": "0.15.0"
+}
 }
