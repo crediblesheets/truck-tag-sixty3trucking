@@ -1,4 +1,5 @@
-// server.js — Email/Password auth + your existing APIs
+// server.js — Email/Password auth + your existing APIs (CORS + cookie fixes)
+
 import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
@@ -9,8 +10,10 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import PDFDocument from 'pdfkit';
 import multer from 'multer';
+
 import {
-  sb, // meta + lists
+  sb,
+  // meta + lists
   getActiveDriverNames,
   getTrailerTypes,
   // admin tickets
@@ -29,6 +32,8 @@ const {
   PORT = 8080,
   JWT_SECRET,
   NODE_ENV = 'development',
+  FRONTEND_ORIGIN = '',   // e.g. http://localhost:5173 or https://yourapp.vercel.app
+  COOKIE_DOMAIN = '',     // optional: .yourdomain.com (omit in dev)
 } = process.env;
 
 if (!JWT_SECRET) {
@@ -36,121 +41,56 @@ if (!JWT_SECRET) {
   process.exit(1);
 }
 
-// ---------- PDF helpers ----------
-const IMG_W = 5100;
-const IMG_H = 6600;
-const PDF_W = 612;
-const PDF_H = 792;
-const sx = PDF_W / IMG_W;
-const sy = PDF_H / IMG_H;
-const X = (px) => px * sx;
-const Y = (px) => px * sy;
-
-// (legacy measured coordinates used elsewhere if needed)
-const COORD = {
-  ticketNo: { x: 4007, y: 810 },
-  dateMonth: { x: 509, y: 895 },
-  dateDay: { x: 1068, y: 878 },
-  dateYear: { x: 1483, y: 878 },
-  truckNo: { x: 1144, y: 1039 },
-  trailerType: { x: 3981, y: 1132 },
-  subHauler: { x: 1220, y: 1403 },
-  primeCarrier: { x: 1305, y: 1564 },
-  shipper: { x: 1204, y: 1733 },
-  origin: { x: 1170, y: 1886 },
-  originCity: { x: 1187, y: 2055 },
-  poNo: { x: 3465, y: 1395 },
-  jobName: { x: 3558, y: 1556 },
-  jobNo: { x: 3448, y: 1733 },
-  destination: { x: 3414, y: 1903 },
-  city: { x: 3371, y: 2055 },
-  // table col centers (row 1)
-  tbl_scaleTagNo: { x: 1102, y: 2504 },
-  tbl_yardOrWeight: { x: 2017, y: 2513 },
-  tbl_material: { x: 2813, y: 2513 },
-  tbl_timeArrival: { x: 3431, y: 2496 },
-  tbl_timeLeave: { x: 3812, y: 2513 },
-  tbl_siteArrival: { x: 4134, y: 2513 },
-  tbl_siteLeave: { x: 4506, y: 2504 },
-  truckStart: { x: 704, y: 4663 },
-  bridgefare: { x: 3863, y: 4663 },
-  signedOutLoadedYes: { x: 2220, y: 4824 },
-  signedOutLoadedNo: { x: 2203, y: 4833 },
-  howManyTonsLoads: { x: 3625, y: 4833 },
-  startTime: { x: 1127, y: 5028 },
-  downtimeLunch: { x: 2262, y: 5028 },
-  notes_mid: { x: 3236, y: 5045 },
-  signOutTime: { x: 2059, y: 5222 },
-  driverName: { x: 1441, y: 5485 },
-  receivedBy: { x: 3956, y: 5485 },
-  notes_big: { x: 831, y: 5866 },
-};
-
-// table layout (in source px)
-const TABLE_FIRST_ROW_Y = 2504;
-const TABLE_ROW_PX = 160;
-const TABLE_MAX_ROWS = 11;
-const TABLE_COLS = ['scaleTagNo', 'yardOrWeight', 'material', 'yardArrival', 'yardLeave', 'siteArrival', 'siteLeave'];
-const TABLE_X_BY_COL = {
-  scaleTagNo: COORD.tbl_scaleTagNo.x,
-  yardOrWeight: COORD.tbl_yardOrWeight.x,
-  material: COORD.tbl_material.x,
-  yardArrival: COORD.tbl_timeArrival.x,
-  yardLeave: COORD.tbl_timeLeave.x,
-  siteArrival: COORD.tbl_siteArrival.x,
-  siteLeave: COORD.tbl_siteLeave.x,
-};
-
-function drawText(doc, s, xpx, ypx, opts = {}) {
-  if (s === undefined || s === null || String(s).trim() === '') return;
-  doc.text(String(s), X(xpx), Y(ypx), { lineBreak: false, ...opts });
+// ---------- cookie + CORS helpers ----------
+function isCrossSiteRequest(origin) {
+  if (!origin) return false; // same-origin or direct (no Origin header)
+  try {
+    // In dev, our API origin is localhost:PORT. Adjust if you serve API elsewhere.
+    const api = new URL(`http://localhost:${PORT}`);
+    const req = new URL(origin);
+    return api.host !== req.host; // different host => cross-site
+  } catch {
+    return true;
+  }
 }
 
-function toMDY(value) {
-  if (!value) return { m: '', d: '', y: '' };
-  const d = new Date(value);
-  if (isNaN(d)) return { m: '', d: '', y: '' };
-  return {
-    m: String(d.getMonth() + 1).padStart(2, '0'),
-    d: String(d.getDate()).padStart(2, '0'),
-    y: String(d.getFullYear()).slice(-2),
+function cookieOpts(origin) {
+  const crossSite = isCrossSiteRequest(origin) || !!FRONTEND_ORIGIN;
+  const sameSite = crossSite ? 'none' : 'lax';
+  const secure = crossSite ? true : NODE_ENV === 'production';
+  const base = {
+    httpOnly: true,
+    sameSite,
+    secure,
+    path: '/',
   };
-}
-
-function hhmm(s) {
-  if (!s) return '';
-  const m = String(s).match(/^(\d{1,2}):(\d{2})/);
-  if (m) return `${m[1].padStart(2, '0')}:${m[2]}`;
-  return String(s);
-}
-
-async function sbDataToBuffer(data) {
-  if (!data) return null;
-  if (Buffer.isBuffer(data)) return data;
-  if (data instanceof Uint8Array) return Buffer.from(data);
-  if (data instanceof ArrayBuffer) return Buffer.from(data);
-  if (typeof data.arrayBuffer === 'function') {
-    const ab = await data.arrayBuffer();
-    return Buffer.from(ab);
-  }
-  if (typeof data.pipe === 'function' || data[Symbol.asyncIterator]) {
-    const chunks = [];
-    for await (const chunk of data) {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-    }
-    return Buffer.concat(chunks);
-  }
-  return null;
+  if (COOKIE_DOMAIN) base.domain = COOKIE_DOMAIN;
+  return base;
 }
 
 // ---------- app ----------
 const app = express();
+
+// CORS — allow your frontend(s) + credentials for cookies
+const allowlist = new Set(
+  [FRONTEND_ORIGIN].filter(Boolean).concat([
+    'http://localhost:5173',
+    'http://127.0.0.1:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+  ])
+);
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || allowlist.has(origin)) return cb(null, true);
+    return cb(new Error(`CORS blocked: ${origin}`));
+  },
+  credentials: true, // send/receive cookies
+}));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
-app.use(cors({ 
-  origin: process.env.FRONTEND_URL || false,
-  credentials: true 
-}));
 app.use(express.static(path.resolve('public')));
 
 // health
@@ -165,21 +105,26 @@ function signSession(payload) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '2h' });
 }
 
+// Accept cookie `t` OR Authorization: Bearer <token>
 function verifySession(req, res, next) {
-  const tok = req.cookies['t'];
-  if (!tok) return res.status(401).json({ ok: false, message: 'No session' });
+  const cookieTok = req.cookies?.t;
+  const header = String(req.headers.authorization || '');
+  const headerTok = header.startsWith('Bearer ') ? header.slice(7) : null;
+  const tok = cookieTok || headerTok;
+
+  if (!tok) return res.status(401).json({ ok: false, code: 'NO_SESSION', message: 'No session' });
   try {
     req.user = jwt.verify(tok, JWT_SECRET);
     next();
   } catch {
-    return res.status(401).json({ ok: false, message: 'Invalid session' });
+    return res.status(401).json({ ok: false, code: 'INVALID_SESSION', message: 'Invalid session' });
   }
 }
 
 async function ensureActiveUser(req, res, next) {
   try {
     const email = String(req.user?.email || '').toLowerCase();
-    if (!email) return res.status(401).json({ ok: false, message: 'No session email' });
+    if (!email) return res.status(401).json({ ok: false, code: 'NO_SESSION_EMAIL', message: 'No session email' });
 
     const { data: u, error } = await sb
       .from('users')
@@ -188,9 +133,8 @@ async function ensureActiveUser(req, res, next) {
       .maybeSingle();
 
     if (error) throw error;
-
     if (!u || !u.active) {
-      return res.status(403).json({ ok: false, message: 'Email not authorized or inactive.' });
+      return res.status(403).json({ ok: false, code: 'INACTIVE_OR_UNKNOWN', message: 'Email not authorized or inactive.' });
     }
 
     req.user.role = ltrim(u.role) === 'admin' ? 'admin' : 'driver';
@@ -198,15 +142,64 @@ async function ensureActiveUser(req, res, next) {
     next();
   } catch (e) {
     console.error('ensureActiveUser', e);
-    return res.status(500).json({ ok: false, message: 'User check failed.' });
+    return res.status(500).json({ ok: false, code: 'USER_CHECK_FAILED', message: 'User check failed.' });
   }
 }
 
 function requireAdmin(req, res, next) {
   const role = String(req.user?.role || '').toLowerCase();
   if (role === 'admin') return next();
-  return res.status(403).json({ ok: false, message: 'Admins only.' });
+  return res.status(403).json({ ok: false, code: 'ADMINS_ONLY', message: 'Admins only.' });
 }
+
+// Email + password login
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const em = String(req.body?.email || '').toLowerCase().trim();
+    const pw = String(req.body?.password || '');
+
+    if (!em) {
+      return res.status(400).json({ ok: false, code: 'EMAIL_REQUIRED', message: 'Email is required.' });
+    }
+
+    // Pull password_hash too
+    const { data: u, error } = await sb
+      .from('users')
+      .select('full_name, email, role, active, password_hash')
+      .eq('email', em)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!u || !u.active) {
+      return res.status(403).json({ ok: false, code: 'INACTIVE_OR_UNKNOWN', message: 'Email not authorized or inactive.' });
+    }
+
+    // If no password on record and the user submitted an empty password → prompt to set one
+    const hasPw = !!(u.password_hash && String(u.password_hash).trim());
+    if (!hasPw && pw.length === 0) {
+      return res.status(409).json({ ok: false, code: 'PASSWORD_NOT_SET', message: 'No password set. Create one now.' });
+    }
+
+    if (!hasPw) {
+      // They tried some non-empty password, but account has no password yet
+      return res.status(400).json({ ok: false, code: 'ACCOUNT_NEEDS_PASSWORD', message: 'No password set. Leave password empty to create one.' });
+    }
+
+    const ok = await bcrypt.compare(pw, u.password_hash);
+    if (!ok) {
+      return res.status(401).json({ ok: false, code: 'BAD_CREDENTIALS', message: 'Invalid email or password.' });
+    }
+
+    const role = (u.role || '').toLowerCase() === 'admin' ? 'admin' : 'driver';
+    const token = signSession({ email: em, fullName: u.full_name || em, role });
+
+    res.cookie('t', token, cookieOpts(req.headers.origin));
+    return res.json({ ok: true, role });
+  } catch (e) {
+    console.error('POST /api/auth/login', e);
+    return res.status(500).json({ ok: false, code: 'LOGIN_FAILED', message: 'Login failed.' });
+  }
+});
 
 function validatePassword(pw) {
   // At least 8 chars, at least one letter and one number
@@ -219,75 +212,15 @@ function validatePassword(pw) {
   return null;
 }
 
-// Email + password login
-app.post('/api/auth/login', async (req, res) => {
-  try {
-    const em = String(req.body?.email || '').toLowerCase().trim();
-    const pw = String(req.body?.password || '');
-
-    if (!em) {
-      return res.status(400).json({ ok: false, message: 'Email is required.' });
-    }
-
-    // Pull password_hash too
-    const { data: u, error } = await sb
-      .from('users')
-      .select('full_name, email, role, active, password_hash')
-      .eq('email', em)
-      .maybeSingle();
-
-    if (error) throw error;
-
-    if (!u || !u.active) {
-      return res.status(403).json({ ok: false, message: 'Email not authorized or inactive.' });
-    }
-
-    // If no password on record and the user submitted an empty password → prompt to set one
-    const hasPw = !!(u.password_hash && String(u.password_hash).trim());
-
-    if (!hasPw && pw.length === 0) {
-      return res
-        .status(409)
-        .json({ ok: false, code: 'PASSWORD_NOT_SET', message: 'No password set. Create one now.' });
-    }
-
-    if (!hasPw) {
-      // They tried some non-empty password, but account has no password yet
-      return res.status(400).json({ ok: false, message: 'No password set. Leave password empty to create one.' });
-    }
-
-    const ok = await bcrypt.compare(pw, u.password_hash);
-    if (!ok) {
-      return res.status(401).json({ ok: false, message: 'Invalid email or password.' });
-    }
-
-    const role = (u.role || '').toLowerCase() === 'admin' ? 'admin' : 'driver';
-    const token = signSession({ email: em, fullName: u.full_name || em, role });
-
-    res.cookie('t', token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: NODE_ENV === 'production',
-      path: '/',
-    });
-
-    return res.json({ ok: true, role });
-  } catch (e) {
-    console.error('POST /api/auth/login', e);
-    return res.status(500).json({ ok: false, message: 'Login failed.' });
-  }
-});
-
 // First-time password setup (only allowed when account has no password yet)
 app.post('/api/auth/set-password', async (req, res) => {
   try {
     const em = String(req.body?.email || '').toLowerCase().trim();
     const newPw = String(req.body?.newPassword || '');
 
-    if (!em) return res.status(400).json({ ok: false, message: 'Email is required.' });
-
+    if (!em) return res.status(400).json({ ok: false, code: 'EMAIL_REQUIRED', message: 'Email is required.' });
     const v = validatePassword(newPw);
-    if (v) return res.status(400).json({ ok: false, message: v });
+    if (v) return res.status(400).json({ ok: false, code: 'WEAK_PASSWORD', message: v });
 
     const { data: u, error } = await sb
       .from('users')
@@ -296,39 +229,32 @@ app.post('/api/auth/set-password', async (req, res) => {
       .maybeSingle();
 
     if (error) throw error;
-
     if (!u || !u.active) {
-      return res.status(403).json({ ok: false, message: 'Email not authorized or inactive.' });
+      return res.status(403).json({ ok: false, code: 'INACTIVE_OR_UNKNOWN', message: 'Email not authorized or inactive.' });
     }
 
     // Only allow if there is no password yet
     if (u.password_hash && String(u.password_hash).trim()) {
-      return res.status(409).json({ ok: false, message: 'Password already set for this account.' });
+      return res.status(409).json({ ok: false, code: 'ALREADY_HAS_PASSWORD', message: 'Password already set for this account.' });
     }
 
     const hash = await bcrypt.hash(newPw, 10);
+
     const { error: updErr } = await sb
       .from('users')
       .update({ password_hash: hash, updated_at: new Date().toISOString() })
       .eq('email', em);
-
     if (updErr) throw updErr;
 
     // Log them in right away
     const role = (u.role || '').toLowerCase() === 'admin' ? 'admin' : 'driver';
     const token = signSession({ email: em, fullName: u.full_name || em, role });
 
-    res.cookie('t', token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: NODE_ENV === 'production',
-      path: '/',
-    });
-
+    res.cookie('t', token, cookieOpts(req.headers.origin));
     return res.json({ ok: true, role });
   } catch (e) {
     console.error('POST /api/auth/set-password', e);
-    return res.status(500).json({ ok: false, message: 'Could not set password.' });
+    return res.status(500).json({ ok: false, code: 'SET_PASSWORD_FAILED', message: 'Could not set password.' });
   }
 });
 
@@ -350,7 +276,6 @@ app.get('/api/me', verifySession, ensureActiveUser, async (req, res) => {
       .from('driver_tags')
       .select('ticket_no, email, status, updated_at')
       .eq('status', 'Pending');
-
     if (e1) throw e1;
 
     if (!tags?.length) {
@@ -358,23 +283,22 @@ app.get('/api/me', verifySession, ensureActiveUser, async (req, res) => {
     }
 
     const ticketNos = tags.map((t) => t.ticket_no);
+
     const { data: at, error: e2 } = await sb
       .from('admin_tickets')
       .select('ticket_no, driver_name')
       .in('ticket_no', ticketNos);
-
     if (e2) throw e2;
 
     const byTicket = new Map(at.map((r) => [r.ticket_no, r.driver_name || '']));
-    const names = Array.from(new Set(at.map((r) => r.driver_name).filter(Boolean)));
 
+    const names = Array.from(new Set(at.map((r) => r.driver_name).filter(Boolean)));
     let byDriverEmail = new Map();
     if (names.length) {
       const { data: us, error: e3 } = await sb
         .from('users')
         .select('full_name, email')
         .in('full_name', names);
-
       if (e3) throw e3;
       byDriverEmail = new Map(us.map((u) => [u.full_name, String(u.email || '').toLowerCase()]));
     }
@@ -396,7 +320,7 @@ app.get('/api/me', verifySession, ensureActiveUser, async (req, res) => {
     return res.json({ ok: true, profile: req.user, tags: out });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ ok: false, message: 'Failed to load data.' });
+    return res.status(500).json({ ok: false, code: 'ME_FAILED', message: 'Failed to load data.' });
   }
 });
 
@@ -414,9 +338,8 @@ app.get('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, res
       .maybeSingle();
 
     if (error) throw error;
-
     if (!data) {
-      return res.status(404).json({ ok: false, message: 'Driver tag not found' });
+      return res.status(404).json({ ok: false, code: 'DRIVER_TAG_NOT_FOUND', message: 'Driver tag not found' });
     }
 
     const driver = {
@@ -436,7 +359,7 @@ app.get('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, res
     return res.json({ ok: true, driver });
   } catch (e) {
     console.error('GET /api/tags/:id/driver', e);
-    return res.status(500).json({ ok: false, message: 'Failed to load driver tag.' });
+    return res.status(500).json({ ok: false, code: 'LOAD_DRIVER_TAG_FAILED', message: 'Failed to load driver tag.' });
   }
 });
 
@@ -449,7 +372,7 @@ app.post(
   async (req, res) => {
     try {
       const ticketNo = String(req.params.id);
-      if (!req.file) return res.status(400).json({ ok: false, message: 'No file uploaded' });
+      if (!req.file) return res.status(400).json({ ok: false, code: 'NO_FILE', message: 'No file uploaded' });
 
       const ext = (req.file.originalname.split('.').pop() || 'bin').toLowerCase();
       const key = `tickets/${ticketNo}/proof-${Date.now()}.${ext}`;
@@ -458,7 +381,6 @@ app.post(
         contentType: req.file.mimetype || 'application/octet-stream',
         upsert: true,
       });
-
       if (upErr) throw upErr;
 
       const { error: dbErr } = await sb
@@ -470,13 +392,12 @@ app.post(
           updated_at: new Date().toISOString(),
         })
         .eq('ticket_no', ticketNo);
-
       if (dbErr) throw dbErr;
 
       return res.json({ ok: true, key });
     } catch (e) {
       console.error('POST /api/tags/:id/proof', e);
-      return res.status(500).json({ ok: false, message: 'Upload failed' });
+      return res.status(500).json({ ok: false, code: 'UPLOAD_FAILED', message: 'Upload failed' });
     }
   }
 );
@@ -491,12 +412,10 @@ app.post(
     try {
       const ticketNo = String(req.params.id);
       const who = String(req.params.who || '').toLowerCase(); // 'driver' | 'received'
-
       if (!['driver', 'received'].includes(who)) {
-        return res.status(400).json({ ok: false, message: 'Invalid signature type' });
+        return res.status(400).json({ ok: false, code: 'INVALID_SIGNATURE_TYPE', message: 'Invalid signature type' });
       }
-
-      if (!req.file) return res.status(400).json({ ok: false, message: 'No file uploaded' });
+      if (!req.file) return res.status(400).json({ ok: false, code: 'NO_FILE', message: 'No file uploaded' });
 
       const key = `tickets/${ticketNo}/sig-${who}-${Date.now()}.png`;
 
@@ -504,22 +423,22 @@ app.post(
         contentType: 'image/png',
         upsert: true,
       });
-
       if (upErr) throw upErr;
 
-      const patch = who === 'driver'
-        ? {
-            signature_driver_key: key,
-            signature_driver_mime: 'image/png',
-            signature_driver_size: req.file.size || null,
-            updated_at: new Date().toISOString(),
-          }
-        : {
-            signature_received_key: key,
-            signature_received_mime: 'image/png',
-            signature_received_size: req.file.size || null,
-            updated_at: new Date().toISOString(),
-          };
+      const patch =
+        who === 'driver'
+          ? {
+              signature_driver_key: key,
+              signature_driver_mime: 'image/png',
+              signature_driver_size: req.file.size || null,
+              updated_at: new Date().toISOString(),
+            }
+          : {
+              signature_received_key: key,
+              signature_received_mime: 'image/png',
+              signature_received_size: req.file.size || null,
+              updated_at: new Date().toISOString(),
+            };
 
       const { error: dbErr } = await sb.from('driver_tags').update(patch).eq('ticket_no', ticketNo);
       if (dbErr) throw dbErr;
@@ -527,7 +446,7 @@ app.post(
       return res.json({ ok: true, key });
     } catch (e) {
       console.error('POST /api/tags/:id/signature/:who', e);
-      return res.status(500).json({ ok: false, message: 'Signature upload failed' });
+      return res.status(500).json({ ok: false, code: 'SIGNATURE_UPLOAD_FAILED', message: 'Signature upload failed' });
     }
   }
 );
@@ -536,14 +455,14 @@ app.post(
 app.get('/api/tags/:id/proof-url', verifySession, ensureActiveUser, async (req, res) => {
   try {
     const ticketNo = String(req.params.id);
-    const wantDownload = req.query.download === '1' || req.query.download === 'true' || req.query.download === 'yes';
+    const wantDownload =
+      req.query.download === '1' || req.query.download === 'true' || req.query.download === 'yes';
 
     const { data, error } = await sb
       .from('driver_tags')
       .select('proof_key')
       .eq('ticket_no', ticketNo)
       .maybeSingle();
-
     if (error) throw error;
 
     const key = data?.proof_key || null;
@@ -554,13 +473,12 @@ app.get('/api/tags/:id/proof-url', verifySession, ensureActiveUser, async (req, 
     const { data: sign, error: sErr } = await sb.storage
       .from('ticket-proofs')
       .createSignedUrl(key, 60 * 60 * 24 * 7, wantDownload ? { download: filename } : undefined);
-
     if (sErr) throw sErr;
 
     return res.json({ ok: true, url: sign.signedUrl });
   } catch (e) {
     console.error('GET /api/tags/:id/proof-url', e);
-    return res.status(500).json({ ok: false, message: 'Failed to create signed URL' });
+    return res.status(500).json({ ok: false, code: 'SIGNED_URL_FAILED', message: 'Failed to create signed URL' });
   }
 });
 
@@ -573,9 +491,8 @@ app.get(
     try {
       const ticketNo = String(req.params.id);
       const who = String(req.params.who || '').toLowerCase();
-
       if (!['driver', 'received'].includes(who)) {
-        return res.status(400).json({ ok: false, message: 'Invalid signature type' });
+        return res.status(400).json({ ok: false, code: 'INVALID_SIGNATURE_TYPE', message: 'Invalid signature type' });
       }
 
       const { data, error } = await sb
@@ -583,25 +500,24 @@ app.get(
         .select('signature_driver_key, signature_received_key')
         .eq('ticket_no', ticketNo)
         .maybeSingle();
-
       if (error) throw error;
 
       const key = who === 'driver' ? data?.signature_driver_key : data?.signature_received_key;
       if (!key) return res.json({ ok: true, url: null });
 
       const filename = key.split('/').pop() || `ticket-${ticketNo}-sig-${who}.png`;
-      const wantDownload = req.query.download === '1' || req.query.download === 'true' || req.query.download === 'yes';
+      const wantDownload =
+        req.query.download === '1' || req.query.download === 'true' || req.query.download === 'yes';
 
       const { data: sign, error: sErr } = await sb.storage
         .from(SIGN_BUCKET)
         .createSignedUrl(key, 60 * 60 * 24 * 7, wantDownload ? { download: filename } : undefined);
-
       if (sErr) throw sErr;
 
       return res.json({ ok: true, url: sign.signedUrl });
     } catch (e) {
       console.error('GET /api/tags/:id/signature-url/:who', e);
-      return res.status(500).json({ ok: false, message: 'Failed to create signed URL' });
+      return res.status(500).json({ ok: false, code: 'SIGNED_URL_FAILED', message: 'Failed to create signed URL' });
     }
   }
 );
@@ -610,14 +526,12 @@ app.get(
 app.get('/api/tags/:id/scale-items', verifySession, ensureActiveUser, async (req, res) => {
   try {
     const ticketNo = String(req.params.id);
-
     const { data, error } = await sb
       .from('scale_tags')
       .select('id, ticket_no, scale_tag_no, yard_or_weight, material, yard_arrival, yard_leave, site_arrival, site_leave')
       .eq('ticket_no', ticketNo)
       .order('id', { ascending: true });
-
-    if (error) throw error;
+    if (error) throw error();
 
     const items = (data || []).map((r) => ({
       _row: r.id,
@@ -633,7 +547,7 @@ app.get('/api/tags/:id/scale-items', verifySession, ensureActiveUser, async (req
     return res.json({ ok: true, items });
   } catch (e) {
     console.error('GET /api/tags/:id/scale-items', e);
-    return res.status(500).json({ ok: false, message: 'Failed to load scale items.' });
+    return res.status(500).json({ ok: false, code: 'LOAD_SCALE_ITEMS_FAILED', message: 'Failed to load scale items.' });
   }
 });
 
@@ -653,9 +567,8 @@ app.post('/api/tags/:id/scale-items', verifySession, ensureActiveUser, async (re
         !it.siteArrival ||
         !it.siteLeave
     );
-
     if (bad) {
-      return res.status(400).json({ ok: false, message: 'All scale tag fields are required.' });
+      return res.status(400).json({ ok: false, code: 'MISSING_FIELDS', message: 'All scale tag fields are required.' });
     }
 
     const rows = itemsIn.map((it) => ({
@@ -680,7 +593,7 @@ app.post('/api/tags/:id/scale-items', verifySession, ensureActiveUser, async (re
     return res.json({ ok: true, saved: rows.length });
   } catch (e) {
     console.error('POST /api/tags/:id/scale-items', e);
-    return res.status(500).json({ ok: false, message: 'Failed to save scale items.' });
+    return res.status(500).json({ ok: false, code: 'SAVE_SCALE_ITEMS_FAILED', message: 'Failed to save scale items.' });
   }
 });
 
@@ -694,9 +607,8 @@ app.post('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, re
       .select('ticket_no')
       .eq('ticket_no', ticketNo)
       .maybeSingle();
-
     if (e0) throw e0;
-    if (!stub) return res.status(404).json({ ok: false, message: 'Ticket not found for this driver' });
+    if (!stub) return res.status(404).json({ ok: false, code: 'TICKET_NOT_FOUND_FOR_DRIVER', message: 'Ticket not found for this driver' });
 
     const {
       bridgefare = '',
@@ -732,7 +644,7 @@ app.post('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, re
     return res.json({ ok: true });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ ok: false, message: 'Save failed.' });
+    return res.status(500).json({ ok: false, code: 'SAVE_DRIVER_FORM_FAILED', message: 'Save failed.' });
   }
 });
 
@@ -740,12 +652,10 @@ app.post('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, re
 app.get('/api/admin/users', verifySession, ensureActiveUser, requireAdmin, async (req, res) => {
   try {
     const q = String(req.query.q || '').trim().toLowerCase();
-
     const { data, error } = await sb
       .from('users')
       .select('email, full_name, role, active')
       .order('full_name', { ascending: true });
-
     if (error) throw error;
 
     const rows = (data || []).filter((r) => {
@@ -757,7 +667,7 @@ app.get('/api/admin/users', verifySession, ensureActiveUser, requireAdmin, async
     res.json({ ok: true, users: rows });
   } catch (e) {
     console.error('GET /api/admin/users', e);
-    res.status(500).json({ ok: false, message: 'Failed to load users.' });
+    res.status(500).json({ ok: false, code: 'LOAD_USERS_FAILED', message: 'Failed to load users.' });
   }
 });
 
@@ -766,25 +676,21 @@ app.post('/api/admin/users', verifySession, ensureActiveUser, requireAdmin, asyn
     const { email, fullName, role, active } = req.body || {};
     const em = String(email || '').toLowerCase().trim();
     const rn = ltrim(role);
-
     if (!em || !rn || !['admin', 'driver'].includes(rn)) {
-      return res.status(400).json({ ok: false, message: 'email and role (admin|driver) are required.' });
+      return res.status(400).json({ ok: false, code: 'INVALID_USER_INPUT', message: 'email and role (admin|driver) are required.' });
     }
-
     const row = {
       email: em,
       full_name: fullName || em,
       role: rn,
       active: Boolean(active),
     };
-
     const { error } = await sb.from('users').upsert(row, { onConflict: 'email' });
     if (error) throw error;
-
     res.json({ ok: true });
   } catch (e) {
     console.error('POST /api/admin/users', e);
-    res.status(500).json({ ok: false, message: 'Failed to add user.' });
+    res.status(500).json({ ok: false, code: 'ADD_USER_FAILED', message: 'Failed to add user.' });
   }
 });
 
@@ -796,20 +702,16 @@ app.put('/api/admin/users/:email', verifySession, ensureActiveUser, requireAdmin
       role: req.body?.role ? ltrim(req.body.role) : undefined,
       active: typeof req.body?.active === 'boolean' ? req.body.active : undefined,
     };
-
     Object.keys(patch).forEach((k) => patch[k] === undefined && delete patch[k]);
-
     if (!Object.keys(patch).length) {
-      return res.status(400).json({ ok: false, message: 'No fields to update.' });
+      return res.status(400).json({ ok: false, code: 'NO_FIELDS', message: 'No fields to update.' });
     }
-
     const { error } = await sb.from('users').update(patch).eq('email', email);
     if (error) throw error;
-
     res.json({ ok: true });
   } catch (e) {
     console.error('PUT /api/admin/users/:email', e);
-    res.status(500).json({ ok: false, message: 'Failed to update user.' });
+    res.status(500).json({ ok: false, code: 'UPDATE_USER_FAILED', message: 'Failed to update user.' });
   }
 });
 
@@ -817,16 +719,13 @@ app.delete('/api/admin/users', verifySession, ensureActiveUser, requireAdmin, as
   try {
     const emails = Array.isArray(req.body?.emails) ? req.body.emails : [];
     const list = emails.map((e) => String(e || '').toLowerCase()).filter(Boolean);
-
-    if (!list.length) return res.status(400).json({ ok: false, message: 'No emails provided.' });
-
+    if (!list.length) return res.status(400).json({ ok: false, code: 'NO_EMAILS', message: 'No emails provided.' });
     const { error } = await sb.from('users').delete().in('email', list);
     if (error) throw error;
-
     res.json({ ok: true, deleted: list.length });
   } catch (e) {
     console.error('DELETE /api/admin/users', e);
-    res.status(500).json({ ok: false, message: 'Failed to delete users.' });
+    res.status(500).json({ ok: false, code: 'DELETE_USERS_FAILED', message: 'Failed to delete users.' });
   }
 });
 
@@ -837,18 +736,15 @@ app.get('/api/admin/tags', verifySession, ensureActiveUser, requireAdmin, async 
       .from('driver_tags')
       .select('ticket_no, email, status, updated_at')
       .order('updated_at', { ascending: false });
-
     if (error) throw error;
 
     const tickets = (rows || []).map((r) => r.ticket_no);
     let names = new Map();
-
     if (tickets.length) {
       const { data: at, error: e2 } = await sb
         .from('admin_tickets')
         .select('ticket_no, driver_name')
         .in('ticket_no', tickets);
-
       if (e2) throw e2;
       names = new Map(at.map((x) => [x.ticket_no, x.driver_name || '']));
     }
@@ -865,7 +761,7 @@ app.get('/api/admin/tags', verifySession, ensureActiveUser, requireAdmin, async 
     return res.json({ ok: true, profile: req.user, tags });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ ok: false, message: 'Failed to load admin tags.' });
+    return res.status(500).json({ ok: false, code: 'LOAD_ADMIN_TAGS_FAILED', message: 'Failed to load admin tags.' });
   }
 });
 
@@ -875,23 +771,21 @@ app.get('/api/admin/meta', verifySession, ensureActiveUser, requireAdmin, async 
     return res.json({ ok: true, profile: _req.user, drivers, trailerTypes });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ ok: false, message: 'Failed to load meta.' });
+    return res.status(500).json({ ok: false, code: 'LOAD_META_FAILED', message: 'Failed to load meta.' });
   }
 });
 
 app.post('/api/admin/tickets', verifySession, ensureActiveUser, requireAdmin, async (req, res) => {
   try {
     const p = req.body || {};
-
     if (!p.ticketNo || !p.driverName || !p.date) {
-      return res.status(400).json({ ok: false, message: 'date, ticketNo and driverName are required.' });
+      return res.status(400).json({ ok: false, code: 'REQUIRED_FIELDS', message: 'date, ticketNo and driverName are required.' });
     }
-
     const result = await upsertAdminTicket(p);
     return res.json({ ok: true, ...result });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ ok: false, message: 'Failed to add ticket.' });
+    return res.status(500).json({ ok: false, code: 'ADD_TICKET_FAILED', message: 'Failed to add ticket.' });
   }
 });
 
@@ -899,9 +793,7 @@ app.get('/api/admin/tickets/:id', verifySession, ensureActiveUser, requireAdmin,
   try {
     const id = String(req.params.id || '').trim();
     const t = await getAdminTicketByTicketNo(id);
-
-    if (!t) return res.status(404).json({ ok: false, message: 'Not found' });
-
+    if (!t) return res.status(404).json({ ok: false, code: 'NOT_FOUND', message: 'Not found' });
     return res.json({
       ok: true,
       ticket: {
@@ -925,7 +817,7 @@ app.get('/api/admin/tickets/:id', verifySession, ensureActiveUser, requireAdmin,
     });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ ok: false, message: 'Failed to load ticket.' });
+    return res.status(500).json({ ok: false, code: 'LOAD_TICKET_FAILED', message: 'Failed to load ticket.' });
   }
 });
 
@@ -933,7 +825,6 @@ app.put('/api/admin/tickets/:id', verifySession, ensureActiveUser, requireAdmin,
   try {
     const ticketNo = String(req.params.id || '').trim();
     const b = req.body || {};
-
     const patch = {
       date: b.date ?? undefined,
       driver_name: b.driverName ?? undefined,
@@ -951,7 +842,6 @@ app.put('/api/admin/tickets/:id', verifySession, ensureActiveUser, requireAdmin,
       destination: b.destination ?? undefined,
       city: (b.city ?? b.destCity) ?? undefined,
     };
-
     Object.keys(patch).forEach((k) => patch[k] === undefined && delete patch[k]);
 
     const { data: upd, error: updErr } = await sb
@@ -959,7 +849,6 @@ app.put('/api/admin/tickets/:id', verifySession, ensureActiveUser, requireAdmin,
       .update(patch)
       .eq('ticket_no', ticketNo)
       .select('ticket_no');
-
     if (updErr) throw updErr;
 
     if (!upd || upd.length === 0) {
@@ -973,7 +862,7 @@ app.put('/api/admin/tickets/:id', verifySession, ensureActiveUser, requireAdmin,
     return res.json({ ok: true });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ ok: false, message: 'Failed to update ticket.' });
+    return res.status(500).json({ ok: false, code: 'UPDATE_TICKET_FAILED', message: 'Failed to update ticket.' });
   }
 });
 
@@ -983,46 +872,30 @@ app.delete('/api/admin/tickets/:id', verifySession, ensureActiveUser, requireAdm
     return res.json({ ok: true });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ ok: false, message: 'Failed to delete ticket.' });
+    return res.status(500).json({ ok: false, code: 'DELETE_TICKET_FAILED', message: 'Failed to delete ticket.' });
   }
 });
 
 app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin, async (req, res) => {
   try {
     const csv = String(req.body?.csv || '');
-    if (!csv.trim()) return res.status(400).json({ ok: false, message: 'Missing csv' });
+    if (!csv.trim()) return res.status(400).json({ ok: false, code: 'MISSING_CSV', message: 'Missing csv' });
 
     function parseCSV(text) {
       const rows = [];
-      let row = [],
-        cur = '',
-        inQ = false;
-
+      let row = [], cur = '', inQ = false;
       for (let i = 0; i < text.length; i++) {
         const c = text[i];
         if (inQ) {
-          if (c === '"' && text[i + 1] === '"') {
-            cur += '"';
-            i++;
-          } else if (c === '"') {
-            inQ = false;
-          } else {
-            cur += c;
-          }
+          if (c === '"' && text[i + 1] === '"') { cur += '"'; i++; }
+          else if (c === '"') { inQ = false; }
+          else { cur += c; }
         } else {
           if (c === '"') inQ = true;
-          else if (c === ',') {
-            row.push(cur);
-            cur = '';
-          } else if (c === '\n') {
-            row.push(cur);
-            rows.push(row);
-            row = [];
-            cur = '';
-          } else if (c === '\r') {
-          } else {
-            cur += c;
-          }
+          else if (c === ',') { row.push(cur); cur = ''; }
+          else if (c === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
+          else if (c === '\r') { /* ignore */ }
+          else { cur += c; }
         }
       }
       row.push(cur);
@@ -1031,8 +904,8 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
     }
 
     const rows = parseCSV(csv);
-    const canon = (s) => String(s || '').toLowerCase().replace(/[^\w#]+/g, '');
 
+    const canon = (s) => String(s || '').toLowerCase().replace(/[^\w#]+/g, '');
     const ALIAS = new Map([
       ['date', 'date'],
       ['ticket#', 'ticket'],
@@ -1068,10 +941,8 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
       ['destination', 'unloaded'],
     ]);
 
-    let headerRow = -1,
-      headerIdx = {};
+    let headerRow = -1, headerIdx = {};
     const needSome = ['date', 'ticket', 'driver'];
-
     for (let i = 0; i < Math.min(rows.length, 50); i++) {
       const r = rows[i] || [];
       const map = {};
@@ -1085,11 +956,8 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
         break;
       }
     }
-
     if (headerRow < 0) {
-      return res
-        .status(400)
-        .json({ ok: false, message: 'Header row not found (looking for Date/Ticket#/Driver Names).' });
+      return res.status(400).json({ ok: false, code: 'HEADER_NOT_FOUND', message: 'Header row not found (looking for Date/Ticket#/Driver Names).' });
     }
 
     const pick = (r, key) => {
@@ -1099,8 +967,7 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
     };
 
     const items = [];
-    let skippedCarrier = 0,
-      invalid = 0;
+    let skippedCarrier = 0, invalid = 0;
 
     for (let i = headerRow + 1; i < rows.length; i++) {
       const r = rows[i] || [];
@@ -1153,17 +1020,114 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
     });
   } catch (e) {
     console.error('import-csv:', e);
-    return res.status(500).json({ ok: false, message: 'Import failed.' });
+    return res.status(500).json({ ok: false, code: 'IMPORT_FAILED', message: 'Import failed.' });
   }
 });
+
+// ======================== PDF helpers (used below) ========================
+const IMG_W = 5100;
+const IMG_H = 6600;
+const PDF_W = 612;
+const PDF_H = 792;
+const sx = PDF_W / IMG_W;
+const sy = PDF_H / IMG_H;
+const X = (px) => px * sx;
+const Y = (px) => px * sy;
+
+const COORD = {
+  ticketNo: { x: 4007, y: 810 },
+  dateMonth: { x: 509, y: 895 },
+  dateDay: { x: 1068, y: 878 },
+  dateYear: { x: 1483, y: 878 },
+
+  truckNo: { x: 1144, y: 1039 },
+  trailerType: { x: 3981, y: 1132 },
+  subHauler: { x: 1220, y: 1403 },
+  primeCarrier: { x: 1305, y: 1564 },
+  shipper: { x: 1204, y: 1733 },
+  origin: { x: 1170, y: 1886 },
+  originCity: { x: 1187, y: 2055 },
+  poNo: { x: 3465, y: 1395 },
+  jobName: { x: 3558, y: 1556 },
+  jobNo: { x: 3448, y: 1733 },
+  destination: { x: 3414, y: 1903 },
+  city: { x: 3371, y: 2055 },
+
+  // table col centers (row 1)
+  tbl_scaleTagNo: { x: 1102, y: 2504 },
+  tbl_yardOrWeight: { x: 2017, y: 2513 },
+  tbl_material: { x: 2813, y: 2513 },
+  tbl_timeArrival: { x: 3431, y: 2496 },
+  tbl_timeLeave: { x: 3812, y: 2513 },
+  tbl_siteArrival: { x: 4134, y: 2513 },
+  tbl_siteLeave: { x: 4506, y: 2504 },
+
+  truckStart: { x: 704, y: 4663 },
+  bridgefare: { x: 3863, y: 4663 },
+
+  signedOutLoadedYes: { x: 2220, y: 4824 },
+  signedOutLoadedNo: { x: 2203, y: 4833 },
+
+  howManyTonsLoads: { x: 3625, y: 4833 },
+
+  startTime: { x: 1127, y: 5028 },
+  downtimeLunch: { x: 2262, y: 5028 },
+  notes_mid: { x: 3236, y: 5045 },
+
+  signOutTime: { x: 2059, y: 5222 },
+
+  driverName: { x: 1441, y: 5485 },
+  receivedBy: { x: 3956, y: 5485 },
+
+  notes_big: { x: 831, y: 5866 },
+};
+
+// utility
+function drawText(doc, s, xpx, ypx, opts = {}) {
+  if (s === undefined || s === null || String(s).trim() === '') return;
+  doc.text(String(s), X(xpx), Y(ypx), { lineBreak: false, ...opts });
+}
+function toMDY(value) {
+  if (!value) return { m: '', d: '', y: '' };
+  const d = new Date(value);
+  if (isNaN(d)) return { m: '', d: '', y: '' };
+  return {
+    m: String(d.getMonth() + 1).padStart(2, '0'),
+    d: String(d.getDate()).padStart(2, '0'),
+    y: String(d.getFullYear()).slice(-2),
+  };
+}
+function hhmm(s) {
+  if (!s) return '';
+  const m = String(s).match(/^(\d{1,2}):(\d{2})/);
+  if (m) return `${m[1].padStart(2, '0')}:${m[2]}`;
+  return String(s);
+}
+async function sbDataToBuffer(data) {
+  if (!data) return null;
+  if (Buffer.isBuffer(data)) return data;
+  if (data instanceof Uint8Array) return Buffer.from(data);
+  if (data instanceof ArrayBuffer) return Buffer.from(data);
+  if (typeof data.arrayBuffer === 'function') {
+    const ab = await data.arrayBuffer();
+    return Buffer.from(ab);
+  }
+  if (typeof data.pipe === 'function' || data[Symbol.asyncIterator]) {
+    const chunks = [];
+    for await (const chunk of data) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
+  }
+  return null;
+}
 
 // ======================== COMMON TICKET READ & PDF ========================
 app.get('/api/tickets/:id', verifySession, ensureActiveUser, async (req, res) => {
   try {
     const ticketNo = String(req.params.id || '').trim();
     const t = await getAdminTicketByTicketNo(ticketNo);
-
-    if (!t) return res.status(404).json({ ok: false, message: 'Not found' });
+    if (!t) return res.status(404).json({ ok: false, code: 'NOT_FOUND', message: 'Not found' });
 
     return res.json({
       ok: true,
@@ -1188,7 +1152,7 @@ app.get('/api/tickets/:id', verifySession, ensureActiveUser, async (req, res) =>
     });
   } catch (e) {
     console.error('GET /api/tickets/:id', e);
-    return res.status(500).json({ ok: false, message: 'Failed to load ticket.' });
+    return res.status(500).json({ ok: false, code: 'LOAD_TICKET_FAILED', message: 'Failed to load ticket.' });
   }
 });
 
@@ -1200,19 +1164,23 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     dateMonth: { x: 518, y: 887 },
     dateDay: { x: 1077, y: 887 },
     dateYear: { x: 1491, y: 887 },
+
     truckNo: { x: 924, y: 1039 },
     trailerTypeLeft: { x: 941, y: 1217 },
     trailerTypeRight: { x: 3668, y: 1132 },
+
     subHauler: { x: 933, y: 1403 },
     primeCarrier: { x: 924, y: 1564 },
     shipper: { x: 941, y: 1717 },
     origin: { x: 950, y: 1903 },
     originCity: { x: 933, y: 2064 },
+
     poNo: { x: 3236, y: 1395 },
     jobName: { x: 3253, y: 1556 },
     jobNo: { x: 3244, y: 1725 },
     destination: { x: 3253, y: 1886 },
     city: { x: 3236, y: 2055 },
+
     tbl_scaleTagNo_r1: { x: 831, y: 2504 },
     tbl_yardOrWeight: { x: 1822, y: 2496 },
     tbl_material_guess: { x: 2584, y: 2504 },
@@ -1220,7 +1188,9 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     tbl_timeLeave: { x: 3778, y: 2496 },
     tbl_siteArrival: { x: 4125, y: 2513 },
     tbl_siteLeave: { x: 4506, y: 2496 },
+
     tbl_scaleTagNo_r2: { x: 789, y: 2623 },
+
     bridgefare: { x: 4023, y: 4630 },
     signedOutLoadedYes: { x: 1940, y: 4833 },
     signedOutLoadedNo: { x: 1949, y: 4833 },
@@ -1230,6 +1200,7 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     downtimeLunch: { x: 1940, y: 5036 },
     notes_mid: { x: 2990, y: 5028 },
     signOutTime: { x: 1915, y: 5222 },
+
     driverName: { x: 1009, y: 5485 },
     receivedBy: { x: 3507, y: 5476 },
   };
@@ -1249,51 +1220,41 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
 
   try {
     if (!fs.existsSync(formPath)) {
-      return res.status(500).json({ ok: false, message: 'Blank form not found' });
+      return res.status(500).json({ ok: false, code: 'FORM_MISSING', message: 'Blank form not found' });
     }
-
     const bgBuffer = fs.readFileSync(formPath);
 
-    const [
-      { data: admin, error: e1 },
-      { data: driver, error: e2 },
-      { data: scale, error: e3 }
-    ] = await Promise.all([
+    const [{ data: admin, error: e1 }, { data: driver, error: e2 }, { data: scale, error: e3 }] = await Promise.all([
       sb.from('admin_tickets').select('*').eq('ticket_no', ticketNo).maybeSingle(),
       sb.from('driver_tags').select('*').eq('ticket_no', ticketNo).maybeSingle(),
       sb.from('scale_tags').select('*').eq('ticket_no', ticketNo).order('id', { ascending: true }),
     ]);
-
     if (e1 || e2 || e3) throw (e1 || e2 || e3);
-    if (!admin) return res.status(404).json({ ok: false, message: 'Ticket not found' });
+    if (!admin) return res.status(404).json({ ok: false, code: 'NOT_FOUND', message: 'Ticket not found' });
 
     const dl = req.query.download === '1' || req.query.download === 'true';
 
     const doc = new PDFDocument({ size: 'LETTER', margin: 0 });
-
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `${dl ? 'attachment' : 'inline'}; filename="ticket-${ticketNo}.pdf"`);
-
     doc.on('error', (err) => {
       console.error('pdfkit error', err);
-      try {
-        res.end();
-      } catch {}
+      try { res.end(); } catch {}
     });
-
     doc.pipe(res);
+
     doc.image(bgBuffer, 0, 0, { width: PDF_W, height: PDF_H });
+
     doc.fontSize(8).fillColor('#000');
 
     const mdy = toMDY(admin.date || admin.Date);
-
     doc.fontSize(10);
     drawText(doc, ticketNo, COORD_PDF.ticketNo.x, COORD_PDF.ticketNo.y);
-
     doc.fontSize(8);
     drawText(doc, mdy.m, COORD_PDF.dateMonth.x, COORD_PDF.dateMonth.y);
     drawText(doc, mdy.d, COORD_PDF.dateDay.x, COORD_PDF.dateDay.y);
     drawText(doc, mdy.y, COORD_PDF.dateYear.x, COORD_PDF.dateYear.y);
+
     drawText(doc, admin.truck_no, COORD_PDF.truckNo.x, COORD_PDF.truckNo.y);
     drawText(doc, admin.trailer_type, COORD_PDF.trailerTypeLeft.x, COORD_PDF.trailerTypeLeft.y);
     drawText(doc, admin.trailer_type, COORD_PDF.trailerTypeRight.x, COORD_PDF.trailerTypeRight.y);
@@ -1302,6 +1263,7 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     drawText(doc, admin.shipper, COORD_PDF.shipper.x, COORD_PDF.shipper.y);
     drawText(doc, admin.origin, COORD_PDF.origin.x, COORD_PDF.origin.y);
     drawText(doc, admin.origin_city, COORD_PDF.originCity.x, COORD_PDF.originCity.y);
+
     drawText(doc, admin.po_no, COORD_PDF.poNo.x, COORD_PDF.poNo.y);
     drawText(doc, admin.job_name, COORD_PDF.jobName.x, COORD_PDF.jobName.y);
     drawText(doc, admin.job_no, COORD_PDF.jobNo.x, COORD_PDF.jobNo.y);
@@ -1335,6 +1297,7 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     drawText(doc, driver?.downtime_lunch, COORD_PDF.downtimeLunch.x, COORD_PDF.downtimeLunch.y);
     drawText(doc, driver?.notes, COORD_PDF.notes_mid.x, COORD_PDF.notes_mid.y);
     drawText(doc, hhmm(driver?.sign_out_time), COORD_PDF.signOutTime.x, COORD_PDF.signOutTime.y);
+
     drawText(doc, admin.driver_name, COORD_PDF.driverName.x, COORD_PDF.driverName.y);
     drawText(doc, driver?.received_by, COORD_PDF.receivedBy.x, COORD_PDF.receivedBy.y);
 
@@ -1344,7 +1307,6 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     async function placeSig(key, name, nameCoordPx) {
       try {
         if (!key) return;
-
         const { data: file, error: sigErr } = await sb.storage.from(SIGN_BUCKET).download(key);
         if (sigErr || !file) return;
 
@@ -1355,6 +1317,7 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
         const nameWidthPt = doc.widthOfString(String(name || ''));
         const nameStartXPt = X(nameCoordPx.x);
         const nameCenterPt = nameStartXPt + nameWidthPt / 2;
+
         const xPt = nameCenterPt - SIG_PT_WIDTH / 2;
         const yPt = Y(nameCoordPx.y) + Y(SIG_Y_OFFSET);
 
@@ -1370,10 +1333,8 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     doc.end();
   } catch (e) {
     console.error('PDF route error', e);
-    if (!res.headersSent) res.status(500).json({ ok: false, message: 'Failed to generate PDF' });
-    try {
-      res.end();
-    } catch {}
+    if (!res.headersSent) res.status(500).json({ ok: false, code: 'PDF_FAILED', message: 'Failed to generate PDF' });
+    try { res.end(); } catch {}
   }
 });
 
@@ -1381,15 +1342,12 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
 app.get('/driver-ticket', verifySession, ensureActiveUser, (_req, res) => {
   res.sendFile(path.resolve('public/driver-ticket.html'));
 });
-
 app.get('/admin', verifySession, ensureActiveUser, requireAdmin, (_req, res) => {
   res.sendFile(path.resolve('public/admin.html'));
 });
-
 app.get('/tag-lists', verifySession, ensureActiveUser, requireAdmin, (_req, res) => {
   res.sendFile(path.resolve('public/tag-lists.html'));
 });
-
 app.get('/admin/users', verifySession, ensureActiveUser, requireAdmin, (_req, res) => {
   res.sendFile(path.resolve('public/admin-users.html'));
 });
@@ -1407,5 +1365,3 @@ if (!process.env.VERCEL) {
 }
 
 export default app;
-
-
