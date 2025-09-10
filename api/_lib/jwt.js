@@ -1,51 +1,50 @@
-// Consistent session helpers for all routes
+// api/_lib/jwt.js
 import jwt from 'jsonwebtoken';
 
-export const COOKIE_NAME = 'tt_session';
-const WEEK = 60 * 60 * 24 * 7;
-
+/** Sign a 30-day session JWT */
 export function signSession(payload) {
-  const secret = process.env.JWT_SECRET;
-  if (!secret) throw new Error('JWT_SECRET is not set');
-  return jwt.sign(payload, secret, { expiresIn: '7d' });
+  const key = process.env.JWT_SECRET;
+  if (!key) throw new Error('JWT_SECRET not set');
+  return jwt.sign(payload, key, { expiresIn: '30d' });
 }
 
-export function verifySessionToken(token) {
+/** Verify session JWT. Returns payload or null. */
+export function verifySession(token) {
+  const key = process.env.JWT_SECRET;
+  if (!key) return null;
   try {
-    return jwt.verify(token, process.env.JWT_SECRET);
+    return jwt.verify(token, key);
   } catch {
     return null;
   }
 }
 
-export function readCookie(req) {
-  const raw = req.headers.cookie || '';
-  const map = Object.fromEntries(
-    raw.split(';').map((c) => c.trim().split('=').map(decodeURIComponent)).filter((a) => a[0])
-  );
-  return map[COOKIE_NAME] || null;
-}
-
+/** Set HttpOnly cookie with the session token */
 export function setSessionCookie(res, token) {
-  const cookie = [
-    `${encodeURIComponent(COOKIE_NAME)}=${encodeURIComponent(token)}`,
+  const domain = process.env.COOKIE_DOMAIN || undefined; // usually empty on Vercel
+  const parts = [
+    `token=${token}`,
     'Path=/',
     'HttpOnly',
     'Secure',
     'SameSite=Lax',
-    `Max-Age=${WEEK}`
-  ].join('; ');
-  res.setHeader('Set-Cookie', cookie);
+    `Max-Age=${60 * 60 * 24 * 30}` // 30 days
+  ];
+  if (domain) parts.push(`Domain=${domain}`);
+  res.setHeader('Set-Cookie', parts.join('; '));
 }
 
+/** Clear the session cookie */
 export function clearSessionCookie(res) {
-  const cookie = [
-    `${encodeURIComponent(COOKIE_NAME)}=`,
+  const domain = process.env.COOKIE_DOMAIN || undefined;
+  const parts = [
+    'token=',
     'Path=/',
     'HttpOnly',
     'Secure',
     'SameSite=Lax',
     'Max-Age=0'
-  ].join('; ');
-  res.setHeader('Set-Cookie', cookie);
+  ];
+  if (domain) parts.push(`Domain=${domain}`);
+  res.setHeader('Set-Cookie', parts.join('; '));
 }

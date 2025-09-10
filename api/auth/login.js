@@ -1,3 +1,4 @@
+// api/auth/login.js
 import bcrypt from 'bcryptjs';
 import { createClient } from '@supabase/supabase-js';
 import { signSession, setSessionCookie } from '../_lib/jwt.js';
@@ -13,32 +14,25 @@ export default async function handler(req, res) {
   }
 
   try {
-    const body = req.body || {};
-    const email = (body.email || '').toLowerCase().trim();
-    const password = body.password || '';
-
+    const { email: rawEmail, password = '' } = req.body || {};
+    const email = (rawEmail || '').trim().toLowerCase();
     if (!email || !password) {
       return res.status(400).json({ ok: false, message: 'Email and password required' });
     }
 
-    // Look up user
+    // Find user
     const { data: user, error } = await supabase
       .from('Users')
       .select('id,email,role,is_active,password_hash')
       .eq('email', email)
       .maybeSingle();
 
-    if (error) {
-      console.error('[login] supabase error', error);
-      return res.status(500).json({ ok: false, message: 'Login failed' });
-    }
-
-    // Not found or inactive
-    if (!user || !user.is_active) {
+    // Treat lookup issues as invalid creds to avoid 500s in the UI
+    if (error || !user || !user.is_active) {
       return res.status(401).json({ ok: false, message: 'Invalid email or password' });
     }
 
-    // If account has no password yet, tell the client to open the modal
+    // No password set yet? Ask client to open the create-password modal.
     if (!user.password_hash) {
       return res.status(409).json({ ok: false, code: 'PASSWORD_NOT_SET', message: 'Password not set' });
     }
@@ -54,7 +48,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ ok: true, role: user.role });
   } catch (err) {
-    console.error('[login] exception', err);
+    console.error('[auth/login]', err);
     return res.status(500).json({ ok: false, message: 'Login failed' });
   }
 }

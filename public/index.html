@@ -175,7 +175,7 @@
     pwdEl.focus({preventScroll:true});
   });
 
-  // ----- Password setup modal logic -----
+  // ----- Password setup modal -----
   const pwModal  = document.getElementById('pwModal');
   const pwEmail  = document.getElementById('pwEmail');
   const newPwd   = document.getElementById('newPwd');
@@ -237,29 +237,27 @@
     }
   });
 
-  // ----- SINGLE login submit handler -----
+  // ----- ONE submit handler only -----
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     setMsg('');
     setLoading(true);
 
-    const email = emailEl.value.trim();
+    const email = emailEl.value.trim().toLowerCase();
     const password = pwdEl.value;
 
     try {
       const r = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+        credentials: 'include',        // accept/set cookies
         body: JSON.stringify({ email, password })
       });
-
-      // try to parse json safely
-      let d = {};
-      try { d = await r.json(); } catch {}
+      const d = await r.json();
 
       if (d && d.code === 'PASSWORD_NOT_SET') {
         setLoading(false);
+        setMsg('');
         openPwModal(email);
         return;
       }
@@ -280,6 +278,7 @@
     }
   });
 </script>
+
 
 </body>
 </html>
