@@ -1351,6 +1351,10 @@ app.get('/tag-lists', verifySession, ensureActiveUser, requireAdmin, (_req, res)
 app.get('/admin/users', verifySession, ensureActiveUser, requireAdmin, (_req, res) => {
   res.sendFile(path.resolve('public/admin-users.html'));
 });
+app.get('/dashboard', verifySession, ensureActiveUser, (_req, res) => {
+  res.sendFile(path.resolve('public/dashboard.html'));
+});
+
 
 // static fallback
 app.get('*', (_req, res) => {
