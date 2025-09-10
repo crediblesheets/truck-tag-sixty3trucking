@@ -1,4 +1,11 @@
-// /api/[...all].js  (root-level)
+// api/[...all].js
 import app from '../server.js';
-export default app;
-export const config = { api: { bodyParser: false } };
+
+// Vercel strips the "/api" prefix when calling this function.
+// Put it back so Express routes like "/api/auth/login" will match.
+export default function handler(req, res) {
+  if (!req.url.startsWith('/api')) {
+    req.url = '/api' + (req.url === '/' ? '' : req.url);
+  }
+  return app(req, res);
+}

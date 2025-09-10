@@ -1,5 +1,6 @@
-// server.js — Email/Password auth + your existing APIs (CORS + cookie fixes)
+// server.js — Email/Password auth + your existing APIs (fixed cookies for cross-site)
 
+// ----- imports -----
 import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
@@ -33,64 +34,171 @@ const {
   JWT_SECRET,
   NODE_ENV = 'development',
   FRONTEND_ORIGIN = '',   // e.g. http://localhost:5173 or https://yourapp.vercel.app
-  COOKIE_DOMAIN = '',     // optional: .yourdomain.com (omit in dev)
+  COOKIE_DOMAIN = '',     // optional: .yourdomain.com (no domain = host-only)
 } = process.env;
 
-if (!JWT_SECRET) {
-  console.error('❌ Missing env var JWT_SECRET');
-  process.exit(1);
-}
-
-// ---------- cookie + CORS helpers ----------
 function isCrossSiteRequest(origin) {
-  if (!origin) return false; // same-origin or direct (no Origin header)
+  if (!origin) return false;
   try {
-    // In dev, our API origin is localhost:PORT. Adjust if you serve API elsewhere.
-    const api = new URL(`http://localhost:${PORT}`);
-    const req = new URL(origin);
-    return api.host !== req.host; // different host => cross-site
+    // During local dev, our API origin is localhost:PORT
+    const a = new URL(origin);
+    const b = new URL(`http://localhost:${PORT}`);
+    return a.host !== b.host;
   } catch {
     return true;
   }
 }
 
+/** Build cookie options for the current environment. */
 function cookieOpts(origin) {
   const crossSite = isCrossSiteRequest(origin) || !!FRONTEND_ORIGIN;
   const sameSite = crossSite ? 'none' : 'lax';
   const secure = crossSite ? true : NODE_ENV === 'production';
+
   const base = {
     httpOnly: true,
-    sameSite,
-    secure,
+    sameSite,  // 'lax' or 'none'
+    secure,    // must be true if sameSite === 'none'
     path: '/',
   };
   if (COOKIE_DOMAIN) base.domain = COOKIE_DOMAIN;
   return base;
 }
 
+// ---------- PDF helpers ----------
+const IMG_W = 5100;
+const IMG_H = 6600;
+const PDF_W = 612;
+const PDF_H = 792;
+const sx = PDF_W / IMG_W;
+const sy = PDF_H / IMG_H;
+const X = (px) => px * sx;
+const Y = (px) => px * sy;
+
+const COORD = {
+  ticketNo: { x: 4007, y: 810 },
+  dateMonth: { x: 509, y: 895 },
+  dateDay: { x: 1068, y: 878 },
+  dateYear: { x: 1483, y: 878 },
+
+  truckNo: { x: 1144, y: 1039 },
+  trailerType: { x: 3981, y: 1132 },
+  subHauler: { x: 1220, y: 1403 },
+  primeCarrier: { x: 1305, y: 1564 },
+  shipper: { x: 1204, y: 1733 },
+  origin: { x: 1170, y: 1886 },
+  originCity: { x: 1187, y: 2055 },
+  poNo: { x: 3465, y: 1395 },
+  jobName: { x: 3558, y: 1556 },
+  jobNo: { x: 3448, y: 1733 },
+  destination: { x: 3414, y: 1903 },
+  city: { x: 3371, y: 2055 },
+
+  // table col centers (row 1)
+  tbl_scaleTagNo: { x: 1102, y: 2504 },
+  tbl_yardOrWeight: { x: 2017, y: 2513 },
+  tbl_material: { x: 2813, y: 2513 },
+  tbl_timeArrival: { x: 3431, y: 2496 },
+  tbl_timeLeave: { x: 3812, y: 2513 },
+  tbl_siteArrival: { x: 4134, y: 2513 },
+  tbl_siteLeave: { x: 4506, y: 2504 },
+
+  truckStart: { x: 704, y: 4663 },
+  bridgefare: { x: 3863, y: 4663 },
+
+  signedOutLoadedYes: { x: 2220, y: 4824 },
+  signedOutLoadedNo: { x: 2203, y: 4833 },
+
+  howManyTonsLoads: { x: 3625, y: 4833 },
+
+  startTime: { x: 1127, y: 5028 },
+  downtimeLunch: { x: 2262, y: 5028 },
+  notes_mid: { x: 3236, y: 5045 },
+
+  signOutTime: { x: 2059, y: 5222 },
+
+  driverName: { x: 1441, y: 5485 },
+  receivedBy: { x: 3956, y: 5485 },
+
+  notes_big: { x: 831, y: 5866 },
+};
+
+// table layout (in source px)
+const TABLE_FIRST_ROW_Y = 2504;
+const TABLE_ROW_PX = 160;
+const TABLE_MAX_ROWS = 11;
+const TABLE_COLS = ['scaleTagNo', 'yardOrWeight', 'material', 'yardArrival', 'yardLeave', 'siteArrival', 'siteLeave'];
+const TABLE_X_BY_COL = {
+  scaleTagNo: COORD.tbl_scaleTagNo.x,
+  yardOrWeight: COORD.tbl_yardOrWeight.x,
+  material: COORD.tbl_material.x,
+  yardArrival: COORD.tbl_timeArrival.x,
+  yardLeave: COORD.tbl_timeLeave.x,
+  siteArrival: COORD.tbl_siteArrival.x,
+  siteLeave: COORD.tbl_siteLeave.x,
+};
+
+function drawText(doc, s, xpx, ypx, opts = {}) {
+  if (s === undefined || s === null || String(s).trim() === '') return;
+  doc.text(String(s), X(xpx), Y(ypx), { lineBreak: false, ...opts });
+}
+function toMDY(value) {
+  if (!value) return { m: '', d: '', y: '' };
+  const d = new Date(value);
+  if (isNaN(d)) return { m: '', d: '', y: '' };
+  return {
+    m: String(d.getMonth() + 1).padStart(2, '0'),
+    d: String(d.getDate()).padStart(2, '0'),
+    y: String(d.getFullYear()).slice(-2),
+  };
+}
+function hhmm(s) {
+  if (!s) return '';
+  const m = String(s).match(/^(\d{1,2}):(\d{2})/);
+  if (m) return `${m[1].padStart(2, '0')}:${m[2]}`;
+  return String(s);
+}
+async function sbDataToBuffer(data) {
+  if (!data) return null;
+  if (Buffer.isBuffer(data)) return data;
+  if (data instanceof Uint8Array) return Buffer.from(data);
+  if (data instanceof ArrayBuffer) return Buffer.from(data);
+  if (typeof data.arrayBuffer === 'function') {
+    const ab = await data.arrayBuffer();
+    return Buffer.from(ab);
+  }
+  if (typeof data.pipe === 'function' || data[Symbol.asyncIterator]) {
+    const chunks = [];
+    for await (const chunk of data) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+    return Buffer.concat(chunks);
+  }
+  return null;
+}
+
 // ---------- app ----------
 const app = express();
+app.use(express.json({ limit: '10mb' }));
+app.use(cookieParser());
 
-// CORS — allow your frontend(s) + credentials for cookies
 const allowlist = new Set(
   [FRONTEND_ORIGIN].filter(Boolean).concat([
+    // common dev origins you might hit from
     'http://localhost:5173',
     'http://127.0.0.1:5173',
     'http://localhost:3000',
     'http://127.0.0.1:3000',
   ])
 );
-
 app.use(cors({
   origin: (origin, cb) => {
+    // allow same-origin (no Origin header) and any explicit allowlisted origin
     if (!origin || allowlist.has(origin)) return cb(null, true);
     return cb(new Error(`CORS blocked: ${origin}`));
   },
-  credentials: true, // send/receive cookies
+  credentials: true, // <-- REQUIRED so browser will accept/set cookies
 }));
-
-app.use(express.json({ limit: '10mb' }));
-app.use(cookieParser());
 app.use(express.static(path.resolve('public')));
 
 // health
@@ -100,31 +208,23 @@ app.get('/api/health', (_req, res) => {
 
 // ---------- auth/session helpers ----------
 const ltrim = (v) => String(v ?? '').trim().toLowerCase();
-
 function signSession(payload) {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '2h' });
 }
-
-// Accept cookie `t` OR Authorization: Bearer <token>
 function verifySession(req, res, next) {
-  const cookieTok = req.cookies?.t;
-  const header = String(req.headers.authorization || '');
-  const headerTok = header.startsWith('Bearer ') ? header.slice(7) : null;
-  const tok = cookieTok || headerTok;
-
-  if (!tok) return res.status(401).json({ ok: false, code: 'NO_SESSION', message: 'No session' });
+  const tok = req.cookies['t'];
+  if (!tok) return res.status(401).json({ ok: false, message: 'No session' });
   try {
     req.user = jwt.verify(tok, JWT_SECRET);
     next();
   } catch {
-    return res.status(401).json({ ok: false, code: 'INVALID_SESSION', message: 'Invalid session' });
+    return res.status(401).json({ ok: false, message: 'Invalid session' });
   }
 }
-
 async function ensureActiveUser(req, res, next) {
   try {
     const email = String(req.user?.email || '').toLowerCase();
-    if (!email) return res.status(401).json({ ok: false, code: 'NO_SESSION_EMAIL', message: 'No session email' });
+    if (!email) return res.status(401).json({ ok: false, message: 'No session email' });
 
     const { data: u, error } = await sb
       .from('users')
@@ -134,7 +234,7 @@ async function ensureActiveUser(req, res, next) {
 
     if (error) throw error;
     if (!u || !u.active) {
-      return res.status(403).json({ ok: false, code: 'INACTIVE_OR_UNKNOWN', message: 'Email not authorized or inactive.' });
+      return res.status(403).json({ ok: false, message: 'Email not authorized or inactive.' });
     }
 
     req.user.role = ltrim(u.role) === 'admin' ? 'admin' : 'driver';
@@ -142,15 +242,16 @@ async function ensureActiveUser(req, res, next) {
     next();
   } catch (e) {
     console.error('ensureActiveUser', e);
-    return res.status(500).json({ ok: false, code: 'USER_CHECK_FAILED', message: 'User check failed.' });
+    return res.status(500).json({ ok: false, message: 'User check failed.' });
   }
 }
-
 function requireAdmin(req, res, next) {
   const role = String(req.user?.role || '').toLowerCase();
   if (role === 'admin') return next();
-  return res.status(403).json({ ok: false, code: 'ADMINS_ONLY', message: 'Admins only.' });
+  return res.status(403).json({ ok: false, message: 'Admins only.' });
 }
+
+// ---------- AUTH ----------
 
 // Email + password login
 app.post('/api/auth/login', async (req, res) => {
@@ -159,10 +260,9 @@ app.post('/api/auth/login', async (req, res) => {
     const pw = String(req.body?.password || '');
 
     if (!em) {
-      return res.status(400).json({ ok: false, code: 'EMAIL_REQUIRED', message: 'Email is required.' });
+      return res.status(400).json({ ok: false, message: 'Email is required.' });
     }
 
-    // Pull password_hash too
     const { data: u, error } = await sb
       .from('users')
       .select('full_name, email, role, active, password_hash')
@@ -171,38 +271,39 @@ app.post('/api/auth/login', async (req, res) => {
 
     if (error) throw error;
     if (!u || !u.active) {
-      return res.status(403).json({ ok: false, code: 'INACTIVE_OR_UNKNOWN', message: 'Email not authorized or inactive.' });
+      return res.status(403).json({ ok: false, message: 'Email not authorized or inactive.' });
     }
 
-    // If no password on record and the user submitted an empty password → prompt to set one
     const hasPw = !!(u.password_hash && String(u.password_hash).trim());
     if (!hasPw && pw.length === 0) {
-      return res.status(409).json({ ok: false, code: 'PASSWORD_NOT_SET', message: 'No password set. Create one now.' });
+      return res
+        .status(409)
+        .json({ ok: false, code: 'PASSWORD_NOT_SET', message: 'No password set. Create one now.' });
     }
-
     if (!hasPw) {
-      // They tried some non-empty password, but account has no password yet
-      return res.status(400).json({ ok: false, code: 'ACCOUNT_NEEDS_PASSWORD', message: 'No password set. Leave password empty to create one.' });
+      return res.status(400).json({ ok: false, message: 'No password set. Leave password empty to create one.' });
     }
 
     const ok = await bcrypt.compare(pw, u.password_hash);
     if (!ok) {
-      return res.status(401).json({ ok: false, code: 'BAD_CREDENTIALS', message: 'Invalid email or password.' });
+      return res.status(401).json({ ok: false, message: 'Invalid email or password.' });
     }
 
     const role = (u.role || '').toLowerCase() === 'admin' ? 'admin' : 'driver';
     const token = signSession({ email: em, fullName: u.full_name || em, role });
 
-    res.cookie('t', token, cookieOpts(req.headers.origin));
+    // FIX: set cookie with cross-site safe flags based on Origin
+    const opts = cookieOpts(req.headers.origin);
+    res.cookie('t', token, opts);
+
     return res.json({ ok: true, role });
   } catch (e) {
     console.error('POST /api/auth/login', e);
-    return res.status(500).json({ ok: false, code: 'LOGIN_FAILED', message: 'Login failed.' });
+    return res.status(500).json({ ok: false, message: 'Login failed.' });
   }
 });
 
 function validatePassword(pw) {
-  // At least 8 chars, at least one letter and one number
   if (typeof pw !== 'string' || pw.length < 8) {
     return 'Password must be at least 8 characters.';
   }
@@ -218,9 +319,9 @@ app.post('/api/auth/set-password', async (req, res) => {
     const em = String(req.body?.email || '').toLowerCase().trim();
     const newPw = String(req.body?.newPassword || '');
 
-    if (!em) return res.status(400).json({ ok: false, code: 'EMAIL_REQUIRED', message: 'Email is required.' });
+    if (!em) return res.status(400).json({ ok: false, message: 'Email is required.' });
     const v = validatePassword(newPw);
-    if (v) return res.status(400).json({ ok: false, code: 'WEAK_PASSWORD', message: v });
+    if (v) return res.status(400).json({ ok: false, message: v });
 
     const { data: u, error } = await sb
       .from('users')
@@ -230,31 +331,31 @@ app.post('/api/auth/set-password', async (req, res) => {
 
     if (error) throw error;
     if (!u || !u.active) {
-      return res.status(403).json({ ok: false, code: 'INACTIVE_OR_UNKNOWN', message: 'Email not authorized or inactive.' });
+      return res.status(403).json({ ok: false, message: 'Email not authorized or inactive.' });
     }
 
-    // Only allow if there is no password yet
     if (u.password_hash && String(u.password_hash).trim()) {
-      return res.status(409).json({ ok: false, code: 'ALREADY_HAS_PASSWORD', message: 'Password already set for this account.' });
+      return res.status(409).json({ ok: false, message: 'Password already set for this account.' });
     }
 
     const hash = await bcrypt.hash(newPw, 10);
-
     const { error: updErr } = await sb
       .from('users')
       .update({ password_hash: hash, updated_at: new Date().toISOString() })
       .eq('email', em);
     if (updErr) throw updErr;
 
-    // Log them in right away
+    // Log them in right away (cookie with cross-site flags)
     const role = (u.role || '').toLowerCase() === 'admin' ? 'admin' : 'driver';
     const token = signSession({ email: em, fullName: u.full_name || em, role });
 
-    res.cookie('t', token, cookieOpts(req.headers.origin));
+    const opts = cookieOpts(req.headers.origin);
+    res.cookie('t', token, opts);
+
     return res.json({ ok: true, role });
   } catch (e) {
     console.error('POST /api/auth/set-password', e);
-    return res.status(500).json({ ok: false, code: 'SET_PASSWORD_FAILED', message: 'Could not set password.' });
+    return res.status(500).json({ ok: false, message: 'Could not set password.' });
   }
 });
 
@@ -320,7 +421,7 @@ app.get('/api/me', verifySession, ensureActiveUser, async (req, res) => {
     return res.json({ ok: true, profile: req.user, tags: out });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ ok: false, code: 'ME_FAILED', message: 'Failed to load data.' });
+    return res.status(500).json({ ok: false, message: 'Failed to load data.' });
   }
 });
 
@@ -339,7 +440,7 @@ app.get('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, res
 
     if (error) throw error;
     if (!data) {
-      return res.status(404).json({ ok: false, code: 'DRIVER_TAG_NOT_FOUND', message: 'Driver tag not found' });
+      return res.status(404).json({ ok: false, message: 'Driver tag not found' });
     }
 
     const driver = {
@@ -359,7 +460,7 @@ app.get('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, res
     return res.json({ ok: true, driver });
   } catch (e) {
     console.error('GET /api/tags/:id/driver', e);
-    return res.status(500).json({ ok: false, code: 'LOAD_DRIVER_TAG_FAILED', message: 'Failed to load driver tag.' });
+    return res.status(500).json({ ok: false, message: 'Failed to load driver tag.' });
   }
 });
 
@@ -372,7 +473,7 @@ app.post(
   async (req, res) => {
     try {
       const ticketNo = String(req.params.id);
-      if (!req.file) return res.status(400).json({ ok: false, code: 'NO_FILE', message: 'No file uploaded' });
+      if (!req.file) return res.status(400).json({ ok: false, message: 'No file uploaded' });
 
       const ext = (req.file.originalname.split('.').pop() || 'bin').toLowerCase();
       const key = `tickets/${ticketNo}/proof-${Date.now()}.${ext}`;
@@ -397,7 +498,7 @@ app.post(
       return res.json({ ok: true, key });
     } catch (e) {
       console.error('POST /api/tags/:id/proof', e);
-      return res.status(500).json({ ok: false, code: 'UPLOAD_FAILED', message: 'Upload failed' });
+      return res.status(500).json({ ok: false, message: 'Upload failed' });
     }
   }
 );
@@ -413,9 +514,9 @@ app.post(
       const ticketNo = String(req.params.id);
       const who = String(req.params.who || '').toLowerCase(); // 'driver' | 'received'
       if (!['driver', 'received'].includes(who)) {
-        return res.status(400).json({ ok: false, code: 'INVALID_SIGNATURE_TYPE', message: 'Invalid signature type' });
+        return res.status(400).json({ ok: false, message: 'Invalid signature type' });
       }
-      if (!req.file) return res.status(400).json({ ok: false, code: 'NO_FILE', message: 'No file uploaded' });
+      if (!req.file) return res.status(400).json({ ok: false, message: 'No file uploaded' });
 
       const key = `tickets/${ticketNo}/sig-${who}-${Date.now()}.png`;
 
@@ -446,7 +547,7 @@ app.post(
       return res.json({ ok: true, key });
     } catch (e) {
       console.error('POST /api/tags/:id/signature/:who', e);
-      return res.status(500).json({ ok: false, code: 'SIGNATURE_UPLOAD_FAILED', message: 'Signature upload failed' });
+      return res.status(500).json({ ok: false, message: 'Signature upload failed' });
     }
   }
 );
@@ -478,49 +579,44 @@ app.get('/api/tags/:id/proof-url', verifySession, ensureActiveUser, async (req, 
     return res.json({ ok: true, url: sign.signedUrl });
   } catch (e) {
     console.error('GET /api/tags/:id/proof-url', e);
-    return res.status(500).json({ ok: false, code: 'SIGNED_URL_FAILED', message: 'Failed to create signed URL' });
+    return res.status(500).json({ ok: false, message: 'Failed to create signed URL' });
   }
 });
 
 // Signed URL for signature
-app.get(
-  '/api/tags/:id/signature-url/:who',
-  verifySession,
-  ensureActiveUser,
-  async (req, res) => {
-    try {
-      const ticketNo = String(req.params.id);
-      const who = String(req.params.who || '').toLowerCase();
-      if (!['driver', 'received'].includes(who)) {
-        return res.status(400).json({ ok: false, code: 'INVALID_SIGNATURE_TYPE', message: 'Invalid signature type' });
-      }
-
-      const { data, error } = await sb
-        .from('driver_tags')
-        .select('signature_driver_key, signature_received_key')
-        .eq('ticket_no', ticketNo)
-        .maybeSingle();
-      if (error) throw error;
-
-      const key = who === 'driver' ? data?.signature_driver_key : data?.signature_received_key;
-      if (!key) return res.json({ ok: true, url: null });
-
-      const filename = key.split('/').pop() || `ticket-${ticketNo}-sig-${who}.png`;
-      const wantDownload =
-        req.query.download === '1' || req.query.download === 'true' || req.query.download === 'yes';
-
-      const { data: sign, error: sErr } = await sb.storage
-        .from(SIGN_BUCKET)
-        .createSignedUrl(key, 60 * 60 * 24 * 7, wantDownload ? { download: filename } : undefined);
-      if (sErr) throw sErr;
-
-      return res.json({ ok: true, url: sign.signedUrl });
-    } catch (e) {
-      console.error('GET /api/tags/:id/signature-url/:who', e);
-      return res.status(500).json({ ok: false, code: 'SIGNED_URL_FAILED', message: 'Failed to create signed URL' });
+app.get('/api/tags/:id/signature-url/:who', verifySession, ensureActiveUser, async (req, res) => {
+  try {
+    const ticketNo = String(req.params.id);
+    const who = String(req.params.who || '').toLowerCase();
+    if (!['driver', 'received'].includes(who)) {
+      return res.status(400).json({ ok: false, message: 'Invalid signature type' });
     }
+
+    const { data, error } = await sb
+      .from('driver_tags')
+      .select('signature_driver_key, signature_received_key')
+      .eq('ticket_no', ticketNo)
+      .maybeSingle();
+    if (error) throw error;
+
+    const key = who === 'driver' ? data?.signature_driver_key : data?.signature_received_key;
+    if (!key) return res.json({ ok: true, url: null });
+
+    const filename = key.split('/').pop() || `ticket-${ticketNo}-sig-${who}.png`;
+    const wantDownload =
+      req.query.download === '1' || req.query.download === 'true' || req.query.download === 'yes';
+
+    const { data: sign, error: sErr } = await sb.storage
+      .from(SIGN_BUCKET)
+      .createSignedUrl(key, 60 * 60 * 24 * 7, wantDownload ? { download: filename } : undefined);
+    if (sErr) throw sErr;
+
+    return res.json({ ok: true, url: sign.signedUrl });
+  } catch (e) {
+    console.error('GET /api/tags/:id/signature-url/:who', e);
+    return res.status(500).json({ ok: false, message: 'Failed to create signed URL' });
   }
-);
+});
 
 // Scale items
 app.get('/api/tags/:id/scale-items', verifySession, ensureActiveUser, async (req, res) => {
@@ -531,7 +627,7 @@ app.get('/api/tags/:id/scale-items', verifySession, ensureActiveUser, async (req
       .select('id, ticket_no, scale_tag_no, yard_or_weight, material, yard_arrival, yard_leave, site_arrival, site_leave')
       .eq('ticket_no', ticketNo)
       .order('id', { ascending: true });
-    if (error) throw error();
+    if (error) throw error;
 
     const items = (data || []).map((r) => ({
       _row: r.id,
@@ -547,7 +643,7 @@ app.get('/api/tags/:id/scale-items', verifySession, ensureActiveUser, async (req
     return res.json({ ok: true, items });
   } catch (e) {
     console.error('GET /api/tags/:id/scale-items', e);
-    return res.status(500).json({ ok: false, code: 'LOAD_SCALE_ITEMS_FAILED', message: 'Failed to load scale items.' });
+    return res.status(500).json({ ok: false, message: 'Failed to load scale items.' });
   }
 });
 
@@ -568,7 +664,7 @@ app.post('/api/tags/:id/scale-items', verifySession, ensureActiveUser, async (re
         !it.siteLeave
     );
     if (bad) {
-      return res.status(400).json({ ok: false, code: 'MISSING_FIELDS', message: 'All scale tag fields are required.' });
+      return res.status(400).json({ ok: false, message: 'All scale tag fields are required.' });
     }
 
     const rows = itemsIn.map((it) => ({
@@ -593,7 +689,7 @@ app.post('/api/tags/:id/scale-items', verifySession, ensureActiveUser, async (re
     return res.json({ ok: true, saved: rows.length });
   } catch (e) {
     console.error('POST /api/tags/:id/scale-items', e);
-    return res.status(500).json({ ok: false, code: 'SAVE_SCALE_ITEMS_FAILED', message: 'Failed to save scale items.' });
+    return res.status(500).json({ ok: false, message: 'Failed to save scale items.' });
   }
 });
 
@@ -608,7 +704,7 @@ app.post('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, re
       .eq('ticket_no', ticketNo)
       .maybeSingle();
     if (e0) throw e0;
-    if (!stub) return res.status(404).json({ ok: false, code: 'TICKET_NOT_FOUND_FOR_DRIVER', message: 'Ticket not found for this driver' });
+    if (!stub) return res.status(404).json({ ok: false, message: 'Ticket not found for this driver' });
 
     const {
       bridgefare = '',
@@ -644,7 +740,7 @@ app.post('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, re
     return res.json({ ok: true });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ ok: false, code: 'SAVE_DRIVER_FORM_FAILED', message: 'Save failed.' });
+    return res.status(500).json({ ok: false, message: 'Save failed.' });
   }
 });
 
@@ -667,7 +763,7 @@ app.get('/api/admin/users', verifySession, ensureActiveUser, requireAdmin, async
     res.json({ ok: true, users: rows });
   } catch (e) {
     console.error('GET /api/admin/users', e);
-    res.status(500).json({ ok: false, code: 'LOAD_USERS_FAILED', message: 'Failed to load users.' });
+    res.status(500).json({ ok: false, message: 'Failed to load users.' });
   }
 });
 
@@ -677,7 +773,7 @@ app.post('/api/admin/users', verifySession, ensureActiveUser, requireAdmin, asyn
     const em = String(email || '').toLowerCase().trim();
     const rn = ltrim(role);
     if (!em || !rn || !['admin', 'driver'].includes(rn)) {
-      return res.status(400).json({ ok: false, code: 'INVALID_USER_INPUT', message: 'email and role (admin|driver) are required.' });
+      return res.status(400).json({ ok: false, message: 'email and role (admin|driver) are required.' });
     }
     const row = {
       email: em,
@@ -690,7 +786,7 @@ app.post('/api/admin/users', verifySession, ensureActiveUser, requireAdmin, asyn
     res.json({ ok: true });
   } catch (e) {
     console.error('POST /api/admin/users', e);
-    res.status(500).json({ ok: false, code: 'ADD_USER_FAILED', message: 'Failed to add user.' });
+    res.status(500).json({ ok: false, message: 'Failed to add user.' });
   }
 });
 
@@ -704,14 +800,14 @@ app.put('/api/admin/users/:email', verifySession, ensureActiveUser, requireAdmin
     };
     Object.keys(patch).forEach((k) => patch[k] === undefined && delete patch[k]);
     if (!Object.keys(patch).length) {
-      return res.status(400).json({ ok: false, code: 'NO_FIELDS', message: 'No fields to update.' });
+      return res.status(400).json({ ok: false, message: 'No fields to update.' });
     }
     const { error } = await sb.from('users').update(patch).eq('email', email);
     if (error) throw error;
     res.json({ ok: true });
   } catch (e) {
     console.error('PUT /api/admin/users/:email', e);
-    res.status(500).json({ ok: false, code: 'UPDATE_USER_FAILED', message: 'Failed to update user.' });
+    res.status(500).json({ ok: false, message: 'Failed to update user.' });
   }
 });
 
@@ -719,13 +815,13 @@ app.delete('/api/admin/users', verifySession, ensureActiveUser, requireAdmin, as
   try {
     const emails = Array.isArray(req.body?.emails) ? req.body.emails : [];
     const list = emails.map((e) => String(e || '').toLowerCase()).filter(Boolean);
-    if (!list.length) return res.status(400).json({ ok: false, code: 'NO_EMAILS', message: 'No emails provided.' });
+    if (!list.length) return res.status(400).json({ ok: false, message: 'No emails provided.' });
     const { error } = await sb.from('users').delete().in('email', list);
     if (error) throw error;
     res.json({ ok: true, deleted: list.length });
   } catch (e) {
     console.error('DELETE /api/admin/users', e);
-    res.status(500).json({ ok: false, code: 'DELETE_USERS_FAILED', message: 'Failed to delete users.' });
+    res.status(500).json({ ok: false, message: 'Failed to delete users.' });
   }
 });
 
@@ -761,7 +857,7 @@ app.get('/api/admin/tags', verifySession, ensureActiveUser, requireAdmin, async 
     return res.json({ ok: true, profile: req.user, tags });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ ok: false, code: 'LOAD_ADMIN_TAGS_FAILED', message: 'Failed to load admin tags.' });
+    return res.status(500).json({ ok: false, message: 'Failed to load admin tags.' });
   }
 });
 
@@ -771,7 +867,7 @@ app.get('/api/admin/meta', verifySession, ensureActiveUser, requireAdmin, async 
     return res.json({ ok: true, profile: _req.user, drivers, trailerTypes });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ ok: false, code: 'LOAD_META_FAILED', message: 'Failed to load meta.' });
+    return res.status(500).json({ ok: false, message: 'Failed to load meta.' });
   }
 });
 
@@ -779,13 +875,13 @@ app.post('/api/admin/tickets', verifySession, ensureActiveUser, requireAdmin, as
   try {
     const p = req.body || {};
     if (!p.ticketNo || !p.driverName || !p.date) {
-      return res.status(400).json({ ok: false, code: 'REQUIRED_FIELDS', message: 'date, ticketNo and driverName are required.' });
+      return res.status(400).json({ ok: false, message: 'date, ticketNo and driverName are required.' });
     }
     const result = await upsertAdminTicket(p);
     return res.json({ ok: true, ...result });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ ok: false, code: 'ADD_TICKET_FAILED', message: 'Failed to add ticket.' });
+    return res.status(500).json({ ok: false, message: 'Failed to add ticket.' });
   }
 });
 
@@ -793,7 +889,7 @@ app.get('/api/admin/tickets/:id', verifySession, ensureActiveUser, requireAdmin,
   try {
     const id = String(req.params.id || '').trim();
     const t = await getAdminTicketByTicketNo(id);
-    if (!t) return res.status(404).json({ ok: false, code: 'NOT_FOUND', message: 'Not found' });
+    if (!t) return res.status(404).json({ ok: false, message: 'Not found' });
     return res.json({
       ok: true,
       ticket: {
@@ -817,7 +913,7 @@ app.get('/api/admin/tickets/:id', verifySession, ensureActiveUser, requireAdmin,
     });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ ok: false, code: 'LOAD_TICKET_FAILED', message: 'Failed to load ticket.' });
+    return res.status(500).json({ ok: false, message: 'Failed to load ticket.' });
   }
 });
 
@@ -862,7 +958,7 @@ app.put('/api/admin/tickets/:id', verifySession, ensureActiveUser, requireAdmin,
     return res.json({ ok: true });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ ok: false, code: 'UPDATE_TICKET_FAILED', message: 'Failed to update ticket.' });
+    return res.status(500).json({ ok: false, message: 'Failed to update ticket.' });
   }
 });
 
@@ -872,14 +968,14 @@ app.delete('/api/admin/tickets/:id', verifySession, ensureActiveUser, requireAdm
     return res.json({ ok: true });
   } catch (e) {
     console.error(e);
-    return res.status(500).json({ ok: false, code: 'DELETE_TICKET_FAILED', message: 'Failed to delete ticket.' });
+    return res.status(500).json({ ok: false, message: 'Failed to delete ticket.' });
   }
 });
 
 app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin, async (req, res) => {
   try {
     const csv = String(req.body?.csv || '');
-    if (!csv.trim()) return res.status(400).json({ ok: false, code: 'MISSING_CSV', message: 'Missing csv' });
+    if (!csv.trim()) return res.status(400).json({ ok: false, message: 'Missing csv' });
 
     function parseCSV(text) {
       const rows = [];
@@ -951,13 +1047,11 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
         if (k && map[k] === undefined) map[k] = idx;
       });
       if (needSome.every((k) => map[k] !== undefined)) {
-        headerRow = i;
-        headerIdx = map;
-        break;
+        headerRow = i; headerIdx = map; break;
       }
     }
     if (headerRow < 0) {
-      return res.status(400).json({ ok: false, code: 'HEADER_NOT_FOUND', message: 'Header row not found (looking for Date/Ticket#/Driver Names).' });
+      return res.status(400).json({ ok: false, message: 'Header row not found (looking for Date/Ticket#/Driver Names).' });
     }
 
     const pick = (r, key) => {
@@ -977,16 +1071,10 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
       const driverName = pick(r, 'driver');
       const date = pick(r, 'date');
 
-      if (!ticketNo || !driverName || !date) {
-        invalid++;
-        continue;
-      }
+      if (!ticketNo || !driverName || !date) { invalid++; continue; }
 
       const carrier = pick(r, 'carrier');
-      if (carrier) {
-        skippedCarrier++;
-        continue;
-      }
+      if (carrier) { skippedCarrier++; continue; }
 
       items.push({
         date,
@@ -1020,114 +1108,16 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
     });
   } catch (e) {
     console.error('import-csv:', e);
-    return res.status(500).json({ ok: false, code: 'IMPORT_FAILED', message: 'Import failed.' });
+    return res.status(500).json({ ok: false, message: 'Import failed.' });
   }
 });
-
-// ======================== PDF helpers (used below) ========================
-const IMG_W = 5100;
-const IMG_H = 6600;
-const PDF_W = 612;
-const PDF_H = 792;
-const sx = PDF_W / IMG_W;
-const sy = PDF_H / IMG_H;
-const X = (px) => px * sx;
-const Y = (px) => px * sy;
-
-const COORD = {
-  ticketNo: { x: 4007, y: 810 },
-  dateMonth: { x: 509, y: 895 },
-  dateDay: { x: 1068, y: 878 },
-  dateYear: { x: 1483, y: 878 },
-
-  truckNo: { x: 1144, y: 1039 },
-  trailerType: { x: 3981, y: 1132 },
-  subHauler: { x: 1220, y: 1403 },
-  primeCarrier: { x: 1305, y: 1564 },
-  shipper: { x: 1204, y: 1733 },
-  origin: { x: 1170, y: 1886 },
-  originCity: { x: 1187, y: 2055 },
-  poNo: { x: 3465, y: 1395 },
-  jobName: { x: 3558, y: 1556 },
-  jobNo: { x: 3448, y: 1733 },
-  destination: { x: 3414, y: 1903 },
-  city: { x: 3371, y: 2055 },
-
-  // table col centers (row 1)
-  tbl_scaleTagNo: { x: 1102, y: 2504 },
-  tbl_yardOrWeight: { x: 2017, y: 2513 },
-  tbl_material: { x: 2813, y: 2513 },
-  tbl_timeArrival: { x: 3431, y: 2496 },
-  tbl_timeLeave: { x: 3812, y: 2513 },
-  tbl_siteArrival: { x: 4134, y: 2513 },
-  tbl_siteLeave: { x: 4506, y: 2504 },
-
-  truckStart: { x: 704, y: 4663 },
-  bridgefare: { x: 3863, y: 4663 },
-
-  signedOutLoadedYes: { x: 2220, y: 4824 },
-  signedOutLoadedNo: { x: 2203, y: 4833 },
-
-  howManyTonsLoads: { x: 3625, y: 4833 },
-
-  startTime: { x: 1127, y: 5028 },
-  downtimeLunch: { x: 2262, y: 5028 },
-  notes_mid: { x: 3236, y: 5045 },
-
-  signOutTime: { x: 2059, y: 5222 },
-
-  driverName: { x: 1441, y: 5485 },
-  receivedBy: { x: 3956, y: 5485 },
-
-  notes_big: { x: 831, y: 5866 },
-};
-
-// utility
-function drawText(doc, s, xpx, ypx, opts = {}) {
-  if (s === undefined || s === null || String(s).trim() === '') return;
-  doc.text(String(s), X(xpx), Y(ypx), { lineBreak: false, ...opts });
-}
-function toMDY(value) {
-  if (!value) return { m: '', d: '', y: '' };
-  const d = new Date(value);
-  if (isNaN(d)) return { m: '', d: '', y: '' };
-  return {
-    m: String(d.getMonth() + 1).padStart(2, '0'),
-    d: String(d.getDate()).padStart(2, '0'),
-    y: String(d.getFullYear()).slice(-2),
-  };
-}
-function hhmm(s) {
-  if (!s) return '';
-  const m = String(s).match(/^(\d{1,2}):(\d{2})/);
-  if (m) return `${m[1].padStart(2, '0')}:${m[2]}`;
-  return String(s);
-}
-async function sbDataToBuffer(data) {
-  if (!data) return null;
-  if (Buffer.isBuffer(data)) return data;
-  if (data instanceof Uint8Array) return Buffer.from(data);
-  if (data instanceof ArrayBuffer) return Buffer.from(data);
-  if (typeof data.arrayBuffer === 'function') {
-    const ab = await data.arrayBuffer();
-    return Buffer.from(ab);
-  }
-  if (typeof data.pipe === 'function' || data[Symbol.asyncIterator]) {
-    const chunks = [];
-    for await (const chunk of data) {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-    }
-    return Buffer.concat(chunks);
-  }
-  return null;
-}
 
 // ======================== COMMON TICKET READ & PDF ========================
 app.get('/api/tickets/:id', verifySession, ensureActiveUser, async (req, res) => {
   try {
     const ticketNo = String(req.params.id || '').trim();
     const t = await getAdminTicketByTicketNo(ticketNo);
-    if (!t) return res.status(404).json({ ok: false, code: 'NOT_FOUND', message: 'Not found' });
+    if (!t) return res.status(404).json({ ok: false, message: 'Not found' });
 
     return res.json({
       ok: true,
@@ -1152,7 +1142,7 @@ app.get('/api/tickets/:id', verifySession, ensureActiveUser, async (req, res) =>
     });
   } catch (e) {
     console.error('GET /api/tickets/:id', e);
-    return res.status(500).json({ ok: false, code: 'LOAD_TICKET_FAILED', message: 'Failed to load ticket.' });
+    return res.status(500).json({ ok: false, message: 'Failed to load ticket.' });
   }
 });
 
@@ -1220,7 +1210,7 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
 
   try {
     if (!fs.existsSync(formPath)) {
-      return res.status(500).json({ ok: false, code: 'FORM_MISSING', message: 'Blank form not found' });
+      return res.status(500).json({ ok: false, message: 'Blank form not found' });
     }
     const bgBuffer = fs.readFileSync(formPath);
 
@@ -1230,7 +1220,7 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
       sb.from('scale_tags').select('*').eq('ticket_no', ticketNo).order('id', { ascending: true }),
     ]);
     if (e1 || e2 || e3) throw (e1 || e2 || e3);
-    if (!admin) return res.status(404).json({ ok: false, code: 'NOT_FOUND', message: 'Ticket not found' });
+    if (!admin) return res.status(404).json({ ok: false, message: 'Ticket not found' });
 
     const dl = req.query.download === '1' || req.query.download === 'true';
 
@@ -1333,7 +1323,7 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     doc.end();
   } catch (e) {
     console.error('PDF route error', e);
-    if (!res.headersSent) res.status(500).json({ ok: false, code: 'PDF_FAILED', message: 'Failed to generate PDF' });
+    if (!res.headersSent) res.status(500).json({ ok: false, message: 'Failed to generate PDF' });
     try { res.end(); } catch {}
   }
 });
