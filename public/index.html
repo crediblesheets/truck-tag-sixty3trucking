@@ -135,10 +135,9 @@
   </footer>
 
   <script>
-  // ---- footer year ----
+  // footer year
   document.getElementById('y').textContent = new Date().getFullYear();
 
-  // ---- element refs ----
   const form      = document.getElementById('loginForm');
   const emailEl   = document.getElementById('email');
   const pwdEl     = document.getElementById('pwd');
@@ -146,7 +145,6 @@
   const msgEl     = document.getElementById('msg');
   const submitBtn = document.getElementById('submitBtn');
 
-  // ---- helpers ----
   function setMsg(text = '', kind = '') {
     msgEl.textContent = text;
     msgEl.className = 'auth-msg ' + (kind ? kind : (text ? 'ok' : ''));
@@ -155,13 +153,12 @@
     submitBtn.classList.toggle('loading', !!on);
     submitBtn.disabled = !!on;
   }
-  const isJson = r => (r.headers.get('content-type') || '').includes('application/json');
 
-  // ---- already signed in? ----
+  // already logged-in guard
   (async () => {
     try {
       const r = await fetch('/api/me', { credentials: 'include' });
-      if (!r.ok || !isJson(r)) return;
+      if (!r.ok) return;
       const j = await r.json();
       if (j.ok && j.profile) {
         const role = (j.profile.role || '').toLowerCase();
@@ -170,109 +167,31 @@
     } catch {}
   })();
 
-  // ---- show/hide password ----
   showBtn.addEventListener('click', () => {
     const showing = pwdEl.type === 'text';
     pwdEl.type = showing ? 'password' : 'text';
     showBtn.setAttribute('aria-pressed', String(!showing));
     showBtn.classList.toggle('on', !showing);
-    pwdEl.focus({ preventScroll: true });
+    pwdEl.focus({preventScroll:true});
   });
 
-  // ===== Password setup modal =====
-  const pwModal   = document.getElementById('pwModal');
-  const pwEmail   = document.getElementById('pwEmail');
-  const newPwd    = document.getElementById('newPwd');
-  const newPwd2   = document.getElementById('newPwd2');
-  const pwMsg     = document.getElementById('pwMsg');
-  const setPwdBtn = document.getElementById('setPwdBtn');
-  const pwCancel  = document.getElementById('pwCancel');
-  const pwClose   = document.getElementById('pwClose');
-
-  function setPwMsg(text = '', kind = '') {
-    pwMsg.textContent = text;
-    pwMsg.className = 'auth-msg ' + (kind ? kind : (text ? 'ok' : ''));
-  }
-  function openPwModal(email) {
-    pwEmail.value = email;
-    newPwd.value = '';
-    newPwd2.value = '';
-    setPwMsg('');
-    pwModal.classList.remove('hidden');
-    pwModal.setAttribute('aria-hidden', 'false');
-    setTimeout(() => newPwd.focus(), 0);
-  }
-  function closePwModal() {
-    pwModal.classList.add('hidden');
-    pwModal.setAttribute('aria-hidden', 'true');
-  }
-  pwCancel.addEventListener('click', closePwModal);
-  pwClose.addEventListener('click', closePwModal);
-
-  setPwdBtn.addEventListener('click', async () => {
-    setPwMsg('');
-    const email = pwEmail.value.trim().toLowerCase();
-    const p1 = newPwd.value;
-    const p2 = newPwd2.value;
-
-    if (p1.length < 8) return setPwMsg('Password must be at least 8 characters.', 'error');
-    if (!/[A-Za-z]/.test(p1) || !/\d/.test(p1)) return setPwMsg('Use letters and at least one number.', 'error');
-    if (p1 !== p2) return setPwMsg('Passwords do not match.', 'error');
-
-    setPwdBtn.classList.add('loading');
-    setPwdBtn.disabled = true;
-
-    try {
-      const r = await fetch('/api/auth/set-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ email, newPassword: p1 })
-      });
-      const d = isJson(r) ? await r.json() : { ok: false, message: await r.text() };
-
-      setPwdBtn.classList.remove('loading');
-      setPwdBtn.disabled = false;
-
-      if (!r.ok || d.ok === false) {
-        return setPwMsg(d.message || 'Could not set password.', 'error');
-      }
-
-      setPwMsg('Password created. Redirecting…', 'ok');
-      const role = (d.role || '').toLowerCase();
-      location.href = role === 'admin' ? '/admin' : '/dashboard.html';
-    } catch (err) {
-      console.error(err);
-      setPwdBtn.classList.remove('loading');
-      setPwdBtn.disabled = false;
-      setPwMsg('Network error. Try again.', 'error');
-    }
-  });
-
-  // ===== SINGLE submit handler for login =====
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     setMsg('');
     setLoading(true);
 
-    const email = emailEl.value.trim().toLowerCase();
+    const email = emailEl.value.trim();
     const password = pwdEl.value;
 
     try {
       const r = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        credentials: 'include',             // keep cookies!
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // always include for cookie-based auth
         body: JSON.stringify({ email, password })
       });
 
-      const d = isJson(r) ? await r.json() : { ok: false, message: await r.text() };
-
-      if (d && d.code === 'PASSWORD_NOT_SET') {
-        setLoading(false);
-        openPwModal(email);
-        return;
-      }
+      const d = await r.json().catch(() => ({}));
 
       if (!r.ok || d.ok === false) {
         setLoading(false);
@@ -286,10 +205,11 @@
     } catch (err) {
       console.error(err);
       setLoading(false);
-      setMsg('Sign-in failed. Check your connection and try again.', 'error');
+      setMsg('Sign-in failed. Please try again.', 'error');
     }
   });
 </script>
+
 
 </body>
 </html>

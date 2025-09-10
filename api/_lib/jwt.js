@@ -1,43 +1,51 @@
-// api/_lib/jwt.js
+// Consistent session helpers for all routes
 import jwt from 'jsonwebtoken';
 
-export const COOKIE_NAME = 'tt_auth';
-export const TOKEN_MAX_AGE = 60 * 60 * 24 * 7; // 7 days
+export const COOKIE_NAME = 'tt_session';
+const WEEK = 60 * 60 * 24 * 7;
 
-function cookieString(value, maxAge = TOKEN_MAX_AGE) {
-  return [
-    `${COOKIE_NAME}=${encodeURIComponent(value)}`,
+export function signSession(payload) {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET is not set');
+  return jwt.sign(payload, secret, { expiresIn: '7d' });
+}
+
+export function verifySessionToken(token) {
+  try {
+    return jwt.verify(token, process.env.JWT_SECRET);
+  } catch {
+    return null;
+  }
+}
+
+export function readCookie(req) {
+  const raw = req.headers.cookie || '';
+  const map = Object.fromEntries(
+    raw.split(';').map((c) => c.trim().split('=').map(decodeURIComponent)).filter((a) => a[0])
+  );
+  return map[COOKIE_NAME] || null;
+}
+
+export function setSessionCookie(res, token) {
+  const cookie = [
+    `${encodeURIComponent(COOKIE_NAME)}=${encodeURIComponent(token)}`,
     'Path=/',
     'HttpOnly',
     'Secure',
     'SameSite=Lax',
-    `Max-Age=${maxAge}`,
+    `Max-Age=${WEEK}`
   ].join('; ');
+  res.setHeader('Set-Cookie', cookie);
 }
 
-export function signToken(user) {
-  return jwt.sign(
-    { sub: user.id, role: user.role, email: user.email },
-    process.env.JWT_SECRET,
-    { expiresIn: `${TOKEN_MAX_AGE}s` }
-  );
-}
-
-export function setAuthCookie(res, token) {
-  res.setHeader('Set-Cookie', cookieString(token));
-}
-
-export function clearAuthCookie(res) {
-  res.setHeader('Set-Cookie', cookieString('', 0));
-}
-
-export function readAuth(req) {
-  const cookies = req.headers.cookie || '';
-  const m = cookies.match(new RegExp(`${COOKIE_NAME}=([^;]+)`));
-  if (!m) return null;
-  try {
-    return jwt.verify(decodeURIComponent(m[1]), process.env.JWT_SECRET);
-  } catch {
-    return null;
-  }
+export function clearSessionCookie(res) {
+  const cookie = [
+    `${encodeURIComponent(COOKIE_NAME)}=`,
+    'Path=/',
+    'HttpOnly',
+    'Secure',
+    'SameSite=Lax',
+    'Max-Age=0'
+  ].join('; ');
+  res.setHeader('Set-Cookie', cookie);
 }

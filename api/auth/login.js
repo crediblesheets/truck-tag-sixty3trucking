@@ -1,46 +1,54 @@
-// api/auth/login.js
-export const config = { runtime: 'nodejs' };
-
-import supabase from '../_lib/supa.js';
 import bcrypt from 'bcryptjs';
-import { signToken, setAuthCookie } from '../_lib/jwt.js';
+import { createClient } from '@supabase/supabase-js';
+import { signSession, setSessionCookie } from '../_lib/jwt.js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ ok: false, message: 'Method Not Allowed' });
+    res.status(405).json({ ok: false, message: 'Method not allowed' });
+    return;
   }
 
-  let body = req.body;
-  if (typeof body !== 'object') {
-    try { body = JSON.parse(req.body || '{}'); } catch { body = {}; }
+  try {
+    const { email, password } = req.body || {};
+    if (!email || !password) {
+      res.status(400).json({ ok: false, message: 'Email and password required' });
+      return;
+    }
+
+    // Get user
+    const { data: user, error } = await supabase
+      .from('Users')
+      .select('id,email,role,is_active,password_hash')
+      .eq('email', email.toLowerCase())
+      .maybeSingle();
+
+    if (error || !user || !user.is_active) {
+      res.status(401).json({ ok: false, message: 'Invalid email or password' });
+      return;
+    }
+
+    const ok = await bcrypt.compare(password, user.password_hash || '');
+    if (!ok) {
+      res.status(401).json({ ok: false, message: 'Invalid email or password' });
+      return;
+    }
+
+    // Issue session
+    const token = signSession({
+      sub: user.id,
+      role: user.role,
+      email: user.email
+    });
+    setSessionCookie(res, token);
+
+    res.status(200).json({ ok: true, role: user.role });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ ok: false, message: 'Login failed' });
   }
-  let { email, password } = body;
-  email = String(email || '').trim().toLowerCase();
-
-  if (!email || !password) {
-    return res.status(400).json({ ok: false, message: 'Email and password are required.' });
-  }
-
-  const { data: user, error } = await supabase
-    .from('users')
-    .select('id,email,role,active,password_hash')
-    .eq('email', email)
-    .maybeSingle();
-
-  if (error) return res.status(500).json({ ok: false, message: 'Database error.' });
-  if (!user || user.active === false) {
-    return res.status(401).json({ ok: false, message: 'Invalid email or password.' });
-  }
-
-  if (!user.password_hash) {
-    // Front-end opens “Create password” modal when it sees this code
-    return res.status(200).json({ ok: false, code: 'PASSWORD_NOT_SET', message: 'Password not set.' });
-  }
-
-  const ok = await bcrypt.compare(password, user.password_hash);
-  if (!ok) return res.status(401).json({ ok: false, message: 'Invalid email or password.' });
-
-  const token = signToken(user);
-  setAuthCookie(res, token);
-  return res.status(200).json({ ok: true, role: user.role });
 }
