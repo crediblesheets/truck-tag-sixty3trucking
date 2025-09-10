@@ -1,11 +1,8 @@
-// ✅ use a supported value (or delete this line entirely)
 export const config = { runtime: 'nodejs' };
 
 import app from '../server.js';
 
 export default function handler(req, res) {
-  if (!req.url.startsWith('/api')) {
-    req.url = '/api' + (req.url === '/' ? '' : req.url);
-  }
+  // Do NOT change req.url here; just pass through to Express.
   return app(req, res);
 }
