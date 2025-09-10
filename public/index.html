@@ -162,7 +162,7 @@
       const j = await r.json();
       if (j.ok && j.profile) {
         const role = (j.profile.role || '').toLowerCase();
-        location.replace(role === 'admin' ? '/admin' : '/dashboard.html');
+        location.replace(role === 'admin' ? '/admin.html' : '/dashboard.html');
       }
     } catch {}
   })();
@@ -229,7 +229,7 @@
 
       setPwMsg('Password created. Redirecting…', 'ok');
       const role = (d.role || '').toLowerCase();
-      location.href = role === 'admin' ? '/admin' : '/dashboard.html';
+      location.href = role === 'admin' ? '/admin.html' : '/dashboard.html';
     } catch (err) {
       console.error(err);
       setPwdBtn.classList.remove('loading'); setPwdBtn.disabled = false;
@@ -270,7 +270,7 @@
 
       const role = (d.role || '').toLowerCase();
       setMsg('Success. Redirecting…', 'ok');
-      location.href = role === 'admin' ? '/admin' : '/dashboard.html';
+      location.href = role === 'admin' ? '/admin.html' : '/dashboard.html';
     } catch (err) {
       console.error(err);
       setLoading(false);
