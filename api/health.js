@@ -1,4 +1,5 @@
-export const config = { runtime: 'nodejs18.x' };
+// Force Node (not Edge) runtime
+export const config = { runtime: 'nodejs' };
 
 export default function handler(req, res) {
   res.status(200).json({ ok: true, url: req.url, now: Date.now() });

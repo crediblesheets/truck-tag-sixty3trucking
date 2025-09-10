@@ -1,8 +1,9 @@
-export const config = { runtime: 'nodejs18.x' };
+// Force Node (not Edge) runtime
+export const config = { runtime: 'nodejs' };
 
 import app from '../server.js';
 
-// Vercel calls this without the '/api' prefix; put it back for Express.
+// Vercel strips '/api' before invoking; add it back so Express routes match
 export default function handler(req, res) {
   if (!req.url.startsWith('/api')) {
     req.url = '/api' + (req.url === '/' ? '' : req.url);
