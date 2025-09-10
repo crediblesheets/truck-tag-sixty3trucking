@@ -1,25 +1,12 @@
 // api/_lib/jwt.js
 import jwt from 'jsonwebtoken';
 
-/** Sign a 30-day session JWT */
 export function signSession(payload) {
-  const key = process.env.JWT_SECRET;
-  if (!key) throw new Error('JWT_SECRET not set');
-  return jwt.sign(payload, key, { expiresIn: '30d' });
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET is not set');
+  return jwt.sign(payload, secret, { expiresIn: '30d' });
 }
 
-/** Verify session JWT. Returns payload or null. */
-export function verifySession(token) {
-  const key = process.env.JWT_SECRET;
-  if (!key) return null;
-  try {
-    return jwt.verify(token, key);
-  } catch {
-    return null;
-  }
-}
-
-/** Set HttpOnly cookie with the session token */
 export function setSessionCookie(res, token) {
   const domain = process.env.COOKIE_DOMAIN || undefined; // usually empty on Vercel
   const parts = [
@@ -28,23 +15,22 @@ export function setSessionCookie(res, token) {
     'HttpOnly',
     'Secure',
     'SameSite=Lax',
-    `Max-Age=${60 * 60 * 24 * 30}` // 30 days
+    'Max-Age=2592000' // 30d
   ];
   if (domain) parts.push(`Domain=${domain}`);
   res.setHeader('Set-Cookie', parts.join('; '));
 }
 
-/** Clear the session cookie */
-export function clearSessionCookie(res) {
-  const domain = process.env.COOKIE_DOMAIN || undefined;
-  const parts = [
-    'token=',
-    'Path=/',
-    'HttpOnly',
-    'Secure',
-    'SameSite=Lax',
-    'Max-Age=0'
-  ];
-  if (domain) parts.push(`Domain=${domain}`);
-  res.setHeader('Set-Cookie', parts.join('; '));
+export function readSessionFromReq(req) {
+  const raw = req.headers.cookie || '';
+  const token = raw
+    .split(';')
+    .map(s => s.trim())
+    .find(s => s.startsWith('token='))?.slice(6);
+  if (!token) return null;
+  try {
+    return jwt.verify(token, process.env.JWT_SECRET);
+  } catch {
+    return null;
+  }
 }

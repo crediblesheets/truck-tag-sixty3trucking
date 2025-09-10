@@ -1,5 +1,6 @@
-import { readCookie, verifySessionToken } from './_lib/jwt.js';
+// api/me.js
 import { createClient } from '@supabase/supabase-js';
+import { readSessionFromReq } from './_lib/jwt.js';
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -7,32 +8,29 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
-  const raw = readCookie(req);
-  if (!raw) {
-    res.status(401).json({ ok: false, message: 'No session' });
-    return;
+  if (req.method !== 'GET') {
+    return res.status(405).json({ ok: false, message: 'Method not allowed' });
   }
 
-  const session = verifySessionToken(raw);
-  if (!session) {
-    res.status(401).json({ ok: false, message: 'Invalid session' });
-    return;
+  try {
+    const session = readSessionFromReq(req);
+    if (!session) {
+      return res.status(401).json({ ok: false, message: 'No session' });
+    }
+
+    const { data: user, error } = await supabase
+      .from('Users')
+      .select('id,email,role,is_active')
+      .eq('id', session.sub)
+      .maybeSingle();
+
+    if (error || !user || !user.is_active) {
+      return res.status(401).json({ ok: false, message: 'Invalid session' });
+    }
+
+    return res.status(200).json({ ok: true, profile: user });
+  } catch (err) {
+    console.error(err);
+    return res.status(401).json({ ok: false, message: 'Invalid session' });
   }
-
-  // Optional: pull latest role/active status
-  const { data: user } = await supabase
-    .from('Users')
-    .select('id,email,role,is_active')
-    .eq('id', session.sub)
-    .maybeSingle();
-
-  if (!user || !user.is_active) {
-    res.status(401).json({ ok: false, message: 'Inactive' });
-    return;
-  }
-
-  res.status(200).json({
-    ok: true,
-    profile: { id: user.id, email: user.email, role: user.role }
-  });
 }

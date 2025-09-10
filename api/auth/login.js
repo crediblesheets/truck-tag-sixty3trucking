@@ -14,41 +14,37 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { email: rawEmail, password = '' } = req.body || {};
-    const email = (rawEmail || '').trim().toLowerCase();
+    const { email, password } = req.body || {};
     if (!email || !password) {
       return res.status(400).json({ ok: false, message: 'Email and password required' });
     }
 
-    // Find user
     const { data: user, error } = await supabase
       .from('Users')
       .select('id,email,role,is_active,password_hash')
-      .eq('email', email)
+      .eq('email', email.toLowerCase())
       .maybeSingle();
 
-    // Treat lookup issues as invalid creds to avoid 500s in the UI
     if (error || !user || !user.is_active) {
       return res.status(401).json({ ok: false, message: 'Invalid email or password' });
     }
 
-    // No password set yet? Ask client to open the create-password modal.
+    // If the account has no password yet, tell the client to open the setup modal
     if (!user.password_hash) {
       return res.status(409).json({ ok: false, code: 'PASSWORD_NOT_SET', message: 'Password not set' });
     }
 
-    const ok = await bcrypt.compare(password, user.password_hash);
+    const ok = await bcrypt.compare(password, user.password_hash || '');
     if (!ok) {
       return res.status(401).json({ ok: false, message: 'Invalid email or password' });
     }
 
-    // Issue session + cookie
     const token = signSession({ sub: user.id, role: user.role, email: user.email });
     setSessionCookie(res, token);
 
     return res.status(200).json({ ok: true, role: user.role });
   } catch (err) {
-    console.error('[auth/login]', err);
+    console.error(err);
     return res.status(500).json({ ok: false, message: 'Login failed' });
   }
 }
