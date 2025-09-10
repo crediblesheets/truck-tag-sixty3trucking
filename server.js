@@ -183,23 +183,32 @@ app.get('/api/ping', (_req, res) => res.json({ pong: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
-const allowlist = new Set(
-  [FRONTEND_ORIGIN].filter(Boolean).concat([
-    // common dev origins you might hit from
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
-    'http://localhost:3000',
-    'http://127.0.0.1:3000',
-  ])
-);
+// ----- CORS (replace your current allowlist/origin block with this) -----
+const devOrigins = new Set([
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+]);
+const explicit = new Set([FRONTEND_ORIGIN].filter(Boolean));
+
 app.use(cors({
   origin: (origin, cb) => {
-    // allow same-origin (no Origin header) and any explicit allowlisted origin
-    if (!origin || allowlist.has(origin)) return cb(null, true);
-    return cb(new Error(`CORS blocked: ${origin}`));
+    // Allow no-origin (same-origin/fetch), dev, explicit FRONTEND_ORIGIN and any *.vercel.app
+    if (!origin) return cb(null, true);
+    try {
+      const u = new URL(origin);
+      if (u.hostname.endsWith('.vercel.app')) return cb(null, true);
+      if (devOrigins.has(origin)) return cb(null, true);
+      if (explicit.has(origin)) return cb(null, true);
+    } catch { /* ignore */ }
+    // If you want to be stricter, change the next line to:
+    // return cb(new Error(`CORS blocked: ${origin}`));
+    return cb(null, true);
   },
-  credentials: true, // <-- REQUIRED so browser will accept/set cookies
+  credentials: true,
 }));
+
 app.use(express.static(path.resolve('public')));
 
 // health
