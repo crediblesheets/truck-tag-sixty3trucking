@@ -179,6 +179,7 @@ async function sbDataToBuffer(data) {
 
 // ---------- app ----------
 const app = express();
+app.get('/api/ping', (_req, res) => res.json({ pong: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
