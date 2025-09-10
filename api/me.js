@@ -18,19 +18,20 @@ export default async function handler(req, res) {
       return res.status(401).json({ ok: false, message: 'No session' });
     }
 
+    // NOTE: "users" + "active"
     const { data: user, error } = await supabase
-      .from('Users')
-      .select('id,email,role,is_active')
+      .from('users')
+      .select('id, email, role, active')
       .eq('id', session.sub)
       .maybeSingle();
 
-    if (error || !user || !user.is_active) {
+    if (error || !user || !user.active) {
       return res.status(401).json({ ok: false, message: 'Invalid session' });
     }
 
     return res.status(200).json({ ok: true, profile: user });
   } catch (err) {
-    console.error(err);
+    console.error('[api/me]', err);
     return res.status(401).json({ ok: false, message: 'Invalid session' });
   }
 }

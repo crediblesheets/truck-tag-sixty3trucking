@@ -15,7 +15,7 @@ export default async function handler(req, res) {
 
   try {
     const { email: rawEmail, newPassword = '' } = req.body || {};
-    const email = (rawEmail || '').trim().toLowerCase();
+    const email = String(rawEmail || '').trim().toLowerCase();
 
     if (!email || !newPassword) {
       return res.status(400).json({ ok: false, message: 'Email and new password required' });
@@ -24,19 +24,24 @@ export default async function handler(req, res) {
       return res.status(400).json({ ok: false, message: 'Password too short' });
     }
 
+    // NOTE: "users" + "active"
     const { data: user, error } = await supabase
-      .from('Users')
-      .select('id,email,role,is_active')
+      .from('users')
+      .select('id, email, role, active, password_hash')
       .eq('email', email)
       .maybeSingle();
 
-    if (error || !user || !user.is_active) {
+    if (error || !user || !user.active) {
       return res.status(400).json({ ok: false, message: 'Account not found or inactive' });
+    }
+
+    if (user.password_hash) {
+      return res.status(409).json({ ok: false, message: 'Password already set for this account.' });
     }
 
     const password_hash = await bcrypt.hash(newPassword, 10);
     const { error: upErr } = await supabase
-      .from('Users')
+      .from('users')
       .update({ password_hash })
       .eq('id', user.id);
 
