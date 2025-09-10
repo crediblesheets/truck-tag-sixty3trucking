@@ -187,6 +187,7 @@
         const r = await fetch('/api/auth/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',          // <-- critical for cookies
           body: JSON.stringify({ email, password })
         });
 
