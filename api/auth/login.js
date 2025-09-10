@@ -9,46 +9,52 @@ const supabase = createClient(
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    res.status(405).json({ ok: false, message: 'Method not allowed' });
-    return;
+    return res.status(405).json({ ok: false, message: 'Method not allowed' });
   }
 
   try {
-    const { email, password } = req.body || {};
+    const body = req.body || {};
+    const email = (body.email || '').toLowerCase().trim();
+    const password = body.password || '';
+
     if (!email || !password) {
-      res.status(400).json({ ok: false, message: 'Email and password required' });
-      return;
+      return res.status(400).json({ ok: false, message: 'Email and password required' });
     }
 
-    // Get user
+    // Look up user
     const { data: user, error } = await supabase
       .from('Users')
       .select('id,email,role,is_active,password_hash')
-      .eq('email', email.toLowerCase())
+      .eq('email', email)
       .maybeSingle();
 
-    if (error || !user || !user.is_active) {
-      res.status(401).json({ ok: false, message: 'Invalid email or password' });
-      return;
+    if (error) {
+      console.error('[login] supabase error', error);
+      return res.status(500).json({ ok: false, message: 'Login failed' });
     }
 
-    const ok = await bcrypt.compare(password, user.password_hash || '');
+    // Not found or inactive
+    if (!user || !user.is_active) {
+      return res.status(401).json({ ok: false, message: 'Invalid email or password' });
+    }
+
+    // If account has no password yet, tell the client to open the modal
+    if (!user.password_hash) {
+      return res.status(409).json({ ok: false, code: 'PASSWORD_NOT_SET', message: 'Password not set' });
+    }
+
+    const ok = await bcrypt.compare(password, user.password_hash);
     if (!ok) {
-      res.status(401).json({ ok: false, message: 'Invalid email or password' });
-      return;
+      return res.status(401).json({ ok: false, message: 'Invalid email or password' });
     }
 
-    // Issue session
-    const token = signSession({
-      sub: user.id,
-      role: user.role,
-      email: user.email
-    });
+    // Issue session + cookie
+    const token = signSession({ sub: user.id, role: user.role, email: user.email });
     setSessionCookie(res, token);
 
-    res.status(200).json({ ok: true, role: user.role });
+    return res.status(200).json({ ok: true, role: user.role });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ ok: false, message: 'Login failed' });
+    console.error('[login] exception', err);
+    return res.status(500).json({ ok: false, message: 'Login failed' });
   }
 }

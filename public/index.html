@@ -135,81 +135,47 @@
   </footer>
 
   <script>
-    // footer year
-    document.getElementById('y').textContent = new Date().getFullYear();
+  // footer year
+  document.getElementById('y').textContent = new Date().getFullYear();
 
-    const form      = document.getElementById('loginForm');
-    const emailEl   = document.getElementById('email');
-    const pwdEl     = document.getElementById('pwd');
-    const showBtn   = document.getElementById('showPwd');
-    const msgEl     = document.getElementById('msg');
-    const submitBtn = document.getElementById('submitBtn');
+  const form      = document.getElementById('loginForm');
+  const emailEl   = document.getElementById('email');
+  const pwdEl     = document.getElementById('pwd');
+  const showBtn   = document.getElementById('showPwd');
+  const msgEl     = document.getElementById('msg');
+  const submitBtn = document.getElementById('submitBtn');
 
-    function setMsg(text = '', kind = '') {
-      msgEl.textContent = text;
-      msgEl.className = 'auth-msg ' + (kind ? kind : (text ? 'ok' : ''));
-    }
-    function setLoading(on) {
-      submitBtn.classList.toggle('loading', !!on);
-      submitBtn.disabled = !!on;
-    }
+  function setMsg(text = '', kind = '') {
+    msgEl.textContent = text;
+    msgEl.className = 'auth-msg ' + (kind ? kind : (text ? 'ok' : ''));
+  }
+  function setLoading(on) {
+    submitBtn.classList.toggle('loading', !!on);
+    submitBtn.disabled = !!on;
+  }
 
-    // if already logged in, go straight in
-    (async () => {
-      try {
-        const r = await fetch('/api/me');
-        if (!r.ok) return;
-        const j = await r.json();
-        if (j.ok && j.profile) {
-          const role = (j.profile.role || '').toLowerCase();
-          location.replace(role === 'admin' ? '/admin' : '/dashboard.html');
-        }
-      } catch {}
-    })();
-
-    showBtn.addEventListener('click', () => {
-      const showing = pwdEl.type === 'text';
-      pwdEl.type = showing ? 'password' : 'text';
-      showBtn.setAttribute('aria-pressed', String(!showing));
-      showBtn.classList.toggle('on', !showing);
-      pwdEl.focus({preventScroll:true});
-    });
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      setMsg('');
-      setLoading(true);
-
-      const email = emailEl.value.trim();
-      const password = pwdEl.value;
-
-      try {
-        const r = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',          // <-- critical for cookies
-          body: JSON.stringify({ email, password })
-        });
-
-        const d = await r.json();
-        if (!r.ok || d.ok === false) {
-          setLoading(false);
-          setMsg(d.message || 'Invalid email or password.', 'error');
-          return;
-        }
-
-        const role = (d.role || '').toLowerCase();
-        setMsg('Success. Redirecting…', 'ok');
-        location.href = role === 'admin' ? '/admin' : '/dashboard.html';
-      } catch (err) {
-        console.error(err);
-        setLoading(false);
-        setMsg('Sign-in failed. Check your connection and try again.', 'error');
+  // if already logged in, go straight in
+  (async () => {
+    try {
+      const r = await fetch('/api/me', { credentials: 'include' });
+      if (!r.ok) return;
+      const j = await r.json();
+      if (j.ok && j.profile) {
+        const role = (j.profile.role || '').toLowerCase();
+        location.replace(role === 'admin' ? '/admin' : '/dashboard.html');
       }
-    });
+    } catch {}
+  })();
 
+  showBtn.addEventListener('click', () => {
+    const showing = pwdEl.type === 'text';
+    pwdEl.type = showing ? 'password' : 'text';
+    showBtn.setAttribute('aria-pressed', String(!showing));
+    showBtn.classList.toggle('on', !showing);
+    pwdEl.focus({preventScroll:true});
+  });
 
-     // ----- Password setup modal logic -----
+  // ----- Password setup modal logic -----
   const pwModal  = document.getElementById('pwModal');
   const pwEmail  = document.getElementById('pwEmail');
   const newPwd   = document.getElementById('newPwd');
@@ -251,6 +217,7 @@
       const r = await fetch('/api/auth/set-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, newPassword: p1 })
       });
       const d = await r.json();
@@ -270,8 +237,7 @@
     }
   });
 
-  // Modify your existing form submit handler to open the modal when needed:
-  // (replace the block that handles the /api/auth/login fetch response)
+  // ----- SINGLE login submit handler -----
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     setMsg('');
@@ -284,13 +250,16 @@
       const r = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ email, password })
       });
-      const d = await r.json();
+
+      // try to parse json safely
+      let d = {};
+      try { d = await r.json(); } catch {}
 
       if (d && d.code === 'PASSWORD_NOT_SET') {
         setLoading(false);
-        setMsg('');
         openPwModal(email);
         return;
       }
@@ -309,7 +278,8 @@
       setLoading(false);
       setMsg('Sign-in failed. Check your connection and try again.', 'error');
     }
-  }, { once: false });
-  </script>
+  });
+</script>
+
 </body>
 </html>
