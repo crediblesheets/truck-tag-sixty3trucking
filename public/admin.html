@@ -777,28 +777,18 @@
       if (!/\.csv$/i.test(file.name) && file.type !== 'text/csv') {
         if (!confirm('File is not .csv — try importing anyway?')) return;
       }
-
-      // NEW: ask if we should email drivers right after import
-      const notify = confirm('Also email drivers about their assigned tickets now?\nOK = Yes, send emails after import.\nCancel = No, just import.');
-
       try {
-        showLoading(notify ? 'Importing CSV & emailing drivers…' : 'Uploading & importing CSV…');
+        showLoading('Uploading & importing CSV…');
         const text = await file.text();
         const r = await fetch('/api/admin/import-csv', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ csv: text, notify })
+          body: JSON.stringify({ csv: text })
         });
         const j = await r.json();
         if (!r.ok || j.ok === false) throw new Error(j.message || 'Import failed.');
         const s = j.summary || {};
-        // if server returns sentEmailCount or failedEmailCount, show them too
-        const emailNote = (typeof s.sentEmailCount === 'number' || typeof s.failedEmailCount === 'number')
-          ? `\nEmails sent: ${s.sentEmailCount ?? 0}\nEmail failures: ${s.failedEmailCount ?? 0}`
-          : '';
-        alert(
-          `Import complete.\nAdded: ${s.added||0}\nUpdated: ${s.updated||0}\nSkipped (Carrier present): ${s.skippedCarrier||0}\nInvalid rows: ${s.invalid||0}${emailNote}`
-        );
+        alert(`Import complete.\nAdded: ${s.added||0}\nUpdated: ${s.updated||0}\nSkipped (Carrier present): ${s.skippedCarrier||0}\nInvalid rows: ${s.invalid||0}`);
         await loadTable();
       } catch (err) {
         console.error(err);
@@ -813,6 +803,7 @@
     $('#searchBox').addEventListener('input', applyFilters);
     $('#refreshBtn').addEventListener('click', loadTable);
 
+
     $('#startDate').addEventListener('change', applyFilters);
     $('#endDate').addEventListener('change', applyFilters);
     $('#clearDates').addEventListener('click', () => {
@@ -820,6 +811,10 @@
       $('#endDate').value = '';
       applyFilters();
     });
+
+
+    
+
 
     // go!
     loadTable();
