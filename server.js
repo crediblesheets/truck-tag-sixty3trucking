@@ -68,6 +68,25 @@ function buildMailer() {
 
 const MAILER = buildMailer();
 
+app.get('/api/admin/test-smtp', async (req, res) => {
+  try {
+    if (!MAILER) return res.status(500).json({ ok: false, message: 'Mailer not configured' });
+    // Verify connection/login with Gmail
+    await MAILER.verify();
+    // Send yourself a test email
+    await MAILER.sendMail({
+      from: fromAddress(),
+      to: process.env.SMTP_USER,
+      subject: 'SMTP test',
+      text: 'If you got this, SMTP login works.',
+    });
+    res.json({ ok: true, message: 'SMTP OK and test mail sent.' });
+  } catch (e) {
+    res.status(500).json({ ok: false, message: e?.message || String(e) });
+  }
+});
+
+
 function fromAddress() {
   // prefer MAIL_FROM, fallback to SMTP_USER, or a generic noreply
   return MAIL_FROM || SMTP_USER || 'no-reply@sixty3-trucking.local';
