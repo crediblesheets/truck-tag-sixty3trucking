@@ -11,6 +11,9 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import PDFDocument from 'pdfkit';
 import multer from 'multer';
+// ADD with other imports
+import nodemailer from 'nodemailer';
+
 
 import {
   sb,
@@ -36,6 +39,131 @@ const {
   FRONTEND_ORIGIN = '',   // e.g. http://localhost:5173 or https://yourapp.vercel.app
   COOKIE_DOMAIN = '',     // optional: .yourdomain.com (no domain = host-only)
 } = process.env;
+
+
+// ADD: SMTP / mail transport (after your env constants)
+const {
+  SMTP_HOST = '',
+  SMTP_PORT = '',
+  SMTP_USER = '',
+  SMTP_PASS = '',
+  MAIL_FROM = '',
+} = process.env;
+
+function buildMailer() {
+  const portNum = Number(SMTP_PORT || 0);
+  if (!SMTP_HOST || !portNum) return null;
+  const secure = portNum === 465; // common convention
+  try {
+    return nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: portNum,
+      secure,
+      auth: SMTP_USER && SMTP_PASS ? { user: SMTP_USER, pass: SMTP_PASS } : undefined,
+    });
+  } catch (e) {
+    console.error('Mailer createTransport failed:', e?.message || e);
+    return null;
+  }
+}
+
+const MAILER = buildMailer();
+
+function fromAddress() {
+  // prefer MAIL_FROM, fallback to SMTP_USER, or a generic noreply
+  return MAIL_FROM || SMTP_USER || 'no-reply@sixty3-trucking.local';
+}
+
+/**
+ * Group imported CSV items by driver email and send one email per driver.
+ * items: [{ ticketNo, driverName, date, jobName, destination, city }]
+ * Returns { sent, failed, attempted, matchedDrivers }
+ */
+async function sendDriverEmailsForCSV(items = []) {
+  if (!MAILER) {
+    console.warn('SMTP not configured. Skipping email send.');
+    return { sent: 0, failed: 0, attempted: 0, matchedDrivers: 0, skipped: items.length };
+  }
+
+  // Unique driver names from CSV
+  const driverNames = Array.from(
+    new Set(items.map(i => (i.driverName || '').trim()).filter(Boolean))
+  );
+
+  if (!driverNames.length) return { sent: 0, failed: 0, attempted: 0, matchedDrivers: 0 };
+
+  // Map full_name -> email from users table (only active users)
+  const { data: users, error } = await sb
+    .from('users')
+    .select('full_name, email, active')
+    .in('full_name', driverNames);
+
+  if (error) throw error;
+
+  const emailByName = new Map(
+    (users || [])
+      .filter(u => u?.active && u?.email)
+      .map(u => [String(u.full_name || '').trim(), String(u.email || '').toLowerCase()])
+  );
+
+  // Group items by recipient email
+  const grouped = new Map();
+  for (const it of items) {
+    const em = emailByName.get((it.driverName || '').trim());
+    if (!em) continue;
+    if (!grouped.has(em)) grouped.set(em, []);
+    grouped.get(em).push(it);
+  }
+
+  let sent = 0, failed = 0;
+
+  for (const [email, list] of grouped) {
+    const lines = list.map(l => {
+      const bits = [
+        `Ticket ${l.ticketNo}`,
+        l.date ? `Date: ${l.date}` : '',
+        l.jobName ? `Job: ${l.jobName}` : '',
+        l.destination ? `Dest: ${l.destination}` : '',
+        l.city ? `City: ${l.city}` : '',
+      ].filter(Boolean);
+      return `• ${bits.join(' | ')}`;
+    }).join('\n');
+
+    const count = list.length;
+    const subject = `New ticket${count > 1 ? 's' : ''} assigned to you (${count})`;
+    const text =
+`Hi,
+
+You have ${count} new ticket${count > 1 ? 's' : ''} assigned.
+
+${lines}
+
+Please sign in to complete your Driver Tag.
+Thank you,
+Sixty–3 Trucking Admin`;
+
+    try {
+      await MAILER.sendMail({
+        from: fromAddress(),
+        to: email,
+        subject,
+        text,
+      });
+      sent++;
+    } catch (e) {
+      console.error('Email send failed →', email, e?.message || e);
+      failed++;
+    }
+  }
+
+  return {
+    sent,
+    failed,
+    attempted: grouped.size,
+    matchedDrivers: emailByName.size,
+  };
+}
+
 
 function isCrossSiteRequest(origin) {
   if (!origin) return false;
@@ -982,9 +1110,11 @@ app.delete('/api/admin/tickets/:id', verifySession, ensureActiveUser, requireAdm
   }
 });
 
+// REPLACE the whole /api/admin/import-csv handler with this
 app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin, async (req, res) => {
   try {
     const csv = String(req.body?.csv || '');
+    const notify = !!req.body?.notify; // NEW: front-end passes this
     if (!csv.trim()) return res.status(400).json({ ok: false, message: 'Missing csv' });
 
     function parseCSV(text) {
@@ -1107,20 +1237,41 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
     }
 
     if (!items.length) {
-      return res.json({ ok: true, summary: { added: 0, updated: 0, skippedCarrier, invalid } });
+      return res.json({ ok: true, summary: { added: 0, updated: 0, skippedCarrier, invalid, sentEmailCount: 0, failedEmailCount: 0 } });
     }
 
+    // Upsert tickets & ensure stubs (existing helper)
     await bulkUpsertAdminTickets(items);
+
+    // Optionally notify drivers by email
+    let emailStats = { sent: 0, failed: 0, attempted: 0, matchedDrivers: 0 };
+    if (notify) {
+      try {
+        emailStats = await sendDriverEmailsForCSV(items);
+      } catch (e) {
+        console.error('Email notify error:', e?.message || e);
+      }
+    }
 
     return res.json({
       ok: true,
-      summary: { added: undefined, updated: undefined, skippedCarrier, invalid },
+      summary: {
+        added: undefined,
+        updated: undefined,
+        skippedCarrier,
+        invalid,
+        sentEmailCount: emailStats.sent,
+        failedEmailCount: emailStats.failed,
+        matchedDrivers: emailStats.matchedDrivers,
+        attemptedRecipients: emailStats.attempted,
+      },
     });
   } catch (e) {
     console.error('import-csv:', e);
     return res.status(500).json({ ok: false, message: 'Import failed.' });
   }
 });
+
 
 // ======================== COMMON TICKET READ & PDF ========================
 app.get('/api/tickets/:id', verifySession, ensureActiveUser, async (req, res) => {
