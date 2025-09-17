@@ -283,6 +283,24 @@
       setMsg('Sign-in failed. Check your connection and try again.', 'error');
     }
   });
+
+  // generic show/hide binder
+function bindShow(btnId, inputEl){
+  const btn = document.getElementById(btnId);
+  if (!btn || !inputEl) return;
+  btn.addEventListener('click', () => {
+    const showing = inputEl.type === 'text';
+    inputEl.type = showing ? 'password' : 'text';
+    btn.setAttribute('aria-pressed', String(!showing));
+    btn.classList.toggle('on', !showing);
+    inputEl.focus({preventScroll:true});
+  });
+}
+
+// bind to modal fields
+bindShow('showNewPwd', newPwd);
+bindShow('showNewPwd2', newPwd2);
+
 </script>
 
 
