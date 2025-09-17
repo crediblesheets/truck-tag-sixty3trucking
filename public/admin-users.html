@@ -173,15 +173,18 @@
                     placeholder="At least 8 chars, include a number"
                     style="font-size:13px;">
             </div>
-            <div style="display:flex; gap:8px;">
-              <button id="btnSetPw" class="btn btn-primary" style="font-size:13px; padding:8px 14px;">
-                Set
+            <div style="display:flex; gap:8px; flex:1;">
+              <button id="btnSetPw" class="btn btn-primary" 
+                      style="flex:1; font-size:13px; padding:10px 0;">
+                Set Password
               </button>
-              <button id="btnClearPw" class="btn danger" type="button" style="font-size:13px; padding:8px 14px;">
-                Clear
+              <button id="btnClearPw" class="btn danger" type="button" 
+                      style="flex:1; font-size:13px; padding:10px 0;">
+                Clear Current Password
               </button>
             </div>
           </div>
+
 
           <p class="muted-small" style="margin-top:10px; font-size:12px; line-height:1.4;">
             Clearing sets password to <code>null</code>. On next login, the user must create one via the setup flow.
