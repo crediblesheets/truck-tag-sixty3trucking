@@ -156,6 +156,30 @@
           <button id="deleteBtn" class="btn danger">Delete</button>
         </div>
 
+        <!-- Password management -->
+      <section class="card detail-card" style="margin-top:12px;">
+        <h3 style="margin:0 0 10px;">Password</h3>
+        <p class="muted-small" style="margin:0 0 10px;">
+          You can either set a new password (e.g., a temporary password to share), or clear it so the user must create one on next sign-in.
+        </p>
+
+        <div class="grid2" style="margin-top:6px;">
+          <div>
+            <label>Set new password (temporary or final)</label>
+            <input id="f_newPw" type="text" placeholder="At least 8 chars, include a number">
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:8px;">
+            <button id="btnSetPw" class="btn btn-primary">Set Password</button>
+            <button id="btnClearPw" class="btn warn" type="button">Clear Password (require setup)</button>
+          </div>
+        </div>
+
+        <p class="muted-small" style="margin-top:8px;">
+          Clearing a password sets it to <code>null</code>. On next login, they’ll see “No password set” and must create one via the setup flow.
+        </p>
+      </section>
+
+
         <!-- Users table -->
         <div class="table-card">
           <div class="scroll-area">
@@ -331,6 +355,51 @@
       $$('#driverList .user-btn, #adminList .user-btn').forEach(btn => btn.classList.remove('active'));
     }
 
+    async function setPasswordForCurrent(){
+  if (!CURRENT){ toast('Select a user first.'); return; }
+  const pw = $('#f_newPw').value;
+  if (!pw || pw.length < 8){ toast('Enter a password with at least 8 characters (include a number).'); return; }
+
+  try{
+    showOverlay('Updating password…');
+    const r = await fetch('/api/admin/users/' + encodeURIComponent(CURRENT.email) + '/password', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ newPassword: pw })
+    });
+    const j = await r.json();
+    if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to set password');
+    $('#f_newPw').value = '';
+    toast('Password updated.');
+  }catch(e){
+    console.error(e);
+    toast(e.message || 'Failed to set password.');
+  }finally{
+    hideOverlay();
+  }
+}
+
+async function clearPasswordForCurrent(){
+  if (!CURRENT){ toast('Select a user first.'); return; }
+  if (!confirm(`Clear password for ${CURRENT.email}? They will be forced to create a new one next time.`)) return;
+
+  try{
+    showOverlay('Clearing password…');
+    const r = await fetch('/api/admin/users/' + encodeURIComponent(CURRENT.email) + '/password', {
+      method: 'DELETE'
+    });
+    const j = await r.json();
+    if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to clear password');
+    toast('Password cleared. User must set a new one.');
+  }catch(e){
+    console.error(e);
+    toast(e.message || 'Failed to clear password.');
+  }finally{
+    hideOverlay();
+  }
+}
+
+
     // ---------- actions ----------
     async function saveCurrent(){
       const email = ltrim($('#f_email').value);
@@ -414,6 +483,7 @@
     $('#segAll').addEventListener('click', () => { FILTER='all'; $('#segAll').classList.add('active'); $('#segDrivers').classList.remove('active'); $('#segAdmins').classList.remove('active'); renderTable(); });
     $('#segDrivers').addEventListener('click', () => { FILTER='driver'; $('#segDrivers').classList.add('active'); $('#segAll').classList.remove('active'); $('#segAdmins').classList.remove('active'); renderTable(); });
     $('#segAdmins').addEventListener('click', () => { FILTER='admin'; $('#segAdmins').classList.add('active'); $('#segAll').classList.remove('active'); $('#segDrivers').classList.remove('active'); renderTable(); });
+    
 
     // sidebar list click -> open
     $('#driverList').addEventListener('click', (e) => {
@@ -463,6 +533,8 @@
     $('#saveBtn').addEventListener('click', saveCurrent);
     $('#deleteBtn').addEventListener('click', deleteCurrent);
     $('#bulkDeleteBtn').addEventListener('click', bulkDelete);
+    $('#btnSetPw').addEventListener('click', setPasswordForCurrent);
+    $('#btnClearPw').addEventListener('click', clearPasswordForCurrent);
 
     // boot
     loadUsers();

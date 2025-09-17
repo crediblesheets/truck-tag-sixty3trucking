@@ -834,6 +834,66 @@ app.delete('/api/admin/users', verifySession, ensureActiveUser, requireAdmin, as
     res.status(500).json({ ok: false, message: 'Failed to delete users.' });
   }
 });
+// ----- ADMIN: user password management -----
+app.post('/api/admin/users/:email/password', verifySession, ensureActiveUser, requireAdmin, async (req, res) => {
+  try {
+    const email = String(req.params.email || '').toLowerCase().trim();
+    const newPw = String(req.body?.newPassword || '');
+
+    if (!email) return res.status(400).json({ ok: false, message: 'Email is required.' });
+    const v = validatePassword(newPw);
+    if (v) return res.status(400).json({ ok: false, message: v });
+
+    // make sure user exists & is active enough to matter (but allow inactive too)
+    const { data: u, error: selErr } = await sb
+      .from('users')
+      .select('email')
+      .eq('email', email)
+      .maybeSingle();
+    if (selErr) throw selErr;
+    if (!u) return res.status(404).json({ ok: false, message: 'User not found.' });
+
+    const hash = await bcrypt.hash(newPw, 10);
+    const { error: updErr } = await sb
+      .from('users')
+      .update({ password_hash: hash, updated_at: new Date().toISOString() })
+      .eq('email', email);
+    if (updErr) throw updErr;
+
+    return res.json({ ok: true, message: 'Password updated.' });
+  } catch (e) {
+    console.error('POST /api/admin/users/:email/password', e);
+    return res.status(500).json({ ok: false, message: 'Failed to set password.' });
+  }
+});
+
+// Clear password -> forces first-time setup via /api/auth/set-password
+app.delete('/api/admin/users/:email/password', verifySession, ensureActiveUser, requireAdmin, async (req, res) => {
+  try {
+    const email = String(req.params.email || '').toLowerCase().trim();
+    if (!email) return res.status(400).json({ ok: false, message: 'Email is required.' });
+
+    const { data: u, error: selErr } = await sb
+      .from('users')
+      .select('email')
+      .eq('email', email)
+      .maybeSingle();
+    if (selErr) throw selErr;
+    if (!u) return res.status(404).json({ ok: false, message: 'User not found.' });
+
+    const { error: updErr } = await sb
+      .from('users')
+      .update({ password_hash: null, updated_at: new Date().toISOString() })
+      .eq('email', email);
+    if (updErr) throw updErr;
+
+    return res.json({ ok: true, message: 'Password cleared. User must set a new one next login.' });
+  } catch (e) {
+    console.error('DELETE /api/admin/users/:email/password', e);
+    return res.status(500).json({ ok: false, message: 'Failed to clear password.' });
+  }
+});
+
 
 // ======================== ADMIN: TICKETS API ========================
 app.get('/api/admin/tags', verifySession, ensureActiveUser, requireAdmin, async (req, res) => {
