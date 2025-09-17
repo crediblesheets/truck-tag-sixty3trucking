@@ -156,28 +156,38 @@
           <button id="deleteBtn" class="btn danger">Delete</button>
         </div>
 
-        <!-- Password management -->
-      <section class="card detail-card" style="margin-top:12px;">
-        <h3 style="margin:0 0 10px;">Password</h3>
-        <p class="muted-small" style="margin:0 0 10px;">
-          You can either set a new password (e.g., a temporary password to share), or clear it so the user must create one on next sign-in.
-        </p>
 
-        <div class="grid2" style="margin-top:6px;">
-          <div>
-            <label>Set new password (temporary or final)</label>
-            <input id="f_newPw" type="text" placeholder="At least 8 chars, include a number">
-          </div>
-          <div style="display:flex;align-items:flex-end;gap:8px;">
-            <button id="btnSetPw" class="btn btn-primary">Set Password</button>
-            <button id="btnClearPw" class="btn warn" type="button">Clear Password (require setup)</button>
-          </div>
-        </div>
+      <!-- Password management -->
+        <section class="card detail-card" style="margin-top:12px;">
+          <h3 style="margin:0 0 6px; font-size:14px; font-weight:600; color:#374151;">
+            Password
+          </h3>
+          <p class="muted-small" style="margin:0 0 12px; font-size:12px; line-height:1.4;">
+            Set a temporary or new password, or clear it so the user must create one on next sign-in.
+          </p>
 
-        <p class="muted-small" style="margin-top:8px;">
-          Clearing a password sets it to <code>null</code>. On next login, they’ll see “No password set” and must create one via the setup flow.
-        </p>
-      </section>
+          <div class="grid2" style="margin-top:6px; align-items:end;">
+            <div>
+              <label style="font-size:12px; color:#555;">New password</label>
+              <input id="f_newPw" type="text" 
+                    placeholder="At least 8 chars, include a number"
+                    style="font-size:13px;">
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button id="btnSetPw" class="btn btn-primary" style="font-size:13px; padding:8px 14px;">
+                Set
+              </button>
+              <button id="btnClearPw" class="btn danger" type="button" style="font-size:13px; padding:8px 14px;">
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <p class="muted-small" style="margin-top:10px; font-size:12px; line-height:1.4;">
+            Clearing sets password to <code>null</code>. On next login, the user must create one via the setup flow.
+          </p>
+        </section>
+
 
 
         <!-- Users table -->
