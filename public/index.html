@@ -41,7 +41,7 @@
         </ul>
       </div>
 
-      <!-- right column: card -->
+      <!-- right column: login card -->
       <div class="login-card card">
         <header class="card-head">
           <h3>Driver Login</h3>
@@ -62,13 +62,9 @@
               <input id="pwd" class="input" type="password" autocomplete="current-password"
                      placeholder="Your password" required>
               <button type="button" id="showPwd" class="icon-btn" aria-label="Show password" aria-pressed="false">
-                <!-- eye icon -->
-                <svg class="eye" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                  <path d="M12 5c-5 0-9 4.5-9 7s4 7 9 7 9-4.5 9-7-4-7-9-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z" fill="currentColor"/>
-                </svg>
-                <svg class="eye-off" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                  <path d="M3 3l18 18M9.9 9.9A4 4 0 0 0 12 16a4 4 0 0 0 2.1-.6M7.1 7.6C5 8.8 3.7 10.5 3 12c1.3 2.8 5 5 9 5 1.5 0 3-.3 4.3-.9M14 5.1A10.7 10.7 0 0 0 12 5c-4 0-7.7 2.2-9 5 .6 1.2 1.7 2.4 3.1 3.3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
-                </svg>
+                <!-- eye icons -->
+                <svg class="eye" viewBox="0 0 24 24" width="18" height="18"><path d="M12 5c-5 0-9 4.5-9 7s4 7 9 7 9-4.5 9-7-4-7-9-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z" fill="currentColor"/></svg>
+                <svg class="eye-off" viewBox="0 0 24 24" width="18" height="18"><path d="M3 3l18 18M9.9 9.9A4 4 0 0 0 12 16a4 4 0 0 0 2.1-.6M7.1 7.6C5 8.8 3.7 10.5 3 12c1.3 2.8 5 5 9 5 1.5 0 3-.3 4.3-.9M14 5.1A10.7 10.7 0 0 0 12 5c-4 0-7.7 2.2-9 5 .6 1.2 1.7 2.4 3.1 3.3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
               </button>
             </div>
           </div>
@@ -87,42 +83,52 @@
         </form>
 
         <!-- Password setup modal -->
-<div id="pwModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true">
-  <div class="modal-backdrop"></div>
-  <div class="modal-box" role="document">
-    <header class="modal-head">
-      <h4>Create your password</h4>
-      <button type="button" id="pwClose" class="modal-x" aria-label="Close">×</button>
-    </header>
-    <div class="modal-body">
-      <p class="muted">This account doesn’t have a password yet. Create one to continue.</p>
+        <div id="pwModal" class="modal hidden" aria-hidden="true" role="dialog" aria-modal="true">
+          <div class="modal-backdrop"></div>
+          <div class="modal-box" role="document">
+            <header class="modal-head">
+              <h4>Create your password</h4>
+              <button type="button" id="pwClose" class="modal-x" aria-label="Close">×</button>
+            </header>
+            <div class="modal-body">
+              <p class="muted">This account doesn’t have a password yet. Create one to continue.</p>
 
-      <div class="field">
-        <label>Email</label>
-        <input id="pwEmail" class="input" type="email" readonly>
-      </div>
+              <div class="field">
+                <label>Email</label>
+                <input id="pwEmail" class="input" type="email" readonly>
+              </div>
 
-      <div class="field">
-        <label>New password</label>
-        <input id="newPwd" class="input" type="password" placeholder="At least 8 characters, include a number">
-      </div>
+              <div class="field">
+                <label>New password</label>
+                <div class="password-wrap">
+                  <input id="newPwd" class="input" type="password" placeholder="At least 8 characters, include a number">
+                  <button type="button" id="showNewPwd" class="icon-btn" aria-label="Show password" aria-pressed="false">
+                    <svg class="eye" viewBox="0 0 24 24" width="18" height="18"><path d="M12 5c-5 0-9 4.5-9 7s4 7 9 7 9-4.5 9-7-4-7-9-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z" fill="currentColor"/></svg>
+                    <svg class="eye-off" viewBox="0 0 24 24" width="18" height="18"><path d="M3 3l18 18M9.9 9.9A4 4 0 0 0 12 16a4 4 0 0 0 2.1-.6M7.1 7.6C5 8.8 3.7 10.5 3 12c1.3 2.8 5 5 9 5 1.5 0 3-.3 4.3-.9M14 5.1A10.7 10.7 0 0 0 12 5c-4 0-7.7 2.2-9 5 .6 1.2 1.7 2.4 3.1 3.3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+                  </button>
+                </div>
+              </div>
 
-      <div class="field">
-        <label>Confirm password</label>
-        <input id="newPwd2" class="input" type="password" placeholder="Re-enter password">
-      </div>
+              <div class="field">
+                <label>Confirm password</label>
+                <div class="password-wrap">
+                  <input id="newPwd2" class="input" type="password" placeholder="Re-enter password">
+                  <button type="button" id="showNewPwd2" class="icon-btn" aria-label="Show password" aria-pressed="false">
+                    <svg class="eye" viewBox="0 0 24 24" width="18" height="18"><path d="M12 5c-5 0-9 4.5-9 7s4 7 9 7 9-4.5 9-7-4-7-9-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Z" fill="currentColor"/></svg>
+                    <svg class="eye-off" viewBox="0 0 24 24" width="18" height="18"><path d="M3 3l18 18M9.9 9.9A4 4 0 0 0 12 16a4 4 0 0 0 2.1-.6M7.1 7.6C5 8.8 3.7 10.5 3 12c1.3 2.8 5 5 9 5 1.5 0 3-.3 4.3-.9M14 5.1A10.7 10.7 0 0 0 12 5c-4 0-7.7 2.2-9 5 .6 1.2 1.7 2.4 3.1 3.3" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+                  </button>
+                </div>
+              </div>
 
-      <div id="pwMsg" class="auth-msg" aria-live="polite"></div>
+              <div id="pwMsg" class="auth-msg" aria-live="polite"></div>
 
-      <div class="modal-actions">
-        <button type="button" id="setPwdBtn" class="btn-primary">Create password</button>
-        <button type="button" id="pwCancel" class="btn-ghost">Cancel</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-
+              <div class="modal-actions">
+                <button type="button" id="setPwdBtn" class="btn-primary">Create password</button>
+                <button type="button" id="pwCancel" class="btn-ghost">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
 
       </div>
     </section>
