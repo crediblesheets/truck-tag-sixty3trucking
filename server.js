@@ -1047,6 +1047,7 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
     const csv = String(req.body?.csv || '');
     if (!csv.trim()) return res.status(400).json({ ok: false, message: 'Missing csv' });
 
+    // --- tiny CSV parser (keeps quotes, handles commas in quotes) ---
     function parseCSV(text) {
       const rows = [];
       let row = [], cur = '', inQ = false;
@@ -1071,7 +1072,11 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
 
     const rows = parseCSV(csv);
 
+    // Canonicalize header names: keep letters/digits/_ and '#', drop everything else
     const canon = (s) => String(s || '').toLowerCase().replace(/[^\w#]+/g, '');
+
+    // Header aliases → normalized keys we’ll use in `pick()`
+    // Added mappings for "# 1 Material PO#" and "# 2 Material PO#"
     const ALIAS = new Map([
       ['date', 'date'],
       ['ticket#', 'ticket'],
@@ -1105,8 +1110,23 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
       ['jobno', 'jobno'],
       ['unloadedat', 'unloaded'],
       ['destination', 'unloaded'],
+
+      // --- Extra PO fields ---
+      // Common canonical forms for "# 1 Material PO#" and "# 2 Material PO#"
+      ['#1materialpo#', 'po1'],
+      ['1materialpo#', 'po1'],
+      ['materialpo#1', 'po1'],
+      ['po#1material', 'po1'],
+      ['materialpo1', 'po1'],
+
+      ['#2materialpo#', 'po2'],
+      ['2materialpo#', 'po2'],
+      ['materialpo#2', 'po2'],
+      ['po#2material', 'po2'],
+      ['materialpo2', 'po2'],
     ]);
 
+    // Locate header row
     let headerRow = -1, headerIdx = {};
     const needSome = ['date', 'ticket', 'driver'];
     for (let i = 0; i < Math.min(rows.length, 50); i++) {
@@ -1146,6 +1166,13 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
       const carrier = pick(r, 'carrier');
       if (carrier) { skippedCarrier++; continue; }
 
+      // --- Build combined PO string: PO / PO1 / PO2 (skip empties, keep order) ---
+      const mainPO = pick(r, 'po');
+      const matPO1 = pick(r, 'po1');
+      const matPO2 = pick(r, 'po2');
+      const poParts = [mainPO, matPO1, matPO2].map(s => String(s || '').trim()).filter(Boolean);
+      const poCombined = poParts.join(' / ');
+
       items.push({
         date,
         ticketNo,
@@ -1158,7 +1185,7 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
         shipper: pick(r, 'billto'),
         origin: pick(r, 'loadedat'),
         originCity: '',
-        poNo: pick(r, 'po'),
+        poNo: poCombined,               // ← combined value goes here
         jobName: pick(r, 'location'),
         jobNo: pick(r, 'jobno'),
         destination: pick(r, 'unloaded'),
@@ -1181,6 +1208,7 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
     return res.status(500).json({ ok: false, message: 'Import failed.' });
   }
 });
+
 
 // ======================== COMMON TICKET READ & PDF ========================
 app.get('/api/tickets/:id', verifySession, ensureActiveUser, async (req, res) => {
