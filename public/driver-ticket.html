@@ -190,14 +190,7 @@
             </div>
           </div>
 
-          <div class="section-title" style="display:flex;align-items:center;gap:12px;">
-            <span>Scale Tags</span>
-            <label class="muted-small" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-              <input id="noScaleReq" type="checkbox">
-              No scale tag required
-            </label>
-          </div>
-
+          <div class="section-title">Scale Tags</div>
           <!-- Mini add form -->
           <div class="mini-form" id="itemForm">
             <div class="mf-tag">
@@ -309,7 +302,6 @@
     // ------ helpers
     const $  = (s) => document.querySelector(s);
     const $$ = (s) => Array.from(document.querySelectorAll(s));
-    const noScaleReq = document.getElementById('noScaleReq');
     const getTrim = (v) => String(v ?? '').trim();
 
     function qParam(name){
@@ -330,14 +322,10 @@
         it.yardArrival && it.yardLeave && it.siteArrival && it.siteLeave
       );
     }
-    function itemsRequirementSatisfied(){
-      return noScaleReq && noScaleReq.checked ? true : itemsAreComplete();
-    }
-
 
     function setSubmitState(){
       const formOk  = $('#tagForm').checkValidity();
-      const itemsOk = itemsRequirementSatisfied();
+      const itemsOk = itemsAreComplete();
       $('#submitBtn').disabled = !(formOk && itemsOk);
       showErr(itemsOk ? '' : 'Add at least one complete Scale Tag item.');
     }
@@ -349,16 +337,6 @@
       if (!isNaN(d)) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       return '';
     }
-
-    function toggleScaleUI(){
-      const hide = noScaleReq && noScaleReq.checked;
-      $('#itemForm').style.display  = hide ? 'none' : '';
-      document.querySelector('.table-wrap').style.display = hide ? 'none' : '';
-      if (hide) showErr('');
-      setSubmitState();
-    }
-    noScaleReq.addEventListener('change', toggleScaleUI);
-
 
     // ------ left admin card
     function renderAdminCard(t = {}){
@@ -849,7 +827,7 @@ function stripWhiteToTransparent(srcCanvas, threshold = 248){
       if (!TICKET_ID) return;
 
       if (!$('#tagForm').reportValidity()) { setSubmitState(); return; }
-      if (!itemsRequirementSatisfied()){ showErr('Add at least one complete Scale Tag item.'); setSubmitState(); return; }
+      if (!itemsAreComplete()){ showErr('Add at least one complete Scale Tag item.'); setSubmitState(); return; }
       showErr('');
 
       const form = new FormData(e.target);
@@ -880,7 +858,7 @@ function stripWhiteToTransparent(srcCanvas, threshold = 248){
         const r1 = await fetch(`/api/tags/${encodeURIComponent(TICKET_ID)}/scale-items`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items: (noScaleReq && noScaleReq.checked) ? [] : SCALE_ITEMS })
+          body: JSON.stringify({ items: SCALE_ITEMS })
         });
         const j1 = await r1.json().catch(()=>({}));
         if (!r1.ok || j1.ok === false) throw new Error(j1.message || 'Scale items save failed');
@@ -922,8 +900,6 @@ function stripWhiteToTransparent(srcCanvas, threshold = 248){
         renderAdminCard(admin);
         prefillDriverForm(driver);
         await loadScaleItems(TICKET_ID);
-        toggleScaleUI();
-
         // load signature previews if present
         await Promise.all([ loadSignaturePreview('driver'), loadSignaturePreview('received') ]);
       } catch (e){
