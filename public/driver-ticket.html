@@ -309,6 +309,7 @@
     // ------ helpers
     const $  = (s) => document.querySelector(s);
     const $$ = (s) => Array.from(document.querySelectorAll(s));
+    const noScaleReq = document.getElementById('noScaleReq');
     const getTrim = (v) => String(v ?? '').trim();
 
     function qParam(name){
@@ -849,7 +850,6 @@ function stripWhiteToTransparent(srcCanvas, threshold = 248){
 
       if (!$('#tagForm').reportValidity()) { setSubmitState(); return; }
       if (!itemsRequirementSatisfied()){ showErr('Add at least one complete Scale Tag item.'); setSubmitState(); return; }
-
       showErr('');
 
       const form = new FormData(e.target);
@@ -923,6 +923,7 @@ function stripWhiteToTransparent(srcCanvas, threshold = 248){
         prefillDriverForm(driver);
         await loadScaleItems(TICKET_ID);
         toggleScaleUI();
+
         // load signature previews if present
         await Promise.all([ loadSignaturePreview('driver'), loadSignaturePreview('received') ]);
       } catch (e){

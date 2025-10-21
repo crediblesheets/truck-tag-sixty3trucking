@@ -28,6 +28,8 @@ import {
 const upload = multer({ limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB
 const SIGN_BUCKET = 'ticket-signatures';
 const formPath = path.resolve('public/assets/forms/blank-ticket.jpg');
+const noScaleReq = document.getElementById('noScaleReq');
+
 
 const {
   PORT = 8080,
