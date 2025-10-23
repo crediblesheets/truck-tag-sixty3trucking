@@ -97,6 +97,27 @@
       .mf-actions{ justify-content:flex-start }
       .time-row{ grid-template-columns: repeat(2, minmax(90px,1fr)) }
     }
+    /* highlight required fields immediately on page load until valid */
+    input:required:invalid,
+    textarea:required:invalid {
+      border-color: #ef4444;                 /* red border */
+      background: #fff7f7;                   /* light red fill */
+      box-shadow: 0 0 0 2px rgba(239,68,68,.12) inset;
+    }
+
+    /* include required time inputs too */
+    input[type="time"]:required:invalid {
+      background: #fff7f7;
+    }
+
+    /* once a required field becomes valid, revert to normal */
+    input:required:valid,
+    textarea:required:valid {
+      border-color: var(--border);
+      background: #fff;
+      box-shadow: none;
+    }
+
   </style>
 </head>
 <body>
@@ -923,7 +944,7 @@ function stripWhiteToTransparent(srcCanvas, threshold = 248){
         prefillDriverForm(driver);
         await loadScaleItems(TICKET_ID);
         toggleScaleUI();
-
+        
         // load signature previews if present
         await Promise.all([ loadSignaturePreview('driver'), loadSignaturePreview('received') ]);
       } catch (e){
