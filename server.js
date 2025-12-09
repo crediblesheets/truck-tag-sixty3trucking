@@ -1312,13 +1312,30 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     }
     const bgBuffer = fs.readFileSync(formPath);
 
-    const [{ data: admin, error: e1 }, { data: driver, error: e2 }, { data: scale, error: e3 }] = await Promise.all([
+    // 🔁 FETCH admin, raw driver row, and scale rows
+    const [{ data: admin, error: e1 }, { data: driverRow, error: e2 }, { data: scale, error: e3 }] = await Promise.all([
       sb.from('admin_tickets').select('*').eq('ticket_no', ticketNo).maybeSingle(),
       sb.from('driver_tags').select('*').eq('ticket_no', ticketNo).maybeSingle(),
       sb.from('scale_tags').select('*').eq('ticket_no', ticketNo).order('id', { ascending: true }),
     ]);
+
     if (e1 || e2 || e3) throw (e1 || e2 || e3);
     if (!admin) return res.status(404).json({ ok: false, message: 'Ticket not found' });
+
+    // ✅ normalize driver object (same shape as /api/tags/:id/driver)
+    const driver = driverRow
+      ? {
+          bridgefare: driverRow.bridgefare ?? '',
+          signedOutLoaded: driverRow.signed_out_loaded ?? '',
+          howManyTonsLoads: driverRow.how_many_tons_loads ?? '',
+          downtimeLunch: driverRow.downtime_lunch ?? '',
+          notes: driverRow.notes ?? '',
+          signOutTime: driverRow.sign_out_time ?? '',
+          receivedBy: driverRow.received_by ?? '',
+          driverSignature: driverRow.driver_signature ?? '',
+          status: driverRow.status ?? '',
+        }
+      : null;
 
     const dl = req.query.download === '1' || req.query.download === 'true';
 
@@ -1358,6 +1375,7 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     drawText(doc, admin.destination, COORD_PDF.destination.x, COORD_PDF.destination.y);
     drawText(doc, admin.city, COORD_PDF.city.x, COORD_PDF.city.y);
 
+    // scale table
     doc.fontSize(7.5);
     const rows = Array.isArray(scale) ? scale : [];
     for (let i = 0; i < Math.min(rows.length, TABLE_MAX_ROWS2); i++) {
@@ -1372,22 +1390,23 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
       drawText(doc, r.site_leave, TABLE_X_BY_COL2.site_leave, yRowPx);
     }
 
+    // driver section (Bridgefare down)
     doc.fontSize(8);
     drawText(doc, admin.truck_start, COORD_PDF.truckStart.x, COORD_PDF.truckStart.y);
     drawText(doc, driver?.bridgefare, COORD_PDF.bridgefare.x, COORD_PDF.bridgefare.y);
-    drawText(doc, driver?.how_many_tons_loads, COORD_PDF.howManyTonsLoads.x, COORD_PDF.howManyTonsLoads.y);
+    drawText(doc, driver?.howManyTonsLoads, COORD_PDF.howManyTonsLoads.x, COORD_PDF.howManyTonsLoads.y);
 
-    const sol = (driver?.signed_out_loaded || '').toString().toLowerCase();
+    const sol = (driver?.signedOutLoaded || '').toString().toLowerCase();
     if (sol === 'yes') drawText(doc, '✓', COORD_PDF.signedOutLoadedYes.x, COORD_PDF.signedOutLoadedYes.y);
     else if (sol === 'no') drawText(doc, '✓', COORD_PDF.signedOutLoadedNo.x, COORD_PDF.signedOutLoadedNo.y);
 
     drawText(doc, hhmm(admin.truck_start || admin.start_time), COORD_PDF.startTime.x, COORD_PDF.startTime.y);
-    drawText(doc, driver?.downtime_lunch, COORD_PDF.downtimeLunch.x, COORD_PDF.downtimeLunch.y);
+    drawText(doc, driver?.downtimeLunch, COORD_PDF.downtimeLunch.x, COORD_PDF.downtimeLunch.y);
     drawText(doc, driver?.notes, COORD_PDF.notes_mid.x, COORD_PDF.notes_mid.y);
-    drawText(doc, hhmm(driver?.sign_out_time), COORD_PDF.signOutTime.x, COORD_PDF.signOutTime.y);
+    drawText(doc, hhmm(driver?.signOutTime), COORD_PDF.signOutTime.x, COORD_PDF.signOutTime.y);
 
     drawText(doc, admin.driver_name, COORD_PDF.driverName.x, COORD_PDF.driverName.y);
-    drawText(doc, driver?.received_by, COORD_PDF.receivedBy.x, COORD_PDF.receivedBy.y);
+    drawText(doc, driver?.receivedBy, COORD_PDF.receivedBy.x, COORD_PDF.receivedBy.y);
 
     const SIG_PT_WIDTH = X(900);
     const SIG_Y_OFFSET = -170;
@@ -1415,8 +1434,9 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
       }
     }
 
-    await placeSig(driver?.signature_driver_key, admin.driver_name, COORD_PDF.driverName);
-    await placeSig(driver?.signature_received_key, driver?.received_by, COORD_PDF.receivedBy);
+    // signatures still use raw DB keys from driverRow
+    await placeSig(driverRow?.signature_driver_key, admin.driver_name, COORD_PDF.driverName);
+    await placeSig(driverRow?.signature_received_key, driver?.receivedBy, COORD_PDF.receivedBy);
 
     doc.end();
   } catch (e) {
@@ -1425,6 +1445,7 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     try { res.end(); } catch {}
   }
 });
+
 
 // ======================== Page routing ========================
 app.get('/driver-ticket', verifySession, ensureActiveUser, (_req, res) => {
