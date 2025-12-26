@@ -293,58 +293,16 @@
     }
     sel.value = val;
   }
-    function lockForm(lock){
-    // 🔹 Only ADMIN ticket fields are editable from Tag Lists
-    const adminSelectors = [
-      'input[name="date"]',
-      'input[name="truckStart"]',
-      'input[name="truckNo"]',
-      'input[name="subHauler"]',
-      'input[name="primeCarrier"]',
-      'input[name="shipper"]',
-      'input[name="origin"]',
-      'input[name="originCity"]',
-      'input[name="poNo"]',
-      'input[name="jobName"]',
-      'input[name="jobNo"]',
-      'input[name="destination"]',
-      'input[name="city"]',
-      'select[name="driverName"]',
-      'select[name="trailerType"]'
-    ];
+  function lockForm(lock){
+    $$('#form input, #form select, #form textarea').forEach(el => el.disabled = lock);
+    $('#form').ticketNo.disabled = true; // never editable
 
-    // Toggle ONLY those admin fields
-    adminSelectors.forEach(sel => {
-      $$(sel, $('#form')).forEach(el => {
-        el.disabled = lock;
-      });
-    });
-
-    // Ticket No is always locked
-    const f = $('#form');
-    if (f && f.ticketNo) f.ticketNo.disabled = true;
-
-    // Driver fields are ALWAYS read-only here
-    [
-      'ds_bridgefare',
-      'ds_signedOutLoaded',
-      'ds_howMany',
-      'ds_downtimeLunch',
-      'ds_signOutTime',
-      'ds_receivedBy',
-      'ds_notes',
-      'ds_driverSignature'
-    ].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.disabled = true;
-    });
-
-    // Buttons
     $('#editBtn').style.display   = lock && CURRENT ? 'inline-flex' : 'none';
     $('#saveBtn').style.display   = lock ? 'none' : 'inline-flex';
     $('#cancelBtn').style.display = lock ? 'none' : 'inline-flex';
     $('#deleteBtn').style.display = CURRENT ? 'inline-flex' : 'none';
-    $('#pdfBtn').style.display    = CURRENT ? 'inline-flex' : 'none';
+    $('#pdfBtn').style.display = CURRENT ? 'inline-flex' : 'none';
+
   }
 
   // ---------- state ----------
@@ -430,8 +388,7 @@
   });
 
   // ---------- load all ----------
-    async function loadAll(keepSelection = false){
-    const prevId = SELECTED_ID;
+  async function loadAll(){
     showOverlay(true);
     try {
       const r = await fetch('/api/admin/tags');
@@ -449,27 +406,16 @@
 
       applyFilter();
 
-      if (!VIEW.length){
+      // auto-open first if exists
+      if (VIEW.length){
+        SELECTED_ID = VIEW[0].ticketNo || VIEW[0].id;
+        $$('.ticket-btn')[0]?.classList.add('active');
+        await openTicket(SELECTED_ID);
+      } else {
         clearFormUI();
         clearDriverScaleUI();
         clearProofUI();
-        return;
       }
-
-      // ✅ Keep same ticket selected if possible after save
-      if (keepSelection && prevId) {
-        const still = VIEW.find(r => String(r.ticketNo || r.id) === String(prevId));
-        SELECTED_ID = still ? (still.ticketNo || still.id) : (VIEW[0].ticketNo || VIEW[0].id);
-      } else {
-        SELECTED_ID = VIEW[0].ticketNo || VIEW[0].id;
-      }
-
-      // Mark active in the sidebar
-      $$('.ticket-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.id === String(SELECTED_ID));
-      });
-
-      await openTicket(SELECTED_ID);
     } catch (e){
       console.error(e);
       alert('Failed to load tickets.');
@@ -477,7 +423,6 @@
       showOverlay(false);
     }
   }
-
 
   // ---------- ticket detail ----------
   function clearFormUI(){
@@ -746,29 +691,26 @@ async function loadProof(id){
     if (SELECTED_ID) openTicket(SELECTED_ID);
   });
 
-    $('#form').addEventListener('submit', async (e) => {
+  $('#form').addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!SELECTED_ID) return;
 
     const fd = new FormData(e.target);
     const body = Object.fromEntries(fd.entries());
-    if (!body.date || !body.driverName) {
-      alert('Date and Driver Name are required.');
-      return;
-    }
+    if (!body.date || !body.driverName) { alert('Date and Driver Name are required.'); return; }
 
     showOverlay(true);
     try {
       const r = await fetch(`/api/admin/tickets/${encodeURIComponent(SELECTED_ID)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
         body: JSON.stringify(body)
       });
       const j = await r.json();
       if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to update');
 
-      // 🔁 reload list but KEEP current ticket selected
-      await loadAll(true);
+      await loadAll();
+      await openTicket(SELECTED_ID);
       alert('Ticket updated.');
     } catch (err){
       console.error(err);
@@ -777,7 +719,6 @@ async function loadProof(id){
       showOverlay(false);
     }
   });
-
 
   // ===== delete =====
   $('#deleteBtn').addEventListener('click', async () => {
