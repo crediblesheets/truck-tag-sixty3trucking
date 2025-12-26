@@ -824,6 +824,59 @@ app.post('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, re
   }
 });
 
+// Admin: send a driver tag back to the driver (set status back to Pending)
+app.post(
+  '/api/admin/tags/:id/send-back',
+  verifySession,
+  ensureActiveUser,
+  requireAdmin,
+  async (req, res) => {
+    try {
+      const ticketNo = String(req.params.id || '').trim();
+      if (!ticketNo) {
+        return res
+          .status(400)
+          .json({ ok: false, message: 'Missing ticket number.' });
+      }
+
+      // Make sure a driver_tag row exists for this ticket
+      const { data: existing, error: selErr } = await sb
+        .from('driver_tags')
+        .select('ticket_no,status')
+        .eq('ticket_no', ticketNo)
+        .maybeSingle();
+
+      if (selErr) throw selErr;
+      if (!existing) {
+        return res
+          .status(404)
+          .json({ ok: false, message: 'No driver tag found for this ticket.' });
+      }
+
+      const patch = {
+        status: 'Pending',
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error: updErr } = await sb
+        .from('driver_tags')
+        .update(patch)
+        .eq('ticket_no', ticketNo);
+
+      if (updErr) throw updErr;
+
+      return res.json({ ok: true, status: 'Pending' });
+    } catch (e) {
+      console.error('POST /api/admin/tags/:id/send-back', e);
+      return res
+        .status(500)
+        .json({ ok: false, message: 'Failed to send back ticket.' });
+    }
+  }
+);
+
+
+
 // ======================== ADMIN: USERS API ========================
 app.get('/api/admin/users', verifySession, ensureActiveUser, requireAdmin, async (req, res) => {
   try {

@@ -160,7 +160,7 @@
             <div><label>Destination City</label><input type="text" name="city" disabled></div>
           </div>
 
-          <!-- ===== Driver tags (read-only; filled if present) ===== -->
+          <!-- ===== Driver tags (now editable in Edit mode) ===== -->
           <div class="grid3" style="margin-top:16px;">
             <div><label>Bridgefare</label><input id="ds_bridgefare" name="bridgefare" type="text" disabled></div>
             <div><label>Signed Out Loaded</label><input id="ds_signedOutLoaded" name="signedOutLoaded" type="text" disabled></div>
@@ -184,7 +184,6 @@
             </div>
           </div>
 
-
           <!-- ===== Proof of Ticket (image) ===== -->
           <div id="proofCard" class="proof-card" style="display:none;">
             <div class="proof-body">
@@ -198,8 +197,6 @@
               </div>
             </div>
           </div>
-
-          
 
           <!-- ===== Scale tags (read-only table) ===== -->
           <div class="table-card" id="scaleTable" style="display:none;">
@@ -226,6 +223,8 @@
           <div class="actions">
             <button type="button" id="pdfBtn" class="btn" style="display:none">Convert to PDF</button>
             <button type="button" id="deleteBtn" class="btn danger" style="display:none">Delete</button>
+            <!-- NEW: send back button -->
+            <button type="button" id="sendBackBtn" class="btn" style="display:none">Send back to driver</button>
             <span style="flex:1"></span>
             <button type="button" id="editBtn" class="btn warn" style="display:none">Edit</button>
             <button type="submit" id="saveBtn" class="btn btn-primary" style="display:none">Save</button>
@@ -294,61 +293,63 @@
     }
     sel.value = val;
   }
+
   function lockForm(lock){
-  const f = $('#form');
+    const f = $('#form');
 
-  // Admin ticket fields
-  const adminSelectors = [
-    'input[name="date"]',
-    'input[name="truckStart"]',
-    'input[name="truckNo"]',
-    'input[name="subHauler"]',
-    'input[name="primeCarrier"]',
-    'input[name="shipper"]',
-    'input[name="origin"]',
-    'input[name="originCity"]',
-    'input[name="poNo"]',
-    'input[name="jobName"]',
-    'input[name="jobNo"]',
-    'input[name="destination"]',
-    'input[name="city"]',
-    'select[name="driverName"]',
-    'select[name="trailerType"]'
-  ];
+    // Admin ticket fields
+    const adminSelectors = [
+      'input[name="date"]',
+      'input[name="truckStart"]',
+      'input[name="truckNo"]',
+      'input[name="subHauler"]',
+      'input[name="primeCarrier"]',
+      'input[name="shipper"]',
+      'input[name="origin"]',
+      'input[name="originCity"]',
+      'input[name="poNo"]',
+      'input[name="jobName"]',
+      'input[name="jobNo"]',
+      'input[name="destination"]',
+      'input[name="city"]',
+      'select[name="driverName"]',
+      'select[name="trailerType"]'
+    ];
 
-  adminSelectors.forEach(sel => {
-    $$(sel, f).forEach(el => {
-      el.disabled = lock;
+    adminSelectors.forEach(sel => {
+      $$(sel, f).forEach(el => {
+        el.disabled = lock;
+      });
     });
-  });
 
-  // Ticket No is always locked
-  if (f && f.ticketNo) f.ticketNo.disabled = true;
+    // Ticket No is always locked
+    if (f && f.ticketNo) f.ticketNo.disabled = true;
 
-  // Driver fields now follow lock flag (editable in Edit mode)
-  const driverFieldIds = [
-    'ds_bridgefare',
-    'ds_signedOutLoaded',
-    'ds_howMany',
-    'ds_downtimeLunch',
-    'ds_signOutTime',
-    'ds_receivedBy',
-    'ds_notes',
-    'ds_driverSignature'
-  ];
-  driverFieldIds.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.disabled = lock;
-  });
+    // Driver fields now follow lock flag (editable in Edit mode)
+    const driverFieldIds = [
+      'ds_bridgefare',
+      'ds_signedOutLoaded',
+      'ds_howMany',
+      'ds_downtimeLunch',
+      'ds_signOutTime',
+      'ds_receivedBy',
+      'ds_notes',
+      'ds_driverSignature'
+    ];
+    driverFieldIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = lock;
+    });
 
-  // Buttons
-  $('#editBtn').style.display   = lock && CURRENT ? 'inline-flex' : 'none';
-  $('#saveBtn').style.display   = lock ? 'none' : 'inline-flex';
-  $('#cancelBtn').style.display = lock ? 'none' : 'inline-flex';
-  $('#deleteBtn').style.display = CURRENT ? 'inline-flex' : 'none';
-  $('#pdfBtn').style.display    = CURRENT ? 'inline-flex' : 'none';
-}
-
+    // Buttons
+    $('#editBtn').style.display       = lock && CURRENT ? 'inline-flex' : 'none';
+    $('#saveBtn').style.display       = lock ? 'none' : 'inline-flex';
+    $('#cancelBtn').style.display     = lock ? 'none' : 'inline-flex';
+    $('#deleteBtn').style.display     = CURRENT ? 'inline-flex' : 'none';
+    $('#pdfBtn').style.display        = CURRENT ? 'inline-flex' : 'none';
+    // NEW: only show send-back in view mode with a selected ticket
+    $('#sendBackBtn').style.display   = lock && CURRENT ? 'inline-flex' : 'none';
+  }
 
   // ---------- state ----------
   let ALL = [];           // from /api/admin/tags
@@ -480,7 +481,6 @@
     $('#deleteBtn').style.display = 'none';
     $('#editBtn').style.display = 'none';
     $('#pdfBtn').style.display = 'none';
-
   }
 
   function clearDriverScaleUI(){
@@ -620,60 +620,59 @@
   }
 
   // ===== Proof image (thumbnail + actions) =====
-async function loadProof(id){
-  clearProofUI();
-  const card = $('#proofCard');
-  try{
-    // 1) Get the "view" URL (inline)
-    const rView = await fetch(`/api/tags/${encodeURIComponent(id)}/proof-url`);
-    const jView = await rView.json().catch(()=> ({}));
-    const viewUrl = jView?.url || null;
-
-    if (!viewUrl){
-      card.style.display = 'none';
-      return;
-    }
-
-    // 2) Get the "download" URL (attachment)
-    const rDl = await fetch(`/api/tags/${encodeURIComponent(id)}/proof-url?download=1`);
-    const jDl = await rDl.json().catch(()=> ({}));
-    const downloadUrl = jDl?.url || viewUrl; // fallback just in case
-
-    // 3) Render UI
-    $('#proofThumb').src = viewUrl;
-    $('#proofOpen').href = viewUrl;
-    $('#proofOpen').style.display = 'inline-flex';
-
-    // Give a nice filename for the download
-    const niceName = `ticket-${id}-proof`;
-
-    const dlBtn = $('#proofDownload');
-    dlBtn.style.display = 'inline-flex';
-    dlBtn.removeAttribute('target'); // ensure no new tab
-    dlBtn.setAttribute('rel', 'noopener');
-    dlBtn.setAttribute('download', niceName);
-
-    // Important: don’t rely on <a download> for cross-origin;
-    // programmatically click an <a> with the signed "attachment" URL.
-    dlBtn.onclick = (ev) => {
-      ev.preventDefault();
-      const a = document.createElement('a');
-      a.href = downloadUrl;          // has Content-Disposition: attachment
-      a.download = niceName;         // nice filename if browser honors it
-      a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    };
-
-    $('#proofMeta').textContent = 'Click the image to preview, or use the buttons to open/download.';
-    card.style.display = 'block';
-  }catch(e){
-    console.warn('proof fetch failed', e);
+  async function loadProof(id){
     clearProofUI();
-  }
-}
+    const card = $('#proofCard');
+    try{
+      // 1) Get the "view" URL (inline)
+      const rView = await fetch(`/api/tags/${encodeURIComponent(id)}/proof-url`);
+      const jView = await rView.json().catch(()=> ({}));
+      const viewUrl = jView?.url || null;
 
+      if (!viewUrl){
+        card.style.display = 'none';
+        return;
+      }
+
+      // 2) Get the "download" URL (attachment)
+      const rDl = await fetch(`/api/tags/${encodeURIComponent(id)}/proof-url?download=1`);
+      const jDl = await rDl.json().catch(()=> ({}));
+      const downloadUrl = jDl?.url || viewUrl; // fallback just in case
+
+      // 3) Render UI
+      $('#proofThumb').src = viewUrl;
+      $('#proofOpen').href = viewUrl;
+      $('#proofOpen').style.display = 'inline-flex';
+
+      // Give a nice filename for the download
+      const niceName = `ticket-${id}-proof`;
+
+      const dlBtn = $('#proofDownload');
+      dlBtn.style.display = 'inline-flex';
+      dlBtn.removeAttribute('target'); // ensure no new tab
+      dlBtn.setAttribute('rel', 'noopener');
+      dlBtn.setAttribute('download', niceName);
+
+      // Important: don’t rely on <a download> for cross-origin;
+      // programmatically click an <a> with the signed "attachment" URL.
+      dlBtn.onclick = (ev) => {
+        ev.preventDefault();
+        const a = document.createElement('a');
+        a.href = downloadUrl;          // has Content-Disposition: attachment
+        a.download = niceName;         // nice filename if browser honors it
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      };
+
+      $('#proofMeta').textContent = 'Click the image to preview, or use the buttons to open/download.';
+      card.style.display = 'block';
+    }catch(e){
+      console.warn('proof fetch failed', e);
+      clearProofUI();
+    }
+  }
 
   // Lightbox behavior
   const lb = $('#lightbox');
@@ -737,83 +736,82 @@ async function loadProof(id){
   });
 
   $('#form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  if (!SELECTED_ID) return;
+    e.preventDefault();
+    if (!SELECTED_ID) return;
 
-  const fd = new FormData(e.target);
-  const body = Object.fromEntries(fd.entries());
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
 
-  if (!body.date || !body.driverName) {
-    alert('Date and Driver Name are required.');
-    return;
-  }
-
-  // Split payload: admin ticket fields vs driver fields
-  const adminPayload = {
-    date: body.date,
-    driverName: body.driverName,
-    truckStart: body.truckStart || '',
-    truckNo: body.truckNo || '',
-    trailerType: body.trailerType || '',
-    subHauler: body.subHauler || '',
-    primeCarrier: body.primeCarrier || '',
-    shipper: body.shipper || '',
-    origin: body.origin || '',
-    originCity: body.originCity || '',
-    poNo: body.poNo || '',
-    jobName: body.jobName || '',
-    jobNo: body.jobNo || '',
-    destination: body.destination || '',
-    city: body.city || '',
-  };
-
-  const driverPayload = {
-    bridgefare: body.bridgefare || '',
-    signedOutLoaded: body.signedOutLoaded || '',
-    howManyTonsLoads: body.howManyTonsLoads || '',
-    downtimeLunch: body.downtimeLunch || '',
-    notes: body.notes || '',
-    signOutTime: body.signOutTime || '',
-    receivedBy: body.receivedBy || '',
-    driverSignature: body.driverSignature || '',
-  };
-
-  showOverlay(true);
-  try {
-    const [rAdmin, rDriver] = await Promise.all([
-      fetch(`/api/admin/tickets/${encodeURIComponent(SELECTED_ID)}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(adminPayload),
-      }),
-      fetch(`/api/admin/tags/${encodeURIComponent(SELECTED_ID)}/driver`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(driverPayload),
-      }),
-    ]);
-
-    const jAdmin  = await rAdmin.json().catch(() => ({}));
-    const jDriver = await rDriver.json().catch(() => ({}));
-
-    if (!rAdmin.ok || jAdmin.ok === false) {
-      throw new Error(jAdmin.message || 'Failed to update ticket.');
-    }
-    if (!rDriver.ok || jDriver.ok === false) {
-      throw new Error(jDriver.message || 'Failed to update driver fields.');
+    if (!body.date || !body.driverName) {
+      alert('Date and Driver Name are required.');
+      return;
     }
 
-    await loadAll(true);   // keep same ticket selected
-    lockForm(true);
-    alert('Ticket updated.');
-  } catch (err) {
-    console.error(err);
-    alert(err.message || 'Could not save.');
-  } finally {
-    showOverlay(false);
-  }
-});
+    // Split payload: admin ticket fields vs driver fields
+    const adminPayload = {
+      date: body.date,
+      driverName: body.driverName,
+      truckStart: body.truckStart || '',
+      truckNo: body.truckNo || '',
+      trailerType: body.trailerType || '',
+      subHauler: body.subHauler || '',
+      primeCarrier: body.primeCarrier || '',
+      shipper: body.shipper || '',
+      origin: body.origin || '',
+      originCity: body.originCity || '',
+      poNo: body.poNo || '',
+      jobName: body.jobName || '',
+      jobNo: body.jobNo || '',
+      destination: body.destination || '',
+      city: body.city || '',
+    };
 
+    const driverPayload = {
+      bridgefare: body.bridgefare || '',
+      signedOutLoaded: body.signedOutLoaded || '',
+      howManyTonsLoads: body.howManyTonsLoads || '',
+      downtimeLunch: body.downtimeLunch || '',
+      notes: body.notes || '',
+      signOutTime: body.signOutTime || '',
+      receivedBy: body.receivedBy || '',
+      driverSignature: body.driverSignature || '',
+    };
+
+    showOverlay(true);
+    try {
+      const [rAdmin, rDriver] = await Promise.all([
+        fetch(`/api/admin/tickets/${encodeURIComponent(SELECTED_ID)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(adminPayload),
+        }),
+        fetch(`/api/admin/tags/${encodeURIComponent(SELECTED_ID)}/driver`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(driverPayload),
+        }),
+      ]);
+
+      const jAdmin  = await rAdmin.json().catch(() => ({}));
+      const jDriver = await rDriver.json().catch(() => ({}));
+
+      if (!rAdmin.ok || jAdmin.ok === false) {
+        throw new Error(jAdmin.message || 'Failed to update ticket.');
+      }
+      if (!rDriver.ok || jDriver.ok === false) {
+        throw new Error(jDriver.message || 'Failed to update driver fields.');
+      }
+
+      await loadAll(true);   // keep same ticket selected (extra arg ignored by loadAll, safe)
+      lockForm(true);
+      alert('Ticket updated.');
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Could not save.');
+    } finally {
+      showOverlay(false);
+    }
+  });
 
   // ===== delete =====
   $('#deleteBtn').addEventListener('click', async () => {
@@ -840,48 +838,84 @@ async function loadProof(id){
     }
   });
 
-async function getProofUrl(id, mode /* 'view' | 'download' */ = 'view'){
-  try{
-    const r = await fetch(`/api/tags/${encodeURIComponent(id)}/proof-url${mode==='download' ? '?download=1' : ''}`);
-    const j = await r.json().catch(()=> ({}));
-    return j?.url || null;
-  }catch{ return null; }
-}
+  // ===== NEW: send back to driver (set status to Pending) =====
+  $('#sendBackBtn').addEventListener('click', async () => {
+    if (!SELECTED_ID || !CURRENT) return;
 
-async function showProofBlock(id){
-  const viewUrl = await getProofUrl(id, 'view');
-  const card = $('#proofCard');
-  if (!viewUrl){
-    card.style.display = 'none';
-    return;
+    const ok = confirm(
+      `Send ticket ${SELECTED_ID} back to the driver?\n\n` +
+      'Status will be set to Pending so the driver can edit and resubmit.'
+    );
+    if (!ok) return;
+
+    showOverlay(true);
+    try {
+      const r = await fetch(`/api/admin/tags/${encodeURIComponent(SELECTED_ID)}/send-back`, {
+        method: 'POST'
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) {
+        throw new Error(j.message || 'Failed to send back ticket.');
+      }
+
+      // Update local status and sidebar list
+      const row = ALL.find(x => String(x.ticketNo||x.id) === String(SELECTED_ID));
+      if (row) row.status = 'Pending';
+      applyFilter();
+
+      // Update status chip on detail view
+      $('#statusChip').textContent = 'Driver Status: Pending';
+
+      alert('Ticket sent back to driver (status set to Pending).');
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Could not send back ticket.');
+    } finally {
+      showOverlay(false);
+    }
+  });
+
+  // (legacy helper for proof, kept as-is)
+  async function getProofUrl(id, mode /* 'view' | 'download' */ = 'view'){
+    try{
+      const r = await fetch(`/api/tags/${encodeURIComponent(id)}/proof-url${mode==='download' ? '?download=1' : ''}`);
+      const j = await r.json().catch(()=> ({}));
+      return j?.url || null;
+    }catch{ return null; }
   }
-  $('#proofThumb').src = viewUrl;    // show thumbnail/full (browser will scale)
-  card.style.display = 'block';
 
-  $('#viewProofBtn').onclick = async () => {
-    const u = await getProofUrl(id, 'view');
-    if (u) window.open(u, '_blank', 'noopener');
-  };
-  $('#downloadProofBtn').onclick = async () => {
-    const u = await getProofUrl(id, 'download'); // has Content-Disposition: attachment
-    if (!u) return;
-    // Trigger download without opening a tab
-    const a = document.createElement('a');
-    a.href = u;
-    a.rel = 'noopener';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-  };
-}
+  async function showProofBlock(id){
+    const viewUrl = await getProofUrl(id, 'view');
+    const card = $('#proofCard');
+    if (!viewUrl){
+      card.style.display = 'none';
+      return;
+    }
+    $('#proofThumb').src = viewUrl;    // show thumbnail/full (browser will scale)
+    card.style.display = 'block';
+
+    $('#viewProofBtn').onclick = async () => {
+      const u = await getProofUrl(id, 'view');
+      if (u) window.open(u, '_blank', 'noopener');
+    };
+    $('#downloadProofBtn').onclick = async () => {
+      const u = await getProofUrl(id, 'download'); // has Content-Disposition: attachment
+      if (!u) return;
+      // Trigger download without opening a tab
+      const a = document.createElement('a');
+      a.href = u;
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    };
+  }
 
   // ===== convert to PDF & download =====
-$('#pdfBtn').addEventListener('click', () => {
-  if (!SELECTED_ID) return;
-  window.open(`/api/tags/${encodeURIComponent(SELECTED_ID)}/pdf?download=1`, '_blank');
-});
-
-
+  $('#pdfBtn').addEventListener('click', () => {
+    if (!SELECTED_ID) return;
+    window.open(`/api/tags/${encodeURIComponent(SELECTED_ID)}/pdf?download=1`, '_blank');
+  });
 
   // go!
   loadAll();
