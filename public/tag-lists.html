@@ -295,61 +295,71 @@
   }
 
   function lockForm(lock){
-    const f = $('#form');
+  const f = $('#form');
 
-    // Admin ticket fields
-    const adminSelectors = [
-      'input[name="date"]',
-      'input[name="truckStart"]',
-      'input[name="truckNo"]',
-      'input[name="subHauler"]',
-      'input[name="primeCarrier"]',
-      'input[name="shipper"]',
-      'input[name="origin"]',
-      'input[name="originCity"]',
-      'input[name="poNo"]',
-      'input[name="jobName"]',
-      'input[name="jobNo"]',
-      'input[name="destination"]',
-      'input[name="city"]',
-      'select[name="driverName"]',
-      'select[name="trailerType"]'
-    ];
+  // Admin ticket fields
+  const adminSelectors = [
+    'input[name="date"]',
+    'input[name="truckStart"]',
+    'input[name="truckNo"]',
+    'input[name="subHauler"]',
+    'input[name="primeCarrier"]',
+    'input[name="shipper"]',
+    'input[name="origin"]',
+    'input[name="originCity"]',
+    'input[name="poNo"]',
+    'input[name="jobName"]',
+    'input[name="jobNo"]',
+    'input[name="destination"]',
+    'input[name="city"]',
+    'select[name="driverName"]',
+    'select[name="trailerType"]'
+  ];
 
-    adminSelectors.forEach(sel => {
-      $$(sel, f).forEach(el => {
-        el.disabled = lock;
-      });
+  adminSelectors.forEach(sel => {
+    $$(sel, f).forEach(el => {
+      el.disabled = lock;
     });
+  });
 
-    // Ticket No is always locked
-    if (f && f.ticketNo) f.ticketNo.disabled = true;
+  // Ticket No is always locked
+  if (f && f.ticketNo) f.ticketNo.disabled = true;
 
-    // Driver fields now follow lock flag (editable in Edit mode)
-    const driverFieldIds = [
-      'ds_bridgefare',
-      'ds_signedOutLoaded',
-      'ds_howMany',
-      'ds_downtimeLunch',
-      'ds_signOutTime',
-      'ds_receivedBy',
-      'ds_notes',
-      'ds_driverSignature'
-    ];
-    driverFieldIds.forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.disabled = lock;
-    });
+  // Driver fields follow lock flag (editable only in Edit mode)
+  const driverFieldIds = [
+    'ds_bridgefare',
+    'ds_signedOutLoaded',
+    'ds_howMany',
+    'ds_downtimeLunch',
+    'ds_signOutTime',
+    'ds_receivedBy',
+    'ds_notes',
+    'ds_driverSignature'
+  ];
+  driverFieldIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = lock;
+  });
 
-    // Buttons
-    $('#editBtn').style.display       = lock && CURRENT ? 'inline-flex' : 'none';
-    $('#saveBtn').style.display       = lock ? 'none' : 'inline-flex';
-    $('#cancelBtn').style.display     = lock ? 'none' : 'inline-flex';
-    $('#deleteBtn').style.display     = CURRENT ? 'inline-flex' : 'none';
-    $('#pdfBtn').style.display        = CURRENT ? 'inline-flex' : 'none';
-    // NEW: only show send-back in view mode with a selected ticket
-    $('#sendBackBtn').style.display   = lock && CURRENT ? 'inline-flex' : 'none';
-  }
+  const hasCurrent = !!CURRENT;
+  const st = (CURRENT && (CURRENT.status || CURRENT.Status || '') || '')
+    .toString()
+    .toLowerCase();
+
+  // Only allow "send back" when viewing a ticket whose status is Done/Submitted
+  const canSendBack =
+    hasCurrent &&
+    lock &&
+    (st === 'done' || st === 'submitted' || st === 'complete' || st === 'completed');
+
+  $('#editBtn').style.display     = lock && hasCurrent ? 'inline-flex' : 'none';
+  $('#saveBtn').style.display     = lock ? 'none' : 'inline-flex';
+  $('#cancelBtn').style.display   = lock ? 'none' : 'inline-flex';
+  $('#deleteBtn').style.display   = hasCurrent ? 'inline-flex' : 'none';
+  $('#pdfBtn').style.display      = hasCurrent ? 'inline-flex' : 'none';
+  $('#sendBackBtn').style.display = canSendBack ? 'inline-flex' : 'none';
+}
+
 
   // ---------- state ----------
   let ALL = [];           // from /api/admin/tags
@@ -506,38 +516,66 @@
   }
 
   async function openTicket(id){
-    showOverlay(true);
-    try {
-      await loadMeta();
+  showOverlay(true);
+  try {
+    // Load dropdown meta (drivers, trailer types)
+    await loadMeta();
 
-      const r = await fetch(`/api/admin/tickets/${encodeURIComponent(id)}`);
-      if (r.status === 401 || r.status === 403) { location.href = '/'; return; }
-      const j = await r.json();
-      if (!j.ok) { alert(j.message || 'Not found'); return; }
-
-      CURRENT = j.ticket || {};
-      fillForm(CURRENT);
-
-      $('#hdr').textContent = `Ticket ${id}`;
-      const st = (ALL.find(x => String(x.ticketNo||x.id) === String(id))?.status || '').toString();
-      $('#statusChip').textContent = st ? `Driver Status: ${st}` : '';
-      $('#hint').textContent = '';
-
-      lockForm(true);
-
-      // Fill driver tags + scale items + proof
-      fillDriverFieldsFromObject(CURRENT);
-      await loadDriverByTicketId(id);
-      await loadScaleItems(id);
-      await loadProof(id);
-      
-    } catch (e){
-      console.error(e);
-      alert('Failed to load ticket.');
-    } finally {
-      showOverlay(false);
+    // Fetch full ticket (admin + driver side)
+    const r = await fetch(`/api/admin/tickets/${encodeURIComponent(id)}`);
+    if (r.status === 401 || r.status === 403) {
+      location.href = '/';
+      return;
     }
+    const j = await r.json();
+    if (!j.ok) {
+      alert(j.message || 'Not found');
+      return;
+    }
+
+    // Main ticket object
+    CURRENT = j.ticket || {};
+
+    // Figure out latest status from the sidebar list (ALL) or the ticket itself
+    const row = ALL.find(x => String(x.ticketNo || x.id) === String(id));
+    const st  = (
+      row?.status ||
+      CURRENT.status ||
+      CURRENT.Status ||
+      ''
+    ).toString();
+
+    // Normalize onto CURRENT so lockForm() can decide whether to show "Send back"
+    CURRENT.status = st;
+
+    // Fill admin fields
+    fillForm(CURRENT);
+
+    // Header + status chip
+    $('#hdr').textContent       = `Ticket ${id}`;
+    $('#statusChip').textContent = st ? `Driver Status: ${st}` : '';
+    $('#hint').textContent      = '';
+
+    // Lock form (view mode). lockForm() will show/hide:
+    // - Edit / Save / Cancel
+    // - Delete / PDF
+    // - Send back to driver (only if status is Done/Submitted/etc.)
+    lockForm(true);
+
+    // Driver fields + scale tags + proof
+    fillDriverFieldsFromObject(CURRENT); // in case driver fields are embedded
+    await loadDriverByTicketId(id);      // fetch latest driver record
+    await loadScaleItems(id);            // scale tags table
+    await loadProof(id);                 // proof image block
+
+  } catch (e){
+    console.error(e);
+    alert('Failed to load ticket.');
+  } finally {
+    showOverlay(false);
   }
+}
+
 
   function fillForm(t = {}){
     const f = $('#form');
@@ -840,40 +878,44 @@
 
   // ===== NEW: send back to driver (set status to Pending) =====
   $('#sendBackBtn').addEventListener('click', async () => {
-    if (!SELECTED_ID || !CURRENT) return;
+  if (!SELECTED_ID || !CURRENT) return;
 
-    const ok = confirm(
-      `Send ticket ${SELECTED_ID} back to the driver?\n\n` +
-      'Status will be set to Pending so the driver can edit and resubmit.'
-    );
-    if (!ok) return;
+  const ok = confirm(
+    `Send ticket ${SELECTED_ID} back to the driver?\n\n` +
+    'Status will be set to Pending so the driver can edit and resubmit.'
+  );
+  if (!ok) return;
 
-    showOverlay(true);
-    try {
-      const r = await fetch(`/api/admin/tags/${encodeURIComponent(SELECTED_ID)}/send-back`, {
-        method: 'POST'
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok || j.ok === false) {
-        throw new Error(j.message || 'Failed to send back ticket.');
-      }
-
-      // Update local status and sidebar list
-      const row = ALL.find(x => String(x.ticketNo||x.id) === String(SELECTED_ID));
-      if (row) row.status = 'Pending';
-      applyFilter();
-
-      // Update status chip on detail view
-      $('#statusChip').textContent = 'Driver Status: Pending';
-
-      alert('Ticket sent back to driver (status set to Pending).');
-    } catch (err) {
-      console.error(err);
-      alert(err.message || 'Could not send back ticket.');
-    } finally {
-      showOverlay(false);
+  showOverlay(true);
+  try {
+    const r = await fetch(`/api/admin/tags/${encodeURIComponent(SELECTED_ID)}/send-back`, {
+      method: 'POST'
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || j.ok === false) {
+      throw new Error(j.message || 'Failed to send back ticket.');
     }
-  });
+
+    // Update local status and sidebar list
+    const row = ALL.find(x => String(x.ticketNo||x.id) === String(SELECTED_ID));
+    if (row) row.status = 'Pending';
+    if (CURRENT) CURRENT.status = 'Pending';
+
+    applyFilter();
+    $('#statusChip').textContent = 'Driver Status: Pending';
+
+    // Re-lock form so lockForm hides the button
+    lockForm(true);
+
+    alert('Ticket sent back to driver (status set to Pending).');
+  } catch (err) {
+    console.error(err);
+    alert(err.message || 'Could not send back ticket.');
+  } finally {
+    showOverlay(false);
+  }
+});
+
 
   // (legacy helper for proof, kept as-is)
   async function getProofUrl(id, mode /* 'view' | 'download' */ = 'view'){
