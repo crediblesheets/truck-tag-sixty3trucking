@@ -474,6 +474,76 @@ app.get('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, res
   }
 });
 
+// Admin edit of driver tag fields (Bridgefare, Signed Out Loaded, etc.) from Tag Lists
+app.put('/api/admin/tags/:id/driver', verifySession, ensureActiveUser, requireAdmin, async (req, res) => {
+  try {
+    const ticketNo = String(req.params.id || '').trim();
+    if (!ticketNo) {
+      return res.status(400).json({ ok: false, message: 'Missing ticket number.' });
+    }
+
+    const {
+      bridgefare,
+      signedOutLoaded,
+      howManyTonsLoads,
+      downtimeLunch,
+      notes,
+      signOutTime,
+      receivedBy,
+      driverSignature,
+    } = req.body || {};
+
+    const patch = {
+      bridgefare,
+      signed_out_loaded: signedOutLoaded,
+      how_many_tons_loads: howManyTonsLoads,
+      downtime_lunch: downtimeLunch,
+      notes,
+      sign_out_time: signOutTime,
+      received_by: receivedBy,
+      driver_signature: driverSignature,
+      updated_at: new Date().toISOString(),
+    };
+
+    // remove undefined so we don’t touch untouched columns
+    Object.keys(patch).forEach((k) => patch[k] === undefined && delete patch[k]);
+
+    if (!Object.keys(patch).length) {
+      return res.json({ ok: true });
+    }
+
+    const { data: existing, error: selErr } = await sb
+      .from('driver_tags')
+      .select('ticket_no')
+      .eq('ticket_no', ticketNo)
+      .maybeSingle();
+    if (selErr) throw selErr;
+
+    if (existing) {
+      const { error: updErr } = await sb
+        .from('driver_tags')
+        .update(patch)
+        .eq('ticket_no', ticketNo);
+      if (updErr) throw updErr;
+    } else {
+      const row = {
+        ticket_no: ticketNo,
+        status: 'Pending',
+        ...patch,
+      };
+      const { error: insErr } = await sb.from('driver_tags').insert(row);
+      if (insErr) throw insErr;
+    }
+
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('PUT /api/admin/tags/:id/driver', e);
+    return res.status(500).json({ ok: false, message: 'Failed to update driver tag.' });
+  }
+});
+
+
+
 // Proof upload
 app.post(
   '/api/tags/:id/proof',

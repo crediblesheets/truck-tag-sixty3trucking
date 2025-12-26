@@ -162,27 +162,28 @@
 
           <!-- ===== Driver tags (read-only; filled if present) ===== -->
           <div class="grid3" style="margin-top:16px;">
-            <div><label>Bridgefare</label><input id="ds_bridgefare" type="text" disabled></div>
-            <div><label>Signed Out Loaded</label><input id="ds_signedOutLoaded" type="text" disabled></div>
-            <div><label>How Many Tons/Loads</label><input id="ds_howMany" type="text" disabled></div>
+            <div><label>Bridgefare</label><input id="ds_bridgefare" name="bridgefare" type="text" disabled></div>
+            <div><label>Signed Out Loaded</label><input id="ds_signedOutLoaded" name="signedOutLoaded" type="text" disabled></div>
+            <div><label>How Many Tons/Loads</label><input id="ds_howMany" name="howManyTonsLoads" type="text" disabled></div>
           </div>
 
           <div class="grid3" style="margin-top:10px;">
-            <div><label>Downtime & Lunch</label><input id="ds_downtimeLunch" type="text" disabled></div>
-            <div><label>Sign Out Time</label><input id="ds_signOutTime" type="time" disabled></div>
-            <div><label>Received by</label><input id="ds_receivedBy" type="text" disabled></div>
+            <div><label>Downtime & Lunch</label><input id="ds_downtimeLunch" name="downtimeLunch" type="text" disabled></div>
+            <div><label>Sign Out Time</label><input id="ds_signOutTime" name="signOutTime" type="time" disabled></div>
+            <div><label>Received by</label><input id="ds_receivedBy" name="receivedBy" type="text" disabled></div>
           </div>
 
           <div class="grid2" style="margin-top:10px;">
             <div style="grid-column:1/-1;">
               <label>Notes</label>
-              <textarea id="ds_notes" disabled></textarea>
+              <textarea id="ds_notes" name="notes" disabled></textarea>
             </div>
             <div style="grid-column:1/-1;">
               <label>Driver Signature</label>
-              <input id="ds_driverSignature" type="text" disabled>
+              <input id="ds_driverSignature" name="driverSignature" type="text" disabled>
             </div>
           </div>
+
 
           <!-- ===== Proof of Ticket (image) ===== -->
           <div id="proofCard" class="proof-card" style="display:none;">
@@ -294,16 +295,60 @@
     sel.value = val;
   }
   function lockForm(lock){
-    $$('#form input, #form select, #form textarea').forEach(el => el.disabled = lock);
-    $('#form').ticketNo.disabled = true; // never editable
+  const f = $('#form');
 
-    $('#editBtn').style.display   = lock && CURRENT ? 'inline-flex' : 'none';
-    $('#saveBtn').style.display   = lock ? 'none' : 'inline-flex';
-    $('#cancelBtn').style.display = lock ? 'none' : 'inline-flex';
-    $('#deleteBtn').style.display = CURRENT ? 'inline-flex' : 'none';
-    $('#pdfBtn').style.display = CURRENT ? 'inline-flex' : 'none';
+  // Admin ticket fields
+  const adminSelectors = [
+    'input[name="date"]',
+    'input[name="truckStart"]',
+    'input[name="truckNo"]',
+    'input[name="subHauler"]',
+    'input[name="primeCarrier"]',
+    'input[name="shipper"]',
+    'input[name="origin"]',
+    'input[name="originCity"]',
+    'input[name="poNo"]',
+    'input[name="jobName"]',
+    'input[name="jobNo"]',
+    'input[name="destination"]',
+    'input[name="city"]',
+    'select[name="driverName"]',
+    'select[name="trailerType"]'
+  ];
 
-  }
+  adminSelectors.forEach(sel => {
+    $$(sel, f).forEach(el => {
+      el.disabled = lock;
+    });
+  });
+
+  // Ticket No is always locked
+  if (f && f.ticketNo) f.ticketNo.disabled = true;
+
+  // Driver fields now follow lock flag (editable in Edit mode)
+  const driverFieldIds = [
+    'ds_bridgefare',
+    'ds_signedOutLoaded',
+    'ds_howMany',
+    'ds_downtimeLunch',
+    'ds_signOutTime',
+    'ds_receivedBy',
+    'ds_notes',
+    'ds_driverSignature'
+  ];
+  driverFieldIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = lock;
+  });
+
+  // Buttons
+  $('#editBtn').style.display   = lock && CURRENT ? 'inline-flex' : 'none';
+  $('#saveBtn').style.display   = lock ? 'none' : 'inline-flex';
+  $('#cancelBtn').style.display = lock ? 'none' : 'inline-flex';
+  $('#deleteBtn').style.display = CURRENT ? 'inline-flex' : 'none';
+  $('#pdfBtn').style.display    = CURRENT ? 'inline-flex' : 'none';
+}
+
 
   // ---------- state ----------
   let ALL = [];           // from /api/admin/tags
@@ -692,33 +737,83 @@ async function loadProof(id){
   });
 
   $('#form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (!SELECTED_ID) return;
+  e.preventDefault();
+  if (!SELECTED_ID) return;
 
-    const fd = new FormData(e.target);
-    const body = Object.fromEntries(fd.entries());
-    if (!body.date || !body.driverName) { alert('Date and Driver Name are required.'); return; }
+  const fd = new FormData(e.target);
+  const body = Object.fromEntries(fd.entries());
 
-    showOverlay(true);
-    try {
-      const r = await fetch(`/api/admin/tickets/${encodeURIComponent(SELECTED_ID)}`, {
-        method:'PUT',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(body)
-      });
-      const j = await r.json();
-      if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to update');
+  if (!body.date || !body.driverName) {
+    alert('Date and Driver Name are required.');
+    return;
+  }
 
-      await loadAll();
-      await openTicket(SELECTED_ID);
-      alert('Ticket updated.');
-    } catch (err){
-      console.error(err);
-      alert(err.message || 'Could not save.');
-    } finally {
-      showOverlay(false);
+  // Split payload: admin ticket fields vs driver fields
+  const adminPayload = {
+    date: body.date,
+    driverName: body.driverName,
+    truckStart: body.truckStart || '',
+    truckNo: body.truckNo || '',
+    trailerType: body.trailerType || '',
+    subHauler: body.subHauler || '',
+    primeCarrier: body.primeCarrier || '',
+    shipper: body.shipper || '',
+    origin: body.origin || '',
+    originCity: body.originCity || '',
+    poNo: body.poNo || '',
+    jobName: body.jobName || '',
+    jobNo: body.jobNo || '',
+    destination: body.destination || '',
+    city: body.city || '',
+  };
+
+  const driverPayload = {
+    bridgefare: body.bridgefare || '',
+    signedOutLoaded: body.signedOutLoaded || '',
+    howManyTonsLoads: body.howManyTonsLoads || '',
+    downtimeLunch: body.downtimeLunch || '',
+    notes: body.notes || '',
+    signOutTime: body.signOutTime || '',
+    receivedBy: body.receivedBy || '',
+    driverSignature: body.driverSignature || '',
+  };
+
+  showOverlay(true);
+  try {
+    const [rAdmin, rDriver] = await Promise.all([
+      fetch(`/api/admin/tickets/${encodeURIComponent(SELECTED_ID)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(adminPayload),
+      }),
+      fetch(`/api/admin/tags/${encodeURIComponent(SELECTED_ID)}/driver`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(driverPayload),
+      }),
+    ]);
+
+    const jAdmin  = await rAdmin.json().catch(() => ({}));
+    const jDriver = await rDriver.json().catch(() => ({}));
+
+    if (!rAdmin.ok || jAdmin.ok === false) {
+      throw new Error(jAdmin.message || 'Failed to update ticket.');
     }
-  });
+    if (!rDriver.ok || jDriver.ok === false) {
+      throw new Error(jDriver.message || 'Failed to update driver fields.');
+    }
+
+    await loadAll(true);   // keep same ticket selected
+    lockForm(true);
+    alert('Ticket updated.');
+  } catch (err) {
+    console.error(err);
+    alert(err.message || 'Could not save.');
+  } finally {
+    showOverlay(false);
+  }
+});
+
 
   // ===== delete =====
   $('#deleteBtn').addEventListener('click', async () => {
