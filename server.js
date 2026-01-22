@@ -1496,7 +1496,7 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
 
     const doc = new PDFDocument({ size: 'LETTER', margin: 0 });
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `${dl ? 'attachment' : 'inline'}; filename="ticket-${ticketNo}.pdf"`);
+    res.setHeader('Content-Disposition', `${dl ? 'attachment' : 'inline'}; filename="${ticketNo}.pdf"`);
     doc.on('error', (err) => {
       console.error('pdfkit error', err);
       try { res.end(); } catch {}
