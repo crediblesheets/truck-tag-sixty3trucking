@@ -2,123 +2,259 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
   <title>Driver Ticket — Sixty-3 Trucking</title>
   <link rel="stylesheet" href="./styles.css"/>
 
   <style>
-    .layout{ display:grid; grid-template-columns: 320px 1fr; gap:16px; align-items:start; }
-    .sidebar-card{ position:sticky; top:16px; }
-    .kv{ margin:0; padding:0; list-style:none; display:grid; gap:10px; }
-    .kv li{ padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:#fff; }
-    .kv .k{ font-size:12px; color:var(--muted); display:block; margin-bottom:4px; }
-    .kv .v{ font-weight:600; }
+  :root{
+    --tap: 44px;          /* iOS recommended minimum tap target */
+    --pad: 16px;
+    --radius: 12px;
+  }
 
-    .section-title{ margin:18px 0 8px; font-size:16px; font-weight:700 }
-    .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
-    .form-grid label{font-size:12px;color:#555;display:block;margin-bottom:6px}
-    .form-grid input,.form-grid textarea{ width:100%; box-sizing:border-box; padding:10px 12px; border:1px solid var(--border); border-radius:10px; }
-    .form-grid textarea{ min-height:90px; grid-column: 1/-1; }
-    .muted-small{ color:#6b7280; font-size:12px }
+  html{
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
 
-    /* mini scale form + table */
+  /* ---------- Layout ---------- */
+  .layout{
+    display:grid;
+    grid-template-columns: minmax(300px, 360px) 1fr;
+    gap:16px;
+    align-items:start;
+  }
+
+  .sidebar-card{
+    position:sticky;
+    top:16px;
+    max-height: calc(100vh - 32px);
+    overflow:auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* iPad / tablet: prefer single column for comfort (portrait + many landscape cases) */
+  @media (max-width: 1180px){
+    .layout{ grid-template-columns: 1fr; }
+    .sidebar-card{ position:static; max-height:none; overflow:visible; }
+  }
+
+  /* ---------- Ticket KV card ---------- */
+  .kv{
+    margin:0;
+    padding:0;
+    list-style:none;
+    display:grid;
+    gap:10px;
+  }
+  .kv li{
+    padding:12px 12px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    background:#fff;
+  }
+  .kv .k{ font-size:12px; color:var(--muted); display:block; margin-bottom:4px; }
+  .kv .v{ font-weight:600; word-break: break-word; }
+
+  .section-title{ margin:18px 0 8px; font-size:16px; font-weight:700 }
+  .muted-small{ color:#6b7280; font-size:12px }
+
+  /* ---------- Forms (tablet-friendly) ---------- */
+  .form-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:12px;
+  }
+  .form-grid label{ font-size:12px; color:#555; display:block; margin-bottom:6px; }
+
+  /* IMPORTANT: 16px prevents iOS Safari zoom on focus */
+  .form-grid input,
+  .form-grid textarea,
+  .mini-form input{
+    width:100%;
+    box-sizing:border-box;
+    padding:12px 12px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    font-size:16px;
+    line-height:1.2;
+    min-height: var(--tap);
+  }
+
+  .form-grid textarea{
+    min-height:110px;
+    grid-column: 1/-1;
+    resize: vertical;
+  }
+
+  /* Make time inputs nicer on iPad */
+  input[type="time"]{
+    font-size:16px;
+  }
+
+  @media (max-width: 640px){
+    .form-grid{ grid-template-columns: 1fr; }
+  }
+
+  /* ---------- Buttons / tap targets ---------- */
+  /* styles.css defines .btn already; these are safe overrides for touch */
+  .btn{
+    min-height: var(--tap);
+    padding: 10px 14px;
+    font-size: 15px;
+  }
+
+  /* link buttons in table: increase touch area without changing look too much */
+  .btn.link{
+    background:none;
+    border:none;
+    color:#2563eb;
+    cursor:pointer;
+    padding: 10px 8px;
+    min-height: var(--tap);
+  }
+
+  /* checkbox tap size */
+  #noScaleReq{
+    width:18px;
+    height:18px;
+  }
+
+  /* ---------- Mini scale form ---------- */
+  .mini-form{
+    display:grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) 170px;
+    grid-template-areas:
+      "tag weight material actions"
+      "times times  times    actions";
+    gap:10px;
+    align-items:end;
+  }
+  .mini-form label{ font-size:12px;color:#555;display:block;margin-bottom:6px }
+
+  .mf-tag{grid-area:tag}
+  .mf-weight{grid-area:weight}
+  .mf-mat{grid-area:material}
+  .mf-actions{
+    grid-area:actions;
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    align-items:flex-end;
+    flex-wrap:wrap;
+  }
+
+  .time-row{
+    grid-area:times;
+    display:grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap:10px;
+  }
+  .time-row .time label{ font-size:11px; margin-bottom:4px }
+  .time-row .time input{ padding:10px 10px; min-width:0 }
+
+  /* Tablet: make mini-form stack earlier so it doesn’t feel cramped */
+  @media (max-width: 1180px){
     .mini-form{
-      display:grid;
-      grid-template-columns: 1.6fr 1.6fr 1.6fr 140px;
+      grid-template-columns: 1fr 1fr;
       grid-template-areas:
-        "tag weight material actions"
-        "times times  times    actions";
-      gap:10px;
-      align-items:end;
+        "tag tag"
+        "weight material"
+        "times times"
+        "actions actions";
     }
-    .mini-form label{font-size:12px;color:#555;display:block;margin-bottom:6px}
-    .mini-form input{ width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--border);border-radius:10px }
-    .mf-tag{grid-area:tag}
-    .mf-weight{grid-area:weight}
-    .mf-mat{grid-area:material}
-    .mf-actions{
-      grid-area:actions; display:flex; gap:8px; justify-content:flex-end; align-items:flex-end
-    }
-    .time-row{
-      grid-area:times; display:grid; grid-template-columns: repeat(4, minmax(90px, 1fr)); gap:10px;
-    }
-    .time-row .time label{font-size:11px;margin-bottom:4px}
-    .time-row .time input{padding:8px 10px;min-width:0}
-    .time-row .time input[type="time"]{max-width:140px}
+    .mf-actions{ justify-content:flex-start }
+    .time-row{ grid-template-columns: repeat(2, minmax(0, 1fr)) }
+  }
 
-    .table-wrap{ margin-top:10px; border:1px solid var(--border); border-radius:12px; overflow:hidden; }
-    table{ width:100%; border-collapse:collapse }
-    thead{ background:#f8fafc }
-    th,td{ padding:10px 12px; border-bottom:1px solid #eef2f7; text-align:left; font-size:14px }
-    tbody tr:last-child td{ border-bottom:none }
-    .scroll-area{ max-height:240px; overflow:auto }
-    .row-actions{ display:flex; gap:8px }
-    .btn.link{ background:none; border:none; color:#2563eb; cursor:pointer; padding:0 }
+  /* ---------- Table: swipe scroll on tablet ---------- */
+  .table-wrap{
+    margin-top:10px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    overflow:hidden;
+  }
 
-    /* proof */
-    .proof-help{ margin-top:6px }
-    #proofPreview{ max-height:140px; border:1px solid var(--border); border-radius:10px; padding:4px; }
+  .scroll-area{
+    max-height: 280px;
+    overflow:auto;
+    -webkit-overflow-scrolling: touch;
+  }
 
-    /* signature chips */
-    .sig-row{ display:flex; gap:10px; align-items:center }
-    .sig-chip{
-      display:inline-flex; align-items:center; gap:8px;
-      border:1px dashed #cbd5e1; background:#fff; padding:6px 8px; border-radius:10px;
-    }
-    .sig-chip img{ height:28px; max-width:160px; object-fit:contain; }
-    .sig-chip .remove{ border:0; background:transparent; color:#ef4444; cursor:pointer; font-size:12px }
+  /* Allow horizontal swipe if needed */
+  .scroll-area table{
+    min-width: 760px;
+  }
 
-    /* signature modal */
-    .sig-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; z-index:1600 }
-    .sig-overlay.show{ display:flex }
-    .sig-modal{
-      width:min(92vw,680px); background:#fff; border-radius:16px; border:1px solid var(--border);
-      box-shadow:0 10px 30px rgba(0,0,0,.25); padding:16px; display:flex; flex-direction:column; gap:12px
-    }
-    .sig-head{ display:flex; align-items:center; justify-content:space-between }
-    .sig-title{ font-weight:700; }
-    .sig-canvas-wrap{
-      background:#f8fafc; border:1px solid #e5e7eb; border-radius:12px; overflow:hidden;
-    }
-    #sigCanvas{ display:block; width:100%; height:260px; background:transparent; cursor:crosshair }
-    .sig-actions{ display:flex; gap:10px; justify-content:flex-end }
+  table{ width:100%; border-collapse:collapse }
+  thead{ background:#f8fafc }
+  th,td{
+    padding:12px 12px;
+    border-bottom:1px solid #eef2f7;
+    text-align:left;
+    font-size:14px;
+    white-space: nowrap;
+  }
+  tbody tr:last-child td{ border-bottom:none }
+  .row-actions{ display:flex; gap:8px; align-items:center }
 
-    @media (max-width: 980px){
-      .layout{ grid-template-columns: 1fr; }
-      .sidebar-card{ position:static; }
-      .mini-form{
-        grid-template-columns: 1fr 1fr;
-        grid-template-areas:
-          "tag tag"
-          "weight material"
-          "times times"
-          "actions actions";
-      }
-      .mf-actions{ justify-content:flex-start }
-      .time-row{ grid-template-columns: repeat(2, minmax(90px,1fr)) }
-    }
-    /* highlight required fields immediately on page load until valid */
-    input:required:invalid,
-    textarea:required:invalid {
-      border-color: #ef4444;                 /* red border */
-      background: #fff7f7;                   /* light red fill */
-      box-shadow: 0 0 0 2px rgba(239,68,68,.12) inset;
-    }
+  /* ---------- Proof preview ---------- */
+  #proofPreview{
+    max-height:160px;
+    max-width:100%;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:4px;
+    object-fit:contain;
+  }
 
-    /* include required time inputs too */
-    input[type="time"]:required:invalid {
-      background: #fff7f7;
-    }
+  /* ---------- Signature chips ---------- */
+  .sig-row{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .sig-chip{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    border:1px dashed #cbd5e1;
+    background:#fff;
+    padding:8px 10px;
+    border-radius:10px;
+  }
+  .sig-chip img{ height:32px; max-width:200px; object-fit:contain; }
+  .sig-chip .remove{ border:0; background:transparent; color:#ef4444; cursor:pointer; font-size:14px }
 
-    /* once a required field becomes valid, revert to normal */
-    input:required:valid,
-    textarea:required:valid {
-      border-color: var(--border);
-      background: #fff;
-      box-shadow: none;
-    }
+  /* ---------- Signature modal ---------- */
+  .sig-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; z-index:1600 }
+  .sig-overlay.show{ display:flex }
+  .sig-modal{
+    width:min(94vw, 760px);
+    background:#fff;
+    border-radius:16px;
+    border:1px solid var(--border);
+    box-shadow:0 10px 30px rgba(0,0,0,.25);
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  #sigCanvas{ display:block; width:100%; height:280px; background:transparent; cursor:crosshair }
 
-  </style>
+  /* ---------- Required field highlight (kept) ---------- */
+  input:required:invalid,
+  textarea:required:invalid {
+    border-color: #ef4444;
+    background: #fff7f7;
+    box-shadow: 0 0 0 2px rgba(239,68,68,.12) inset;
+  }
+  input[type="time"]:required:invalid { background: #fff7f7; }
+  input:required:valid,
+  textarea:required:valid {
+    border-color: var(--border);
+    background: #fff;
+    box-shadow: none;
+  }
+</style>
+
 </head>
 <body>
   <header class="site-header">
