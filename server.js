@@ -443,8 +443,9 @@ app.get('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, res
     const { data, error } = await sb
       .from('driver_tags')
       .select(
-        'bridgefare, signed_out_loaded, how_many_tons_loads, downtime_lunch, notes, sign_out_time, received_by, driver_signature, status, updated_at, email'
+        'bridgefare, signed_out_loaded, how_many_tons_loads, downtime_lunch, leave_yard_time, truck_stop, notes, sign_out_time, received_by, driver_signature, status, updated_at, email'
       )
+
       .eq('ticket_no', ticketNo)
       .maybeSingle();
 
@@ -458,6 +459,11 @@ app.get('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, res
       signedOutLoaded: data.signed_out_loaded ?? '',
       howManyTonsLoads: data.how_many_tons_loads ?? '',
       downtimeLunch: data.downtime_lunch ?? '',
+
+      // NEW
+      leaveYardTime: data.leave_yard_time ?? '',
+      truckStop: data.truck_stop ?? '',
+
       notes: data.notes ?? '',
       signOutTime: data.sign_out_time ?? '',
       receivedBy: data.received_by ?? '',
@@ -466,6 +472,7 @@ app.get('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, res
       updatedAt: data.updated_at ?? '',
       email: (data.email || '').toLowerCase(),
     };
+
 
     return res.json({ ok: true, driver });
   } catch (e) {
@@ -487,6 +494,9 @@ app.put('/api/admin/tags/:id/driver', verifySession, ensureActiveUser, requireAd
       signedOutLoaded,
       howManyTonsLoads,
       downtimeLunch,
+      // NEW
+      leaveYardTime = '',
+      truckStop = '',
       notes,
       signOutTime,
       receivedBy,
@@ -806,6 +816,9 @@ app.post('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, re
         signed_out_loaded: signedOutLoaded,
         how_many_tons_loads: howManyTonsLoads,
         downtime_lunch: downtimeLunch,
+        // NEW
+        leave_yard_time: leaveYardTime,
+        truck_stop: truckStop,
         notes,
         sign_out_time: signOutTime,
         received_by: receivedBy,

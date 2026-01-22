@@ -166,6 +166,17 @@
               <input name="downtimeLunch" type="text" placeholder="e.g., 00:30">
             </div>
 
+            <!-- NEW -->
+            <div>
+              <label>Leave Yard Time</label>
+              <input name="leaveYardTime" type="time" step="60" lang="en-US" placeholder="HH:MM">
+            </div>
+            <div>
+              <label>Truck Stop</label>
+              <input name="truckStop" type="text" placeholder="e.g., Pilot / Loves / Flying J">
+            </div>
+
+
             <div style="grid-column:1/-1;">
               <label>Notes</label>
               <textarea name="notes" placeholder="Notes"></textarea>
@@ -566,6 +577,8 @@
       f.signedOutLoaded.value = d.signedOutLoaded ?? '';
       f.howMany.value         = d.howManyTonsLoads ?? '';
       f.downtimeLunch.value   = d.downtimeLunch ?? '';
+      f.leaveYardTime.value   = (d.leaveYardTime || '').slice(0,5);
+      f.truckStop.value       = d.truckStop ?? '';
       f.notes.value           = d.notes ?? '';
       f.signOutTime.value     = (d.signOutTime || '').slice(0,5);
       $('#receivedBy').value  = d.receivedBy ?? '';
@@ -879,12 +892,18 @@ function stripWhiteToTransparent(srcCanvas, threshold = 248){
         signedOutLoaded: form.get('signedOutLoaded') ?? '',
         howManyTonsLoads: form.get('howMany') ?? '',
         downtimeLunch: form.get('downtimeLunch') ?? '',
+
+        // NEW
+        leaveYardTime: form.get('leaveYardTime') ?? '',
+        truckStop: form.get('truckStop') ?? '',
+
         notes: form.get('notes') ?? '',
         signOutTime: form.get('signOutTime') ?? '',
         receivedBy: form.get('receivedBy') ?? '',
         driverSignature: form.get('driverSignature') ?? '',
         status: 'Done'
       };
+
 
       try {
         // 1) proof upload (optional)
