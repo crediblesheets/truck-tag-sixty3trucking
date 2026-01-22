@@ -1433,7 +1433,7 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     howManyTonsLoads: { x: 3498, y: 4833 },
     truckStart: { x: 704, y: 4663 },
     // ✅ NEW: Truck Stop Time (below TRUCK STOP)
-    truckStopTime: { x: 1940, y: 4663 },
+    truckStopTime: { x: 1900, y: 4663 },
     startTime: { x: 1034, y: 5028 },
     downtimeLunch: { x: 1940, y: 5036 },
     notes_mid: { x: 2990, y: 5028 },
