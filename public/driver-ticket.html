@@ -172,9 +172,10 @@
               <input name="leaveYardTime" type="time" step="60" lang="en-US" placeholder="HH:MM">
             </div>
             <div>
-              <label>Truck Stop</label>
-              <input name="truckStop" type="text" placeholder="e.g., Pilot / Loves / Flying J">
+              <label>Truck Stop Time</label>
+              <input name="truckStop" type="time" step="60" lang="en-US">
             </div>
+
 
 
             <div style="grid-column:1/-1;">
@@ -578,7 +579,7 @@
       f.howMany.value         = d.howManyTonsLoads ?? '';
       f.downtimeLunch.value   = d.downtimeLunch ?? '';
       f.leaveYardTime.value   = (d.leaveYardTime || '').slice(0,5);
-      f.truckStop.value       = d.truckStop ?? '';
+      f.truckStop.value       = (d.truckStop || '').slice(0,5);
       f.notes.value           = d.notes ?? '';
       f.signOutTime.value     = (d.signOutTime || '').slice(0,5);
       $('#receivedBy').value  = d.receivedBy ?? '';
