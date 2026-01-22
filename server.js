@@ -508,12 +508,18 @@ app.put('/api/admin/tags/:id/driver', verifySession, ensureActiveUser, requireAd
       signed_out_loaded: signedOutLoaded,
       how_many_tons_loads: howManyTonsLoads,
       downtime_lunch: downtimeLunch,
+
+      // NEW ✅
+      leave_yard_time: leaveYardTime,
+      truck_stop: truckStop,
+
       notes,
       sign_out_time: signOutTime,
       received_by: receivedBy,
       driver_signature: driverSignature,
       updated_at: new Date().toISOString(),
     };
+
 
     // remove undefined so we don’t touch untouched columns
     Object.keys(patch).forEach((k) => patch[k] === undefined && delete patch[k]);
@@ -801,12 +807,18 @@ app.post('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, re
       signedOutLoaded = '',
       howManyTonsLoads = '',
       downtimeLunch = '',
+
+      // NEW ✅
+      leaveYardTime = '',
+      truckStop = '',
+
       notes = '',
       signOutTime = '',
       receivedBy = '',
       driverSignature = '',
       status = 'Done',
     } = req.body || {};
+
 
     const { error } = await sb
       .from('driver_tags')

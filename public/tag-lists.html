@@ -138,6 +138,13 @@
             </div>
           </div>
 
+          <div class="grid3" style="margin-top:10px;">
+            <div><label>Leave Yard Time</label><input id="ds_leaveYardTime" name="leaveYardTime" type="time" disabled></div>
+            <div><label>Truck Stop Time</label><input id="ds_truckStopTime" name="truckStop" type="time" disabled></div>
+            <div></div>
+          </div>
+
+
           <div class="grid2" style="margin-top:10px;">
             <div><label>Sub Hauler</label><input type="text" name="subHauler" disabled></div>
             <div><label>Prime Carrier</label><input type="text" name="primeCarrier" disabled></div>
@@ -331,11 +338,14 @@
     'ds_signedOutLoaded',
     'ds_howMany',
     'ds_downtimeLunch',
+    'ds_leaveYardTime',
+    'ds_truckStopTime',
     'ds_signOutTime',
     'ds_receivedBy',
     'ds_notes',
     'ds_driverSignature'
   ];
+
   driverFieldIds.forEach(id => {
     const el = document.getElementById(id);
     if (el) el.disabled = lock;
@@ -500,6 +510,8 @@
     $('#ds_downtimeLunch').value = '';
     $('#ds_signOutTime').value = '';
     $('#ds_receivedBy').value = '';
+    $('#ds_leaveYardTime').value = '';
+    $('#ds_truckStopTime').value = '';
     $('#ds_notes').value = '';
     $('#ds_driverSignature').value = '';
     $('#ds_items').innerHTML = `<tr><td colspan="7" class="muted" style="text-align:center;">No scale tags.</td></tr>`;
@@ -629,12 +641,17 @@
     const signOutTimeRaw   = obj.signOutTime ?? obj['Sign Out Time'] ?? '';
     const receivedBy       = obj.receivedBy ?? obj['Received by'] ?? '';
     const driverSignature  = obj.driverSignature ?? obj['Driver Signature'] ?? '';
+    const leaveYardTimeRaw = obj.leaveYardTime ?? obj.leave_yard_time ?? obj['Leave Yard Time'] ?? '';
+    const truckStopRaw     = obj.truckStop ?? obj.truck_stop ?? obj['Truck Stop Time'] ?? obj['Truck Stop'] ?? '';
+
 
     $('#ds_bridgefare').value      = bridgefare;
     $('#ds_signedOutLoaded').value = signedOutLoaded;
     $('#ds_howMany').value         = howMany;
     $('#ds_downtimeLunch').value   = downtimeLunch;
     $('#ds_notes').value           = notes;
+    $('#ds_leaveYardTime').value = toHHMM(leaveYardTimeRaw);
+    $('#ds_truckStopTime').value = toHHMM(truckStopRaw);
     $('#ds_signOutTime').value     = toHHMM(signOutTimeRaw);
     $('#ds_receivedBy').value      = receivedBy;
     $('#ds_driverSignature').value = driverSignature;
@@ -809,11 +826,14 @@
       signedOutLoaded: body.signedOutLoaded || '',
       howManyTonsLoads: body.howManyTonsLoads || '',
       downtimeLunch: body.downtimeLunch || '',
+      leaveYardTime: body.leaveYardTime || '',
+      truckStop: body.truckStop || '',
       notes: body.notes || '',
       signOutTime: body.signOutTime || '',
       receivedBy: body.receivedBy || '',
       driverSignature: body.driverSignature || '',
     };
+
 
     showOverlay(true);
     try {
