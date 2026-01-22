@@ -1432,6 +1432,8 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     signedOutLoadedNo: { x: 1949, y: 4833 },
     howManyTonsLoads: { x: 3498, y: 4833 },
     truckStart: { x: 704, y: 4663 },
+    // ✅ NEW: Truck Stop Time (below TRUCK STOP)
+    truckStopTime: { x: 1940, y: 4663 },
     startTime: { x: 1034, y: 5028 },
     downtimeLunch: { x: 1940, y: 5036 },
     notes_mid: { x: 2990, y: 5028 },
@@ -1471,19 +1473,24 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     if (!admin) return res.status(404).json({ ok: false, message: 'Ticket not found' });
 
     // ✅ normalize driver object (same shape as /api/tags/:id/driver)
-    const driver = driverRow
-      ? {
-          bridgefare: driverRow.bridgefare ?? '',
-          signedOutLoaded: driverRow.signed_out_loaded ?? '',
-          howManyTonsLoads: driverRow.how_many_tons_loads ?? '',
-          downtimeLunch: driverRow.downtime_lunch ?? '',
-          notes: driverRow.notes ?? '',
-          signOutTime: driverRow.sign_out_time ?? '',
-          receivedBy: driverRow.received_by ?? '',
-          driverSignature: driverRow.driver_signature ?? '',
-          status: driverRow.status ?? '',
-        }
-      : null;
+      const driver = driverRow
+        ? {
+            bridgefare: driverRow.bridgefare ?? '',
+            signedOutLoaded: driverRow.signed_out_loaded ?? '',
+            howManyTonsLoads: driverRow.how_many_tons_loads ?? '',
+            downtimeLunch: driverRow.downtime_lunch ?? '',
+
+            // ✅ NEW
+            leaveYardTime: driverRow.leave_yard_time ?? '',
+            truckStop: driverRow.truck_stop ?? '',
+
+            notes: driverRow.notes ?? '',
+            signOutTime: driverRow.sign_out_time ?? '',
+            receivedBy: driverRow.received_by ?? '',
+            driverSignature: driverRow.driver_signature ?? '',
+            status: driverRow.status ?? '',
+          }
+        : null;
 
     const dl = req.query.download === '1' || req.query.download === 'true';
 
@@ -1541,6 +1548,7 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     // driver section (Bridgefare down)
     doc.fontSize(8);
     drawText(doc, admin.truck_start, COORD_PDF.truckStart.x, COORD_PDF.truckStart.y);
+    drawText(doc, hhmm(driver?.truckStop), COORD_PDF.truckStopTime.x, COORD_PDF.truckStopTime.y);
     drawText(doc, driver?.bridgefare, COORD_PDF.bridgefare.x, COORD_PDF.bridgefare.y);
     drawText(doc, driver?.howManyTonsLoads, COORD_PDF.howManyTonsLoads.x, COORD_PDF.howManyTonsLoads.y);
 
@@ -1548,7 +1556,7 @@ app.get('/api/tags/:id/pdf', verifySession, ensureActiveUser, async (req, res) =
     if (sol === 'yes') drawText(doc, '✓', COORD_PDF.signedOutLoadedYes.x, COORD_PDF.signedOutLoadedYes.y);
     else if (sol === 'no') drawText(doc, '✓', COORD_PDF.signedOutLoadedNo.x, COORD_PDF.signedOutLoadedNo.y);
 
-    drawText(doc, hhmm(admin.truck_start || admin.start_time), COORD_PDF.startTime.x, COORD_PDF.startTime.y);
+    drawText(doc, hhmm(driver?.leaveYardTime), COORD_PDF.startTime.x, COORD_PDF.startTime.y);
     drawText(doc, driver?.downtimeLunch, COORD_PDF.downtimeLunch.x, COORD_PDF.downtimeLunch.y);
     drawText(doc, driver?.notes, COORD_PDF.notes_mid.x, COORD_PDF.notes_mid.y);
     drawText(doc, hhmm(driver?.signOutTime), COORD_PDF.signOutTime.x, COORD_PDF.signOutTime.y);
