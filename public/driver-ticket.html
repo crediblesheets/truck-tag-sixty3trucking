@@ -253,6 +253,19 @@
     background: #fff;
     box-shadow: none;
   }
+
+  .form-grid select,
+  .mini-form select{
+    width:100%;
+    box-sizing:border-box;
+    padding:12px 12px;
+    border:1px solid var(--border);
+    border-radius:10px;
+    font-size:16px;
+    line-height:1.2;
+    min-height: var(--tap);
+    background:#fff;
+  }
 </style>
 
 </head>
@@ -359,18 +372,28 @@
             </div>
           </div>
 
-          <div class="section-title" style="display:flex;align-items:center;gap:12px;">
-            <span>Scale Tags</span>
+          <div class="section-title" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <span id="itemsTitle">Scale Tags</span>
+
             <label class="muted-small" style="display:flex;align-items:center;gap:6px;cursor:pointer;">
               <input id="noScaleReq" type="checkbox">
               No scale tag required
             </label>
+
+            <div style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+              <span class="muted-small">Type</span>
+              <select id="tagMode">
+                <option value="scale">Scale Tags</option>
+                <option value="equipment">Equipment Move</option>
+              </select>
+            </div>
           </div>
+
 
           <!-- Mini add form -->
           <div class="mini-form" id="itemForm">
             <div class="mf-tag">
-              <label>Scale Tag No</label>
+              <label id="lbl_scaleTagNo">Scale Tag No</label>
               <input id="f_scaleTagNo" placeholder="e.g., 1002345">
             </div>
             <div class="mf-weight">
@@ -410,7 +433,7 @@
               <table>
                 <thead>
                   <tr>
-                    <th>Scale Tag No</th>
+                    <th id="th_scaleTagNo">Scale Tag No</th>
                     <th>Yard/Weight</th>
                     <th>Material</th>
                     <th>Time Arr</th>
@@ -481,6 +504,82 @@
     const noScaleReq = document.getElementById('noScaleReq');
     const getTrim = (v) => String(v ?? '').trim();
 
+    const tagModeSel = document.getElementById('tagMode');
+      let TAG_MODE = 'scale';
+
+      const initialPH = {
+        tag: $('#f_scaleTagNo')?.placeholder || 'e.g., 1002345',
+        yard: $('#f_yardOrWeight')?.placeholder || 'e.g., 12,500 kg',
+        mat: $('#f_material')?.placeholder || 'e.g., Gravel',
+      };
+
+      function isEquipMode(){
+        return String(TAG_MODE).toLowerCase() === 'equipment';
+      }
+
+      function applyTagMode(mode){
+        TAG_MODE = (mode === 'equipment') ? 'equipment' : 'scale';
+
+        const equip = isEquipMode();
+
+        // Titles / headers
+        $('#itemsTitle').textContent = equip ? 'Equipment Move' : 'Scale Tags';
+        $('#lbl_scaleTagNo').textContent = equip ? 'Material/Equipment' : 'Scale Tag No';
+        $('#th_scaleTagNo').textContent  = equip ? 'Material/Equipment' : 'Scale Tag No';
+
+        // Disable/enable inputs
+        const yard = $('#f_yardOrWeight');
+        const mat  = $('#f_material');
+        if (yard && mat){
+          yard.disabled = equip;
+          mat.disabled  = equip;
+
+          if (equip){
+            yard.value = '';
+            mat.value  = '';
+            yard.placeholder = '(not required for equipment move)';
+            mat.placeholder  = '(not required for equipment move)';
+          } else {
+            yard.placeholder = initialPH.yard;
+            mat.placeholder  = initialPH.mat;
+          }
+        }
+
+        // Adjust tag placeholder
+        const tag = $('#f_scaleTagNo');
+        if (tag){
+          tag.placeholder = equip ? 'e.g., Excavator / Skid Steer / Generator' : initialPH.tag;
+        }
+
+        setSubmitState();
+      }
+
+      if (tagModeSel){
+        tagModeSel.addEventListener('change', () => {
+          const next = tagModeSel.value;
+          if (next === TAG_MODE) return;
+
+          // Safety: don’t mix two types in one ticket
+          if (SCALE_ITEMS.length){
+            const ok = confirm('Switching Type will clear existing items. Continue?');
+            if (!ok){
+              tagModeSel.value = TAG_MODE;
+              return;
+            }
+            SCALE_ITEMS = [];
+            EDIT_INDEX = null;
+            clearMiniForm();
+            renderItemsTable();
+          }
+
+          applyTagMode(next);
+        });
+      }
+
+
+      
+
+
     function qParam(name){
       const u = new URL(location.href);
       return u.searchParams.get(name);
@@ -494,11 +593,16 @@
 
     function itemsAreComplete(){
       if (SCALE_ITEMS.length === 0) return false;
+
+      const equip = isEquipMode();
+
       return SCALE_ITEMS.every(it =>
-        it.scaleTagNo && it.yardOrWeight && it.material &&
+        it.scaleTagNo &&
+        (equip ? true : (it.yardOrWeight && it.material)) &&
         it.yardArrival && it.yardLeave && it.siteArrival && it.siteLeave
       );
     }
+
     function itemsRequirementSatisfied(){
       return noScaleReq && noScaleReq.checked ? true : itemsAreComplete();
     }
@@ -508,7 +612,7 @@
       const formOk  = $('#tagForm').checkValidity();
       const itemsOk = itemsRequirementSatisfied();
       $('#submitBtn').disabled = !(formOk && itemsOk);
-      showErr(itemsOk ? '' : 'Add at least one complete Scale Tag item.');
+      showErr(itemsOk ? '' : `Add at least one complete ${isEquipMode() ? 'Equipment Move' : 'Scale Tag'} item.`);
     }
     $('#tagForm').addEventListener('input', setSubmitState);
 
@@ -610,21 +714,25 @@
 
     $('#addItem').addEventListener('click', () => {
       const data = readMiniForm();
+      const equip = isEquipMode();
 
       ['#f_scaleTagNo','#f_yardOrWeight','#f_material','#f_yardArrival','#f_yardLeave','#f_siteArrival','#f_siteLeave']
         .forEach(sel => $(sel).classList.remove('input-invalid'));
 
       let ok = true;
+      
       if (!data.scaleTagNo)   { $('#f_scaleTagNo').classList.add('input-invalid'); ok=false; }
-      if (!data.yardOrWeight) { $('#f_yardOrWeight').classList.add('input-invalid'); ok=false; }
-      if (!data.material)     { $('#f_material').classList.add('input-invalid'); ok=false; }
+      if (!equip){
+        if (!data.yardOrWeight) { $('#f_yardOrWeight').classList.add('input-invalid'); ok=false; }
+        if (!data.material)     { $('#f_material').classList.add('input-invalid'); ok=false; }
+      }
       if (!data.yardArrival)  { $('#f_yardArrival').classList.add('input-invalid'); ok=false; }
       if (!data.yardLeave)    { $('#f_yardLeave').classList.add('input-invalid'); ok=false; }
       if (!data.siteArrival)  { $('#f_siteArrival').classList.add('input-invalid'); ok=false; }
       if (!data.siteLeave)    { $('#f_siteLeave').classList.add('input-invalid'); ok=false; }
 
       if (!ok){
-        alert('Please complete all Scale Tag fields before saving the item.');
+        alert(`Please complete all required ${equip ? 'Equipment Move' : 'Scale Tag'} fields before saving the item.`);
         return;
       }
 
@@ -720,6 +828,12 @@
       f.signOutTime.value     = (d.signOutTime || '').slice(0,5);
       $('#receivedBy').value  = d.receivedBy ?? '';
       $('#driverSignature').value = d.driverSignature ?? '';
+
+      // NEW: restore saved mode
+      const savedMode = (d.tagMode || 'scale').toLowerCase();
+      if (tagModeSel) tagModeSel.value = (savedMode === 'equipment') ? 'equipment' : 'scale';
+      applyTagMode(tagModeSel ? tagModeSel.value : savedMode);
+
       setSubmitState();
     }
 
@@ -1020,7 +1134,12 @@ function stripWhiteToTransparent(srcCanvas, threshold = 248){
       if (!TICKET_ID) return;
 
       if (!$('#tagForm').reportValidity()) { setSubmitState(); return; }
-      if (!itemsRequirementSatisfied()){ showErr('Add at least one complete Scale Tag item.'); setSubmitState(); return; }
+      if (!itemsRequirementSatisfied()){
+        showErr(`Add at least one complete ${isEquipMode() ? 'Equipment Move' : 'Scale Tag'} item.`);
+        setSubmitState();
+        return;
+      }
+
       showErr('');
 
       const form = new FormData(e.target);
@@ -1033,6 +1152,7 @@ function stripWhiteToTransparent(srcCanvas, threshold = 248){
         // NEW
         leaveYardTime: form.get('leaveYardTime') ?? '',
         truckStop: form.get('truckStop') ?? '',
+        tagMode: TAG_MODE,
 
         notes: form.get('notes') ?? '',
         signOutTime: form.get('signOutTime') ?? '',
@@ -1057,7 +1177,11 @@ function stripWhiteToTransparent(srcCanvas, threshold = 248){
         const r1 = await fetch(`/api/tags/${encodeURIComponent(TICKET_ID)}/scale-items`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ items: (noScaleReq && noScaleReq.checked) ? [] : SCALE_ITEMS })
+          body: JSON.stringify({
+            mode: TAG_MODE,
+            items: (noScaleReq && noScaleReq.checked) ? [] : SCALE_ITEMS
+          })
+
         });
         const j1 = await r1.json().catch(()=>({}));
         if (!r1.ok || j1.ok === false) throw new Error(j1.message || 'Scale items save failed');
@@ -1100,6 +1224,8 @@ function stripWhiteToTransparent(srcCanvas, threshold = 248){
         prefillDriverForm(driver);
         await loadScaleItems(TICKET_ID);
         toggleScaleUI();
+        // ensure mode UI is applied even on first load
+        applyTagMode(tagModeSel ? tagModeSel.value : 'scale');
         
         // load signature previews if present
         await Promise.all([ loadSignaturePreview('driver'), loadSignaturePreview('received') ]);

@@ -443,7 +443,7 @@ app.get('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, res
     const { data, error } = await sb
       .from('driver_tags')
       .select(
-        'bridgefare, signed_out_loaded, how_many_tons_loads, downtime_lunch, leave_yard_time, truck_stop, notes, sign_out_time, received_by, driver_signature, status, updated_at, email'
+        'bridgefare, signed_out_loaded, how_many_tons_loads, downtime_lunch, leave_yard_time, truck_stop, notes, sign_out_time, received_by, driver_signature, status, updated_at, email, tag_mode'
       )
 
       .eq('ticket_no', ticketNo)
@@ -463,6 +463,7 @@ app.get('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, res
       // NEW
       leaveYardTime: data.leave_yard_time ?? '',
       truckStop: data.truck_stop ?? '',
+      tagMode: data.tag_mode ?? 'scale',
 
       notes: data.notes ?? '',
       signOutTime: data.sign_out_time ?? '',
@@ -501,6 +502,7 @@ app.put('/api/admin/tags/:id/driver', verifySession, ensureActiveUser, requireAd
       signOutTime,
       receivedBy,
       driverSignature,
+      tagMode, // NEW
     } = req.body || {};
 
     const patch = {
@@ -512,7 +514,7 @@ app.put('/api/admin/tags/:id/driver', verifySession, ensureActiveUser, requireAd
       // NEW ✅
       leave_yard_time: leaveYardTime,
       truck_stop: truckStop,
-
+      tag_mode: tagMode,
       notes,
       sign_out_time: signOutTime,
       received_by: receivedBy,
@@ -748,31 +750,47 @@ app.post('/api/tags/:id/scale-items', verifySession, ensureActiveUser, async (re
     const ticketNo = String(req.params.id || '').trim();
     const itemsIn = Array.isArray(req.body?.items) ? req.body.items : [];
 
-    const bad = itemsIn.find(
-      (it) =>
-        !it ||
-        !it.scaleTagNo ||
-        !it.yardOrWeight ||
-        !it.material ||
-        !it.yardArrival ||
-        !it.yardLeave ||
-        !it.siteArrival ||
-        !it.siteLeave
-    );
+    const mode = String(req.body?.mode || 'scale').toLowerCase();
+    const equip = mode === 'equipment';
+
+    await sb.from('driver_tags').update({
+      tag_mode: mode,
+      updated_at: new Date().toISOString(),
+    }).eq('ticket_no', ticketNo);
+
+
+    const bad = itemsIn.find((it) => {
+      if (!it) return true;
+      if (!it.scaleTagNo) return true;
+      if (!it.yardArrival || !it.yardLeave || !it.siteArrival || !it.siteLeave) return true;
+
+      // Only require yard/material for Scale Tags
+      if (!equip && (!it.yardOrWeight || !it.material)) return true;
+
+      return false;
+    });
+
     if (bad) {
-      return res.status(400).json({ ok: false, message: 'All scale tag fields are required.' });
+      return res.status(400).json({
+        ok: false,
+        message: equip
+          ? 'Material/Equipment and all time fields are required.'
+          : 'All scale tag fields are required.',
+      });
     }
+
 
     const rows = itemsIn.map((it) => ({
       ticket_no: ticketNo,
       scale_tag_no: String(it.scaleTagNo),
-      yard_or_weight: String(it.yardOrWeight),
-      material: String(it.material),
+      yard_or_weight: equip ? '' : String(it.yardOrWeight || ''),
+      material:       equip ? '' : String(it.material || ''),
       yard_arrival: String(it.yardArrival),
       yard_leave: String(it.yardLeave),
       site_arrival: String(it.siteArrival),
       site_leave: String(it.siteLeave),
     }));
+
 
     const { error: delErr } = await sb.from('scale_tags').delete().eq('ticket_no', ticketNo);
     if (delErr) throw delErr;
@@ -816,6 +834,7 @@ app.post('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, re
       signOutTime = '',
       receivedBy = '',
       driverSignature = '',
+      tagMode = 'scale',      // ✅ ADD THIS
       status = 'Done',
     } = req.body || {};
 
@@ -835,6 +854,7 @@ app.post('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, re
         sign_out_time: signOutTime,
         received_by: receivedBy,
         driver_signature: driverSignature,
+        tag_mode: String(tagMode || 'scale').toLowerCase(),
         status,
         updated_at: new Date().toISOString(),
       })
