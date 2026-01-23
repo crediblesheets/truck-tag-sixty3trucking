@@ -211,7 +211,7 @@
               <table class="data-table">
                 <thead>
                   <tr>
-                    <th>Scale Tag No</th>
+                    <th id="th_itemName">Scale Tag No</th>
                     <th>Yard/Weight</th>
                     <th>Material</th>
                     <th>Time Arr</th>
@@ -300,6 +300,19 @@
     }
     sel.value = val;
   }
+
+  function applyScaleHeaderByMode(modeRaw){
+  const mode = String(modeRaw || '').trim().toLowerCase();
+  const th = document.getElementById('th_itemName');
+  if (!th) return;
+
+  // treat anything with equip/material as "Materials/Equipment"
+  const isMaterialsEquip =
+    mode.includes('equip') || mode.includes('material');
+
+  th.textContent = isMaterialsEquip ? 'Materials/Equipment' : 'Scale Tag No';
+}
+
 
   function lockForm(lock){
   const f = $('#form');
@@ -504,6 +517,7 @@
   }
 
   function clearDriverScaleUI(){
+    applyScaleHeaderByMode('scale'); // default label back to Scale Tag No
     $('#ds_bridgefare').value = '';
     $('#ds_signedOutLoaded').value = '';
     $('#ds_howMany').value = '';
@@ -669,9 +683,12 @@
       else obj = j;
 
       fillDriverFieldsFromObject(obj);
+      // ✅ update header based on tagMode saved in driver_tags
+      applyScaleHeaderByMode(obj.tagMode || obj.tag_mode || CURRENT?.tagMode || CURRENT?.tag_mode);
     }catch(e){
       console.warn('driver fetch failed', e);
     }
+    
   }
 
   // ===== Proof image (thumbnail + actions) =====
