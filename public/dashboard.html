@@ -13,8 +13,6 @@
     }
     .ticket-link:hover{box-shadow:0 6px 20px rgba(2, 8, 23, 0.08)}
     .muted-small{color:#6b7280;font-size:12px;margin-top:4px;text-align:center}
-    .card.center{text-align:center}
-    
   </style>
 </head>
 
@@ -36,13 +34,11 @@
     <section class="card intro">
       <h2 id="driverName">Welcome, …</h2>
       <p class="muted">Click a ticket below to open and fill it.</p>
-       <!-- ✅ NEW -->
+
       <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
         <button id="newDraftBtn" class="btn btn-primary" type="button">➕ Draft a Ticket</button>
         <span class="muted-small">No Ticket No needed — Admin will finalize & submit.</span>
       </div>
-
-
     </section>
 
     <section id="tagsWrap" class="card">
@@ -60,27 +56,7 @@
   <script>
     document.getElementById('y').textContent = new Date().getFullYear();
 
-    let TAGS = [];
-    let CURRENT_EMAIL = null;
-
-    const $  = s => document.querySelector(s);
-
-    async function createDraftAndOpen(){
-      const r = await fetch('/api/drafts', { method:'POST' });
-      const j = await r.json().catch(()=> ({}));
-      if (!r.ok || j.ok === false) {
-        alert(j.message || 'Failed to create draft.');
-        return;
-      }
-      location.href = `/driver-draft?id=${encodeURIComponent(j.id)}`;
-    }
-
-    document.addEventListener('click', (e) => {
-      if (e.target && e.target.id === 'newDraftBtn') {
-        createDraftAndOpen();
-      }
-    });
-
+    const $ = (s) => document.querySelector(s);
 
     function guessTags(data){
       if (Array.isArray(data?.pending)) return data.pending;
@@ -108,6 +84,16 @@
                                     (em ? (hasEmail ? getEmail(t)===em : true) : true));
     }
 
+    function fmtMMDDYYYY(s){
+      if (!s) return '';
+      const d = new Date(s);
+      if (isNaN(d)) return '';
+      const mm = String(d.getMonth()+1).padStart(2,'0');
+      const dd = String(d.getDate()).padStart(2,'0');
+      const yyyy = d.getFullYear();
+      return `${mm}-${dd}-${yyyy}`;
+    }
+
     function render(list){
       const wrap = $('#tags');
       if (!list.length){
@@ -120,7 +106,7 @@
         const id = getId(t);
         const updatedRaw = t.updatedAt || t.UpdatedAt || '';
         const updated = fmtMMDDYYYY(updatedRaw);
-        const url = `/driver-ticket.html?id=${encodeURIComponent(id)}`;
+        const url = `/driver-ticket?id=${encodeURIComponent(id)}`;
         return `
           <a class="ticket-link" href="${url}">
             Ticket ${id || '(no id)'}
@@ -137,53 +123,45 @@
         : `You're all caught up — no pending tags 🎉`;
     }
 
-    function fmtMMDDYYYY(s){
-      if (!s) return '';
-      const d = new Date(s);
-      if (isNaN(d)) return '';
-      const mm = String(d.getMonth()+1).padStart(2,'0');
-      const dd = String(d.getDate()).padStart(2,'0');
-      const yyyy = d.getFullYear();
-      return `${mm}-${dd}-${yyyy}`;
+    async function createDraftAndOpen(){
+      const btn = $('#newDraftBtn');
+      if (btn) btn.disabled = true;
+
+      try{
+        const r = await fetch('/api/drafts', { method:'POST', credentials:'include' });
+        const j = await r.json().catch(()=> ({}));
+        if (!r.ok || j.ok === false) throw new Error(j.message || 'Could not create draft');
+
+        // draft id is UUID
+        location.href = `/driver-draft?id=${encodeURIComponent(j.id)}`;
+      } catch(err){
+        alert(err.message || 'Could not create draft');
+        if (btn) btn.disabled = false;
+      }
     }
 
-    // ✅ NEW: Create draft ticket (no ticket #) then open it
     const newDraftBtn = document.getElementById('newDraftBtn');
     if (newDraftBtn){
-      newDraftBtn.addEventListener('click', async () => {
-        newDraftBtn.disabled = true;
-        try{
-          const r = await fetch('/api/driver/drafts', { method:'POST' });
-          const j = await r.json().catch(()=> ({}));
-          if (!r.ok || j.ok === false) throw new Error(j.message || 'Could not create draft');
-
-          // draftId is NOT a ticket number; it’s just a draft record id
-          const draftId = j.id;
-          location.href = `/driver-ticket.html?draft=1&id=${encodeURIComponent(draftId)}`;
-        }catch(err){
-          alert(err.message || 'Could not create draft.');
-          newDraftBtn.disabled = false;
-        }
-      });
+      newDraftBtn.addEventListener('click', createDraftAndOpen);
     }
 
-
-    // Initial load
     (async () => {
       try {
-        const r = await fetch('/api/me');
-        const data = await r.json();
+        const r = await fetch('/api/me', { credentials:'include' });
+        const data = await r.json().catch(()=> ({}));
         if (!data.ok) { location.href = '/'; return; }
+
         const profile = data.profile || {};
         const name = profile.fullName || profile.name || profile.email || 'Driver';
-        CURRENT_EMAIL = (profile.email || '').toLowerCase();
+        const currentEmail = (profile.email || '').toLowerCase();
+
         $('#driverName').textContent = `Welcome, ${name}`;
 
-        TAGS = guessTags(data);
-        const visible = onlyPendingForMe(TAGS, CURRENT_EMAIL);
+        const tags = guessTags(data);
+        const visible = onlyPendingForMe(tags, currentEmail);
         updateSubtitle(visible.length);
         render(visible);
-      } catch (e){
+      } catch {
         location.href = '/';
       }
     })();
