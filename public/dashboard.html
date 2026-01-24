@@ -36,6 +36,13 @@
     <section class="card intro">
       <h2 id="driverName">Welcome, …</h2>
       <p class="muted">Click a ticket below to open and fill it.</p>
+       <!-- ✅ NEW -->
+      <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <button id="newDraftBtn" class="btn btn-primary" type="button">➕ Draft a Ticket</button>
+        <span class="muted-small">No Ticket No needed — Admin will finalize & submit.</span>
+      </div>
+
+
     </section>
 
     <section id="tagsWrap" class="card">
@@ -57,6 +64,23 @@
     let CURRENT_EMAIL = null;
 
     const $  = s => document.querySelector(s);
+
+    async function createDraftAndOpen(){
+      const r = await fetch('/api/drafts', { method:'POST' });
+      const j = await r.json().catch(()=> ({}));
+      if (!r.ok || j.ok === false) {
+        alert(j.message || 'Failed to create draft.');
+        return;
+      }
+      location.href = `/driver-draft?id=${encodeURIComponent(j.id)}`;
+    }
+
+    document.addEventListener('click', (e) => {
+      if (e.target && e.target.id === 'newDraftBtn') {
+        createDraftAndOpen();
+      }
+    });
+
 
     function guessTags(data){
       if (Array.isArray(data?.pending)) return data.pending;
@@ -122,6 +146,27 @@
       const yyyy = d.getFullYear();
       return `${mm}-${dd}-${yyyy}`;
     }
+
+    // ✅ NEW: Create draft ticket (no ticket #) then open it
+    const newDraftBtn = document.getElementById('newDraftBtn');
+    if (newDraftBtn){
+      newDraftBtn.addEventListener('click', async () => {
+        newDraftBtn.disabled = true;
+        try{
+          const r = await fetch('/api/driver/drafts', { method:'POST' });
+          const j = await r.json().catch(()=> ({}));
+          if (!r.ok || j.ok === false) throw new Error(j.message || 'Could not create draft');
+
+          // draftId is NOT a ticket number; it’s just a draft record id
+          const draftId = j.id;
+          location.href = `/driver-ticket.html?draft=1&id=${encodeURIComponent(draftId)}`;
+        }catch(err){
+          alert(err.message || 'Could not create draft.');
+          newDraftBtn.disabled = false;
+        }
+      });
+    }
+
 
     // Initial load
     (async () => {

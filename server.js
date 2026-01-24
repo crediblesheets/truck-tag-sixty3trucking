@@ -261,6 +261,13 @@ function requireAdmin(req, res, next) {
   return res.status(403).json({ ok: false, message: 'Admins only.' });
 }
 
+function requireDriver(req, res, next) {
+  const role = String(req.user?.role || '').toLowerCase();
+  if (role === 'driver') return next();
+  return res.status(403).json({ ok: false, message: 'Drivers only.' });
+}
+
+
 // ---------- AUTH ----------
 
 // Email + password login
@@ -434,6 +441,165 @@ app.get('/api/me', verifySession, ensureActiveUser, async (req, res) => {
     return res.status(500).json({ ok: false, message: 'Failed to load data.' });
   }
 });
+
+// ======================== DRIVER: DRAFT TICKETS API ========================
+
+// Create new draft (no ticket_no)
+app.post('/api/drafts', verifySession, ensureActiveUser, requireDriver, async (req, res) => {
+  try {
+    const row = {
+      driver_email: String(req.user.email || '').toLowerCase(),
+      driver_name: req.user.fullName || '',
+      status: 'Draft',
+      tag_mode: 'scale',
+      payload: {},
+      items: [],
+      updated_at: new Date().toISOString(),
+    };
+
+    const { data, error } = await sb
+      .from('ticket_drafts')
+      .insert(row)
+      .select('id')
+      .single();
+    if (error) throw error;
+
+    return res.json({ ok: true, id: data.id });
+  } catch (e) {
+    console.error('POST /api/drafts', e);
+    return res.status(500).json({ ok: false, message: 'Failed to create draft.' });
+  }
+});
+
+// List my drafts (Draft + Sent; excludes Converted)
+app.get('/api/drafts', verifySession, ensureActiveUser, requireDriver, async (req, res) => {
+  try {
+    const me = String(req.user.email || '').toLowerCase();
+    const { data, error } = await sb
+      .from('ticket_drafts')
+      .select('id, status, tag_mode, updated_at, created_at, sent_at, converted_ticket_no')
+      .eq('driver_email', me)
+      .neq('status', 'Converted')
+      .order('updated_at', { ascending: false });
+    if (error) throw error;
+
+    return res.json({ ok: true, drafts: data || [] });
+  } catch (e) {
+    console.error('GET /api/drafts', e);
+    return res.status(500).json({ ok: false, message: 'Failed to load drafts.' });
+  }
+});
+
+// Read one draft (owner only)
+app.get('/api/drafts/:id', verifySession, ensureActiveUser, requireDriver, async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    const me = String(req.user.email || '').toLowerCase();
+
+    const { data, error } = await sb
+      .from('ticket_drafts')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ ok: false, message: 'Draft not found.' });
+
+    if (String(data.driver_email || '').toLowerCase() !== me) {
+      return res.status(403).json({ ok: false, message: 'Not your draft.' });
+    }
+
+    return res.json({ ok: true, draft: data });
+  } catch (e) {
+    console.error('GET /api/drafts/:id', e);
+    return res.status(500).json({ ok: false, message: 'Failed to load draft.' });
+  }
+});
+
+// Update draft (owner only; Draft status only)
+app.put('/api/drafts/:id', verifySession, ensureActiveUser, requireDriver, async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    const me = String(req.user.email || '').toLowerCase();
+    const b = req.body || {};
+
+    const { data: draft, error: selErr } = await sb
+      .from('ticket_drafts')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (selErr) throw selErr;
+    if (!draft) return res.status(404).json({ ok: false, message: 'Draft not found.' });
+
+    if (String(draft.driver_email || '').toLowerCase() !== me) {
+      return res.status(403).json({ ok: false, message: 'Not your draft.' });
+    }
+    if (String(draft.status || '') !== 'Draft') {
+      return res.status(409).json({ ok: false, message: 'Draft already sent/converted and cannot be edited.' });
+    }
+
+    const tagMode = String(b.tagMode ?? b.mode ?? b.tag_mode ?? draft.tag_mode ?? 'scale').toLowerCase();
+
+    // allow either payloadPatch or full payload
+    const payloadPatch = (b.payloadPatch && typeof b.payloadPatch === 'object')
+      ? b.payloadPatch
+      : (b.payload && typeof b.payload === 'object' ? b.payload : {});
+    const nextPayload = { ...(draft.payload || {}), ...payloadPatch };
+
+    const patch = {
+      payload: nextPayload,
+      tag_mode: tagMode,
+      updated_at: new Date().toISOString(),
+    };
+    if (b.items !== undefined) patch.items = Array.isArray(b.items) ? b.items : [];
+
+    const { error: updErr } = await sb.from('ticket_drafts').update(patch).eq('id', id);
+    if (updErr) throw updErr;
+
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('PUT /api/drafts/:id', e);
+    return res.status(500).json({ ok: false, message: 'Failed to update draft.' });
+  }
+});
+
+// Send draft to admin (locks draft)
+app.post('/api/drafts/:id/send', verifySession, ensureActiveUser, requireDriver, async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    const me = String(req.user.email || '').toLowerCase();
+
+    const { data: draft, error: selErr } = await sb
+      .from('ticket_drafts')
+      .select('id, driver_email, status')
+      .eq('id', id)
+      .maybeSingle();
+    if (selErr) throw selErr;
+    if (!draft) return res.status(404).json({ ok: false, message: 'Draft not found.' });
+
+    if (String(draft.driver_email || '').toLowerCase() !== me) {
+      return res.status(403).json({ ok: false, message: 'Not your draft.' });
+    }
+    if (String(draft.status || '') !== 'Draft') {
+      return res.status(409).json({ ok: false, message: 'Draft already sent/converted.' });
+    }
+
+    const { error: updErr } = await sb
+      .from('ticket_drafts')
+      .update({
+        status: 'Sent',
+        sent_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+    if (updErr) throw updErr;
+
+    return res.json({ ok: true, status: 'Sent' });
+  } catch (e) {
+    console.error('POST /api/drafts/:id/send', e);
+    return res.status(500).json({ ok: false, message: 'Failed to send draft.' });
+  }
+});
+
 
 // Driver tag values
 app.get('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, res) => {
@@ -919,6 +1085,221 @@ app.post(
     }
   }
 );
+
+// ======================== ADMIN: DRAFT TICKETS API ========================
+
+// List drafts (default: Sent)
+app.get('/api/admin/drafts', verifySession, ensureActiveUser, requireAdmin, async (req, res) => {
+  try {
+    const status = String(req.query.status || 'Sent');
+    let q = sb
+      .from('ticket_drafts')
+      .select('id, driver_email, driver_name, status, tag_mode, converted_ticket_no, updated_at, created_at, sent_at')
+      .order('updated_at', { ascending: false });
+
+    if (status) q = q.eq('status', status);
+
+    const { data, error } = await q;
+    if (error) throw error;
+
+    return res.json({ ok: true, drafts: data || [] });
+  } catch (e) {
+    console.error('GET /api/admin/drafts', e);
+    return res.status(500).json({ ok: false, message: 'Failed to load drafts.' });
+  }
+});
+
+// Read one draft
+app.get('/api/admin/drafts/:id', verifySession, ensureActiveUser, requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    const { data, error } = await sb
+      .from('ticket_drafts')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return res.status(404).json({ ok: false, message: 'Draft not found.' });
+
+    return res.json({ ok: true, draft: data });
+  } catch (e) {
+    console.error('GET /api/admin/drafts/:id', e);
+    return res.status(500).json({ ok: false, message: 'Failed to load draft.' });
+  }
+});
+
+// Update draft (Admin can tweak payload/items/tag_mode)
+app.put('/api/admin/drafts/:id', verifySession, ensureActiveUser, requireAdmin, async (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    const b = req.body || {};
+
+    const { data: draft, error: selErr } = await sb
+      .from('ticket_drafts')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+    if (selErr) throw selErr;
+    if (!draft) return res.status(404).json({ ok: false, message: 'Draft not found.' });
+    if (String(draft.status || '') === 'Converted') {
+      return res.status(409).json({ ok: false, message: 'Draft already converted.' });
+    }
+
+    const tagMode = String(b.tagMode ?? b.mode ?? b.tag_mode ?? draft.tag_mode ?? 'scale').toLowerCase();
+
+    const payloadPatch = (b.payloadPatch && typeof b.payloadPatch === 'object')
+      ? b.payloadPatch
+      : (b.payload && typeof b.payload === 'object' ? b.payload : {});
+    const nextPayload = { ...(draft.payload || {}), ...payloadPatch };
+
+    const patch = {
+      payload: nextPayload,
+      tag_mode: tagMode,
+      updated_at: new Date().toISOString(),
+    };
+    if (b.items !== undefined) patch.items = Array.isArray(b.items) ? b.items : [];
+
+    const { error: updErr } = await sb.from('ticket_drafts').update(patch).eq('id', id);
+    if (updErr) throw updErr;
+
+    return res.json({ ok: true });
+  } catch (e) {
+    console.error('PUT /api/admin/drafts/:id', e);
+    return res.status(500).json({ ok: false, message: 'Failed to update draft.' });
+  }
+});
+
+// Convert Draft -> Normal ticket (requires ticketNo + date + driverName)
+app.post('/api/admin/drafts/:id/submit', verifySession, ensureActiveUser, requireAdmin, async (req, res) => {
+  try {
+    const draftId = String(req.params.id || '').trim();
+    const b = req.body || {};
+
+    const ticketNo = String(b.ticketNo || '').trim();
+    const date = String(b.date || '').trim();
+    const driverName = String(b.driverName || '').trim();
+
+    // ✅ Admin must provide these
+    if (!ticketNo || !date || !driverName) {
+      return res.status(400).json({ ok: false, message: 'ticketNo, date, and driverName are required to submit.' });
+    }
+
+    // load draft
+    const { data: draft, error: dErr } = await sb
+      .from('ticket_drafts')
+      .select('*')
+      .eq('id', draftId)
+      .maybeSingle();
+    if (dErr) throw dErr;
+    if (!draft) return res.status(404).json({ ok: false, message: 'Draft not found.' });
+    if (String(draft.status || '') === 'Converted') {
+      return res.status(409).json({ ok: false, message: 'Draft already converted.' });
+    }
+
+    // block duplicate ticket_no
+    const { data: exists, error: exErr } = await sb
+      .from('admin_tickets')
+      .select('ticket_no')
+      .eq('ticket_no', ticketNo)
+      .maybeSingle();
+    if (exErr) throw exErr;
+    if (exists) return res.status(409).json({ ok: false, message: `Ticket No ${ticketNo} already exists.` });
+
+    // create admin ticket row
+    const adminRow = {
+      date,
+      ticket_no: ticketNo,
+      driver_name: driverName,
+      truck_start: b.truckStart || '',
+      truck_no: b.truckNo || '',
+      trailer_type: b.trailerType || '',
+      sub_hauler: b.subHauler || '',
+      prime_carrier: b.primeCarrier || '',
+      shipper: b.shipper || '',
+      origin: b.origin || '',
+      origin_city: b.originCity || '',
+      po_no: b.poNo || '',
+      job_name: b.jobName || '',
+      job_no: b.jobNo || '',
+      destination: b.destination || '',
+      city: b.city || '',
+    };
+
+    const { error: insTicketErr } = await sb.from('admin_tickets').insert(adminRow);
+    if (insTicketErr) throw insTicketErr;
+
+    // ensure driver_tags row exists
+    const { error: stubErr } = await sb
+      .from('driver_tags')
+      .upsert({ ticket_no: ticketNo, status: 'Done' }, { onConflict: 'ticket_no' });
+    if (stubErr) throw stubErr;
+
+    // apply driver payload onto driver_tags (snake_case columns)
+    const p = (draft.payload && typeof draft.payload === 'object') ? draft.payload : {};
+    const tagMode = String(draft.tag_mode || 'scale').toLowerCase();
+
+    const driverPatch = {
+      email: String(draft.driver_email || '').toLowerCase(),
+      status: 'Done',
+      tag_mode: tagMode,
+
+      bridgefare: p.bridgefare ?? '',
+      signed_out_loaded: p.signedOutLoaded ?? '',
+      how_many_tons_loads: p.howManyTonsLoads ?? '',
+      downtime_lunch: p.downtimeLunch ?? '',
+      leave_yard_time: p.leaveYardTime ?? '',
+      truck_stop: p.truckStop ?? '',
+      notes: p.notes ?? '',
+      sign_out_time: p.signOutTime ?? '',
+      received_by: p.receivedBy ?? '',
+      driver_signature: p.driverSignature ?? '',
+
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error: updDriverErr } = await sb.from('driver_tags').update(driverPatch).eq('ticket_no', ticketNo);
+    if (updDriverErr) throw updDriverErr;
+
+    // write scale_tags from draft.items (same mapping as your existing /scale-items)
+    const items = Array.isArray(draft.items) ? draft.items : [];
+    await sb.from('scale_tags').delete().eq('ticket_no', ticketNo);
+
+    if (items.length) {
+      const equip = tagMode === 'equipment';
+      const rows = items.map((it) => ({
+        ticket_no: ticketNo,
+        scale_tag_no: String(it.scaleTagNo || ''),
+        yard_or_weight: equip ? '' : String(it.yardOrWeight || ''),
+        material: equip ? '' : String(it.material || ''),
+        yard_arrival: String(it.yardArrival || ''),
+        yard_leave: String(it.yardLeave || ''),
+        site_arrival: String(it.siteArrival || ''),
+        site_leave: String(it.siteLeave || ''),
+      }));
+
+      const { error: insScaleErr } = await sb.from('scale_tags').insert(rows);
+      if (insScaleErr) throw insScaleErr;
+    }
+
+    // mark draft converted
+    const { error: convErr } = await sb
+      .from('ticket_drafts')
+      .update({
+        status: 'Converted',
+        converted_ticket_no: ticketNo,
+        converted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', draftId);
+    if (convErr) throw convErr;
+
+    return res.json({ ok: true, ticketNo });
+  } catch (e) {
+    console.error('POST /api/admin/drafts/:id/submit', e);
+    return res.status(500).json({ ok: false, message: 'Failed to submit draft.' });
+  }
+});
+
 
 
 
@@ -1639,6 +2020,15 @@ app.get('/admin/users', verifySession, ensureActiveUser, requireAdmin, (_req, re
 app.get('/dashboard', verifySession, ensureActiveUser, (_req, res) => {
   res.sendFile(path.resolve('public/dashboard.html'));
 });
+
+app.get('/driver-draft', verifySession, ensureActiveUser, requireDriver, (_req, res) => {
+  res.sendFile(path.resolve('public/driver-draft.html'));
+});
+
+app.get('/draft-tickets', verifySession, ensureActiveUser, requireAdmin, (_req, res) => {
+  res.sendFile(path.resolve('public/draft-tickets.html'));
+});
+
 
 
 // static fallback
