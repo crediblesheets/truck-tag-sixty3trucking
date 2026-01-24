@@ -248,7 +248,9 @@
     document.getElementById('y').textContent = new Date().getFullYear();
 
     const $  = (s, root=document) => root.querySelector(s);
+    const $$ = (s, root=document) => Array.from(root.querySelectorAll(s));
     const ltrim = (v) => String(v ?? '').trim().toLowerCase();
+
 
     function setOpen(modal, on=true){
       modal.classList.toggle('show', on);
