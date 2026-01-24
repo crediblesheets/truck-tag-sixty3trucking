@@ -106,7 +106,7 @@
         const id = getId(t);
         const updatedRaw = t.updatedAt || t.UpdatedAt || '';
         const updated = fmtMMDDYYYY(updatedRaw);
-        const url = `/driver-ticket?id=${encodeURIComponent(id)}`;
+        const url = `/driver-ticket.html?id=${encodeURIComponent(id)}`;
         return `
           <a class="ticket-link" href="${url}">
             Ticket ${id || '(no id)'}
@@ -133,7 +133,8 @@
         if (!r.ok || j.ok === false) throw new Error(j.message || 'Could not create draft');
 
         // draft id is UUID
-        location.href = `/driver-draft?id=${encodeURIComponent(j.id)}`;
+         location.href = `/driver-ticket.html?id=${encodeURIComponent(j.id)}`;
+
       } catch(err){
         alert(err.message || 'Could not create draft');
         if (btn) btn.disabled = false;
