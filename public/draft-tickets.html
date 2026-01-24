@@ -33,11 +33,46 @@
     label{font-size:12px;color:#555;display:block;margin-bottom:6px}
     input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;box-sizing:border-box}
 
-    /* Modal */
-    .modal{position:fixed;inset:0;display:none;z-index:1000}
-    .modal.show{display:block}
-    .modal .backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45)}
-    .modal .sheet{position:relative;max-width:980px;margin:4vh auto;background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:20px 22px}
+
+        /* Modal */
+    .modal{
+    position:fixed;
+    inset:0;
+    display:none;
+    z-index:1000;
+
+    /* ✅ allow scrolling when content is taller than viewport */
+    overflow:auto;
+    -webkit-overflow-scrolling: touch;
+
+    /* optional: nice padding around the sheet */
+    padding: 4vh 12px;
+    }
+
+    .modal.show{ display:block; }
+
+    /* make backdrop always cover full screen */
+    .modal .backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.45);
+    }
+
+    /* ✅ limit the sheet height and make it scroll inside */
+    .modal .sheet{
+    position:relative;
+    max-width:980px;
+    margin:0 auto;
+    background:#fff;
+    border-radius:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.2);
+    padding:20px 22px;
+
+    max-height: calc(100vh - 8vh);
+    overflow:auto;
+    -webkit-overflow-scrolling: touch;
+    }
+
     .modal .close{position:absolute;right:10px;top:10px;border:0;background:transparent;font-size:24px;cursor:pointer}
     .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
     .danger{background:#ef4444!important;color:#fff!important;border-color:#ef4444!important}
@@ -253,9 +288,11 @@
 
 
     function setOpen(modal, on=true){
-      modal.classList.toggle('show', on);
-      modal.setAttribute('aria-hidden', on ? 'false' : 'true');
+    modal.classList.toggle('show', on);
+    modal.setAttribute('aria-hidden', on ? 'false' : 'true');
+    document.body.style.overflow = on ? 'hidden' : '';
     }
+
     function fmtDateTime(t){
       if (!t) return '';
       const d = new Date(t);
