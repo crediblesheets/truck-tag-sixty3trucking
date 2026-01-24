@@ -8,7 +8,7 @@
 
   <style>
   :root{
-    --tap: 44px;          /* iOS recommended minimum tap target */
+    --tap: 44px;
     --pad: 16px;
     --radius: 12px;
   }
@@ -34,7 +34,6 @@
     -webkit-overflow-scrolling: touch;
   }
 
-  /* iPad / tablet: prefer single column for comfort (portrait + many landscape cases) */
   @media (max-width: 1180px){
     .layout{ grid-template-columns: 1fr; }
     .sidebar-card{ position:static; max-height:none; overflow:visible; }
@@ -68,7 +67,6 @@
   }
   .form-grid label{ font-size:12px; color:#555; display:block; margin-bottom:6px; }
 
-  /* IMPORTANT: 16px prevents iOS Safari zoom on focus */
   .form-grid input,
   .form-grid textarea,
   .mini-form input{
@@ -77,7 +75,7 @@
     padding:12px 12px;
     border:1px solid var(--border);
     border-radius:10px;
-    font-size:16px;
+    font-size:16px; /* prevents iOS zoom */
     line-height:1.2;
     min-height: var(--tap);
   }
@@ -88,24 +86,19 @@
     resize: vertical;
   }
 
-  /* Make time inputs nicer on iPad */
-  input[type="time"]{
-    font-size:16px;
-  }
+  input[type="time"]{ font-size:16px; }
 
   @media (max-width: 640px){
     .form-grid{ grid-template-columns: 1fr; }
   }
 
   /* ---------- Buttons / tap targets ---------- */
-  /* styles.css defines .btn already; these are safe overrides for touch */
   .btn{
     min-height: var(--tap);
     padding: 10px 14px;
     font-size: 15px;
   }
 
-  /* link buttons in table: increase touch area without changing look too much */
   .btn.link{
     background:none;
     border:none;
@@ -115,7 +108,6 @@
     min-height: var(--tap);
   }
 
-  /* checkbox tap size */
   #noScaleReq{
     width:18px;
     height:18px;
@@ -154,7 +146,6 @@
   .time-row .time label{ font-size:11px; margin-bottom:4px }
   .time-row .time input{ padding:10px 10px; min-width:0 }
 
-  /* Tablet: make mini-form stack earlier so it doesn’t feel cramped */
   @media (max-width: 1180px){
     .mini-form{
       grid-template-columns: 1fr 1fr;
@@ -182,10 +173,7 @@
     -webkit-overflow-scrolling: touch;
   }
 
-  /* Allow horizontal swipe if needed */
-  .scroll-area table{
-    min-width: 760px;
-  }
+  .scroll-area table{ min-width: 760px; }
 
   table{ width:100%; border-collapse:collapse }
   thead{ background:#f8fafc }
@@ -239,7 +227,7 @@
   }
   #sigCanvas{ display:block; width:100%; height:280px; background:transparent; cursor:crosshair }
 
-  /* ---------- Required field highlight (kept) ---------- */
+  /* ---------- Required field highlight ---------- */
   input:required:invalid,
   textarea:required:invalid {
     border-color: #ef4444;
@@ -267,8 +255,8 @@
     background:#fff;
   }
 </style>
-
 </head>
+
 <body>
   <header class="site-header">
     <div class="container header-inner" style="grid-template-columns:auto 1fr auto;">
@@ -278,10 +266,10 @@
       </div>
       <div class="title-wrap" style="justify-content:flex-start;">
         <h1 class="page-title">Driver Ticket</h1>
-        <p class="subtitle">Fill and submit your tag</p>
+        <p class="subtitle" id="subTitle">Fill and submit your tag</p>
       </div>
       <div>
-        <a href="/dashboard.html" class="btn">← Back to Dashboard</a>
+        <a href="/dashboard" class="btn">← Back to Dashboard</a>
       </div>
     </div>
   </header>
@@ -315,7 +303,6 @@
               <input name="downtimeLunch" type="text" placeholder="e.g., 00:30">
             </div>
 
-            <!-- NEW -->
             <div>
               <label>Leave Yard Time</label>
               <input name="leaveYardTime" type="time" step="60" lang="en-US" placeholder="HH:MM">
@@ -324,8 +311,6 @@
               <label>Truck Stop Time</label>
               <input name="truckStop" type="time" step="60" lang="en-US">
             </div>
-
-
 
             <div style="grid-column:1/-1;">
               <label>Notes</label>
@@ -388,7 +373,6 @@
               </select>
             </div>
           </div>
-
 
           <!-- Mini add form -->
           <div class="mini-form" id="itemForm">
@@ -487,8 +471,9 @@
   <script>
     document.getElementById('y').textContent = new Date().getFullYear();
 
-    // ------ state
-    let TICKET_ID = null;
+    // -------------------- state
+    let TICKET_ID = null;     // ticket_no OR draft uuid
+    let IS_DRAFT = false;
     let SCALE_ITEMS = [];
     let EDIT_INDEX = null;
 
@@ -498,87 +483,25 @@
     let ctx, canvas;
     let hasStroke = false;
 
-    // ------ helpers
+    // -------------------- helpers
     const $  = (s) => document.querySelector(s);
     const $$ = (s) => Array.from(document.querySelectorAll(s));
     const noScaleReq = document.getElementById('noScaleReq');
     const getTrim = (v) => String(v ?? '').trim();
 
-    const tagModeSel = document.getElementById('tagMode');
-      let TAG_MODE = 'scale';
+    function isUuid(s){
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(s||''));
+    }
 
-      const initialPH = {
-        tag: $('#f_scaleTagNo')?.placeholder || 'e.g., 1002345',
-        yard: $('#f_yardOrWeight')?.placeholder || 'e.g., 12,500 kg',
-        mat: $('#f_material')?.placeholder || 'e.g., Gravel',
-      };
-
-      function isEquipMode(){
-        return String(TAG_MODE).toLowerCase() === 'equipment';
-      }
-
-      function applyTagMode(mode){
-        TAG_MODE = (mode === 'equipment') ? 'equipment' : 'scale';
-
-        const equip = isEquipMode();
-
-        // Titles / headers
-        $('#itemsTitle').textContent = equip ? 'Equipment Move' : 'Scale Tags';
-        $('#lbl_scaleTagNo').textContent = equip ? 'Material/Equipment' : 'Scale Tag No';
-        $('#th_scaleTagNo').textContent  = equip ? 'Material/Equipment' : 'Scale Tag No';
-
-        // Disable/enable inputs
-        const yard = $('#f_yardOrWeight');
-        const mat  = $('#f_material');
-        if (yard && mat){
-          yard.disabled = equip;
-          mat.disabled  = equip;
-
-          if (equip){
-            yard.value = '';
-            mat.value  = '';
-            yard.placeholder = '(not required for equipment move)';
-            mat.placeholder  = '(not required for equipment move)';
-          } else {
-            yard.placeholder = initialPH.yard;
-            mat.placeholder  = initialPH.mat;
-          }
-        }
-
-        // Adjust tag placeholder
-        const tag = $('#f_scaleTagNo');
-        if (tag){
-          tag.placeholder = equip ? 'e.g., Excavator / Skid Steer / Generator' : initialPH.tag;
-        }
-
-        setSubmitState();
-      }
-
-      if (tagModeSel){
-        tagModeSel.addEventListener('change', () => {
-          const next = tagModeSel.value;
-          if (next === TAG_MODE) return;
-
-          // Safety: don’t mix two types in one ticket
-          if (SCALE_ITEMS.length){
-            const ok = confirm('Switching Type will clear existing items. Continue?');
-            if (!ok){
-              tagModeSel.value = TAG_MODE;
-              return;
-            }
-            SCALE_ITEMS = [];
-            EDIT_INDEX = null;
-            clearMiniForm();
-            renderItemsTable();
-          }
-
-          applyTagMode(next);
-        });
-      }
-
-
-      
-
+    function apiPath(kind, who){
+      const id = encodeURIComponent(TICKET_ID || '');
+      if (kind === 'sigUpload')   return IS_DRAFT ? `/api/drafts/${id}/signature/${who}` : `/api/tags/${id}/signature/${who}`;
+      if (kind === 'sigUrl')      return IS_DRAFT ? `/api/drafts/${id}/signature-url/${who}` : `/api/tags/${id}/signature-url/${who}`;
+      if (kind === 'proofUpload') return IS_DRAFT ? `/api/drafts/${id}/proof` : `/api/tags/${id}/proof`;
+      if (kind === 'saveDraft')   return `/api/drafts/${id}`;
+      if (kind === 'sendDraft')   return `/api/drafts/${id}/send`;
+      return '';
+    }
 
     function qParam(name){
       const u = new URL(location.href);
@@ -591,11 +514,85 @@
       box.style.display = msg ? 'block' : 'none';
     }
 
-    function itemsAreComplete(){
-      if (SCALE_ITEMS.length === 0) return false;
+    function toISODate(s){
+      if (!s) return '';
+      const d = new Date(s);
+      if (!isNaN(d)) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      return '';
+    }
 
+    // -------------------- mode (Scale vs Equipment)
+    const tagModeSel = document.getElementById('tagMode');
+    let TAG_MODE = 'scale';
+
+    const initialPH = {
+      tag: $('#f_scaleTagNo')?.placeholder || 'e.g., 1002345',
+      yard: $('#f_yardOrWeight')?.placeholder || 'e.g., 12,500 kg',
+      mat: $('#f_material')?.placeholder || 'e.g., Gravel',
+    };
+
+    function isEquipMode(){
+      return String(TAG_MODE).toLowerCase() === 'equipment';
+    }
+
+    function applyTagMode(mode){
+      TAG_MODE = (mode === 'equipment') ? 'equipment' : 'scale';
       const equip = isEquipMode();
 
+      $('#itemsTitle').textContent = equip ? 'Equipment Move' : 'Scale Tags';
+      $('#lbl_scaleTagNo').textContent = equip ? 'Material/Equipment' : 'Scale Tag No';
+      $('#th_scaleTagNo').textContent  = equip ? 'Material/Equipment' : 'Scale Tag No';
+
+      const yard = $('#f_yardOrWeight');
+      const mat  = $('#f_material');
+      if (yard && mat){
+        yard.disabled = equip;
+        mat.disabled  = equip;
+
+        if (equip){
+          yard.value = '';
+          mat.value  = '';
+          yard.placeholder = '(not required for equipment move)';
+          mat.placeholder  = '(not required for equipment move)';
+        } else {
+          yard.placeholder = initialPH.yard;
+          mat.placeholder  = initialPH.mat;
+        }
+      }
+
+      const tag = $('#f_scaleTagNo');
+      if (tag){
+        tag.placeholder = equip ? 'e.g., Excavator / Skid Steer / Generator' : initialPH.tag;
+      }
+
+      setSubmitState();
+    }
+
+    if (tagModeSel){
+      tagModeSel.addEventListener('change', () => {
+        const next = tagModeSel.value;
+        if (next === TAG_MODE) return;
+
+        if (SCALE_ITEMS.length){
+          const ok = confirm('Switching Type will clear existing items. Continue?');
+          if (!ok){
+            tagModeSel.value = TAG_MODE;
+            return;
+          }
+          SCALE_ITEMS = [];
+          EDIT_INDEX = null;
+          clearMiniForm();
+          renderItemsTable();
+        }
+
+        applyTagMode(next);
+      });
+    }
+
+    // -------------------- submit enable/disable logic
+    function itemsAreComplete(){
+      if (SCALE_ITEMS.length === 0) return false;
+      const equip = isEquipMode();
       return SCALE_ITEMS.every(it =>
         it.scaleTagNo &&
         (equip ? true : (it.yardOrWeight && it.material)) &&
@@ -607,21 +604,14 @@
       return noScaleReq && noScaleReq.checked ? true : itemsAreComplete();
     }
 
-
     function setSubmitState(){
       const formOk  = $('#tagForm').checkValidity();
       const itemsOk = itemsRequirementSatisfied();
       $('#submitBtn').disabled = !(formOk && itemsOk);
       showErr(itemsOk ? '' : `Add at least one complete ${isEquipMode() ? 'Equipment Move' : 'Scale Tag'} item.`);
     }
-    $('#tagForm').addEventListener('input', setSubmitState);
 
-    function toISODate(s){
-      if (!s) return '';
-      const d = new Date(s);
-      if (!isNaN(d)) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-      return '';
-    }
+    $('#tagForm').addEventListener('input', setSubmitState);
 
     function toggleScaleUI(){
       const hide = noScaleReq && noScaleReq.checked;
@@ -632,8 +622,7 @@
     }
     noScaleReq.addEventListener('change', toggleScaleUI);
 
-
-    // ------ left admin card
+    // -------------------- left card (ticket)
     function renderAdminCard(t = {}){
       $('#hdr').textContent = `Ticket ${t['Ticket No'] || t.ticket_no || TICKET_ID || '—'}`;
       const rows = [
@@ -661,7 +650,27 @@
       `).join('');
     }
 
-    // ------ scale mini form
+    // -------------------- left card (draft)
+    function renderDraftCard(d = {}){
+      const st = d.status || 'Draft';
+      $('#hdr').textContent = `Draft Ticket`;
+      const rows = [
+        ['Draft ID', d.id || TICKET_ID || '—'],
+        ['Status', st],
+        ['Driver Email', d.driver_email || ''],
+        ['Driver Name', d.driver_name || ''],
+        ['Updated', d.updated_at || ''],
+        ['Ticket No', d.converted_ticket_no || '(pending admin)'],
+      ];
+      $('#kv').innerHTML = rows.map(([k, v]) => `
+        <li>
+          <span class="k">${k}</span>
+          <span class="v">${getTrim(v) || '-'}</span>
+        </li>
+      `).join('');
+    }
+
+    // -------------------- scale items mini form
     function readMiniForm(){
       return {
         scaleTagNo: $('#f_scaleTagNo').value.trim(),
@@ -686,7 +695,6 @@
 
     function renderItemsTable(){
       const tbody = $('#itemsBody');
-
       if (!SCALE_ITEMS.length){
         tbody.innerHTML = `<tr><td colspan="8" class="muted-small">No scale tags yet.</td></tr>`;
         setSubmitState();
@@ -716,20 +724,13 @@
       const data = readMiniForm();
       const equip = isEquipMode();
 
-      ['#f_scaleTagNo','#f_yardOrWeight','#f_material','#f_yardArrival','#f_yardLeave','#f_siteArrival','#f_siteLeave']
-        .forEach(sel => $(sel).classList.remove('input-invalid'));
-
       let ok = true;
-      
-      if (!data.scaleTagNo)   { $('#f_scaleTagNo').classList.add('input-invalid'); ok=false; }
+      if (!data.scaleTagNo) ok = false;
       if (!equip){
-        if (!data.yardOrWeight) { $('#f_yardOrWeight').classList.add('input-invalid'); ok=false; }
-        if (!data.material)     { $('#f_material').classList.add('input-invalid'); ok=false; }
+        if (!data.yardOrWeight) ok = false;
+        if (!data.material) ok = false;
       }
-      if (!data.yardArrival)  { $('#f_yardArrival').classList.add('input-invalid'); ok=false; }
-      if (!data.yardLeave)    { $('#f_yardLeave').classList.add('input-invalid'); ok=false; }
-      if (!data.siteArrival)  { $('#f_siteArrival').classList.add('input-invalid'); ok=false; }
-      if (!data.siteLeave)    { $('#f_siteLeave').classList.add('input-invalid'); ok=false; }
+      if (!data.yardArrival || !data.yardLeave || !data.siteArrival || !data.siteLeave) ok = false;
 
       if (!ok){
         alert(`Please complete all required ${equip ? 'Equipment Move' : 'Scale Tag'} fields before saving the item.`);
@@ -744,6 +745,7 @@
         $('#addItem').textContent = 'Add item';
         $('#cancelEdit').style.display = 'none';
       }
+
       renderItemsTable();
       clearMiniForm();
       $('#f_scaleTagNo').focus();
@@ -751,7 +753,8 @@
     });
 
     $('#cancelEdit').addEventListener('click', () => {
-      EDIT_INDEX = null; clearMiniForm();
+      EDIT_INDEX = null;
+      clearMiniForm();
       $('#addItem').textContent = 'Add item';
       $('#cancelEdit').style.display = 'none';
     });
@@ -762,21 +765,23 @@
       if (del != null){
         SCALE_ITEMS.splice(Number(del),1);
         renderItemsTable();
-        setSubmitState();
       } else if (ed != null){
         EDIT_INDEX = Number(ed);
         fillMiniForm(SCALE_ITEMS[EDIT_INDEX]);
         $('#addItem').textContent = 'Save item';
         $('#cancelEdit').style.display = 'inline-flex';
       }
+      setSubmitState();
     });
 
-    async function loadScaleItems(id) {
+    async function loadScaleItems(id){
       try {
         const r = await fetch(`/api/tags/${encodeURIComponent(id)}/scale-items`);
-        const j = await r.json();
+        const j = await r.json().catch(()=> ({}));
         SCALE_ITEMS = Array.isArray(j.items) ? j.items : [];
-      } catch { SCALE_ITEMS = []; }
+      } catch {
+        SCALE_ITEMS = [];
+      }
       renderItemsTable();
       clearMiniForm();
       EDIT_INDEX = null;
@@ -785,15 +790,23 @@
       setSubmitState();
     }
 
-    // ---- Proof picker preview
+    // -------------------- proof picker preview
     $('#proofFile').addEventListener('change', () => {
       const f = $('#proofFile').files[0];
       const info = $('#proofInfo');
       const wrap = $('#proofPreviewWrap');
       const img = $('#proofPreview');
-      if (!f){ info.style.display='none'; wrap.style.display='none'; img.src=''; return; }
+
+      if (!f){
+        info.style.display='none';
+        wrap.style.display='none';
+        img.src='';
+        return;
+      }
+
       info.textContent = `${f.name} — ${Math.round(f.size/1024)} KB`;
       info.style.display = 'block';
+
       if (f.type.startsWith('image/')){
         const reader = new FileReader();
         reader.onload = e => { img.src = e.target.result; wrap.style.display = 'block'; };
@@ -804,18 +817,27 @@
       }
     });
 
-    // ------ data loading (driver + admin)
+    // -------------------- data loading
     async function loadAdminTicket(id){
       const r = await fetch(`/api/tickets/${encodeURIComponent(id)}`);
-      const j = await r.json();
+      const j = await r.json().catch(()=> ({}));
       if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to load ticket');
       return j.ticket || {};
     }
+
     async function loadDriverTag(id){
       const r = await fetch(`/api/tags/${encodeURIComponent(id)}/driver`);
       const j = await r.json().catch(()=> ({}));
       return j.driver || {};
     }
+
+    async function loadDraft(id){
+      const r = await fetch(`/api/drafts/${encodeURIComponent(id)}`);
+      const j = await r.json().catch(()=> ({}));
+      if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to load draft');
+      return j.draft || {};
+    }
+
     function prefillDriverForm(d){
       const f = $('#tagForm');
       f.bridgefare.value      = d.bridgefare ?? '';
@@ -829,7 +851,6 @@
       $('#receivedBy').value  = d.receivedBy ?? '';
       $('#driverSignature').value = d.driverSignature ?? '';
 
-      // NEW: restore saved mode
       const savedMode = (d.tagMode || 'scale').toLowerCase();
       if (tagModeSel) tagModeSel.value = (savedMode === 'equipment') ? 'equipment' : 'scale';
       applyTagMode(tagModeSel ? tagModeSel.value : savedMode);
@@ -837,14 +858,14 @@
       setSubmitState();
     }
 
-    // ------ signature utils
+    // -------------------- signature utils
     function openSigModal(who){
-      SIG_WHO = who; // 'driver'|'received'
+      SIG_WHO = who;
       $('#sigTitle').textContent = who === 'driver' ? 'Add Driver signature' : 'Add Receiver signature';
       $('#sigOverlay').classList.add('show');
       $('#sigOverlay').setAttribute('aria-hidden','false');
       hasStroke = false;
-      resizeCanvasForDPR(); // ensure crispness
+      resizeCanvasForDPR();
     }
     function closeSigModal(){
       $('#sigOverlay').classList.remove('show');
@@ -853,31 +874,25 @@
     }
 
     function resizeCanvasForDPR(){
-  const wrap = $('#sigCanvas').parentElement;
-  const rect = wrap.getBoundingClientRect();
-  const dpr = Math.max(1, window.devicePixelRatio || 1);
+      const wrap = $('#sigCanvas').parentElement;
+      const rect = wrap.getBoundingClientRect();
+      const dpr = Math.max(1, window.devicePixelRatio || 1);
 
-  // reset any prior transform before resizing
-  ctx.setTransform(1,0,0,1,0,0);
+      ctx.setTransform(1,0,0,1,0,0);
 
-  canvas.width  = Math.floor(rect.width * dpr);
-  canvas.height = Math.floor(260 * dpr);
-  canvas.style.width  = rect.width + 'px';
-  canvas.style.height = '260px';
+      canvas.width  = Math.floor(rect.width * dpr);
+      canvas.height = Math.floor(260 * dpr);
+      canvas.style.width  = rect.width + 'px';
+      canvas.style.height = '260px';
 
-  // scale for HiDPI, then clear (transparent)
-  ctx.scale(dpr, dpr);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // drawing style
-  ctx.strokeStyle = '#111827';
-  ctx.lineWidth = 2;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-}
-
-
-
+      ctx.strokeStyle = '#111827';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+    }
 
     function pointerPos(evt){
       const rect = canvas.getBoundingClientRect();
@@ -901,29 +916,83 @@
     function endDraw(){ drawing = false; }
 
     function clearSignature(){
-  // keep the canvas transparent (no white fill)
-  ctx.setTransform(1,0,0,1,0,0);
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  hasStroke = false;
-}
+      ctx.setTransform(1,0,0,1,0,0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      hasStroke = false;
+    }
 
+    function stripWhiteToTransparent(srcCanvas, threshold = 254){
+      const off = document.createElement('canvas');
+      off.width = srcCanvas.width;
+      off.height = srcCanvas.height;
+      const octx = off.getContext('2d');
+      octx.drawImage(srcCanvas, 0, 0);
+
+      const img = octx.getImageData(0, 0, off.width, off.height);
+      const d = img.data;
+
+      for (let i = 0; i < d.length; i += 4){
+        const r = d[i], g = d[i+1], b = d[i+2];
+        if (r >= threshold && g >= threshold && b >= threshold) d[i+3] = 0;
+      }
+      octx.putImageData(img, 0, 0);
+      return off;
+    }
+
+    function cropToInk(srcCanvas){
+      const w = srcCanvas.width, h = srcCanvas.height;
+      const ctx2 = document.createElement('canvas').getContext('2d');
+      ctx2.canvas.width = w;
+      ctx2.canvas.height = h;
+      ctx2.drawImage(srcCanvas, 0, 0);
+      const { data } = ctx2.getImageData(0, 0, w, h);
+
+      let minX = w, minY = h, maxX = -1, maxY = -1;
+      for (let y = 0; y < h; y++){
+        for (let x = 0; x < w; x++){
+          const i = (y*w + x) * 4;
+          const a = data[i+3];
+          if (a > 5){
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+      if (maxX < minX || maxY < minY) return null;
+
+      const pad = 12;
+      minX = Math.max(0, minX - pad);
+      minY = Math.max(0, minY - pad);
+      maxX = Math.min(w-1, maxX + pad);
+      maxY = Math.min(h-1, maxY + pad);
+
+      const cw = maxX - minX + 1;
+      const ch = maxY - minY + 1;
+
+      const out = document.createElement('canvas');
+      out.width = cw;
+      out.height = ch;
+      out.getContext('2d').drawImage(ctx2.canvas, minX, minY, cw, ch, 0, 0, cw, ch);
+      return out;
+    }
 
     async function uploadSignatureBlob(blob, who){
       const fd = new FormData();
       fd.append('file', blob, 'signature.png');
-      const r = await fetch(`/api/tags/${encodeURIComponent(TICKET_ID)}/signature/${who}`, {
-        method:'POST',
-        body: fd
-      });
+
+      const r = await fetch(apiPath('sigUpload', who), { method:'POST', body: fd });
       const j = await r.json().catch(()=> ({}));
       if (!r.ok || j.ok === false) throw new Error(j.message || 'Signature upload failed');
       return true;
     }
 
     async function loadSignaturePreview(who){
-      const r = await fetch(`/api/tags/${encodeURIComponent(TICKET_ID)}/signature-url/${who}`);
+      const r = await fetch(apiPath('sigUrl', who));
       const j = await r.json().catch(()=> ({}));
       const url = j?.url || null;
+
       if (who === 'driver'){
         const chip = $('#chipDriver'), img = $('#imgSigDriver');
         if (url){ img.src = url; chip.style.display = 'inline-flex'; }
@@ -934,113 +1003,6 @@
         else { chip.style.display = 'none'; img.removeAttribute('src'); }
       }
     }
-
-    function stripWhiteToTransparent(srcCanvas, threshold = 252){
-        // copy to offscreen
-        const off = document.createElement('canvas');
-        off.width = srcCanvas.width;
-        off.height = srcCanvas.height;
-        const octx = off.getContext('2d');
-        octx.drawImage(srcCanvas, 0, 0);
-
-        const img = octx.getImageData(0, 0, off.width, off.height);
-        const d = img.data;
-
-        // remove white & near-white pixels (by luminance)
-        // anything brighter than ~98.5% → fully transparent
-        for (let i = 0; i < d.length; i += 4) {
-            const r = d[i], g = d[i+1], b = d[i+2];
-            // quick check for very bright RGB
-            if (r >= threshold && g >= threshold && b >= threshold) { d[i+3] = 0; continue; }
-            // anti-alias fringe cleanup using luminance
-            const lum = 0.2126*r + 0.7152*g + 0.0722*b; // 0..255
-            if (lum > 250) d[i+3] = 0;
-        }
-        octx.putImageData(img, 0, 0);
-
-        // --- auto-crop to bounding box of non-transparent pixels ---
-        const id = octx.getImageData(0, 0, off.width, off.height).data;
-        let minX = off.width, minY = off.height, maxX = -1, maxY = -1;
-        for (let y = 0; y < off.height; y++) {
-            for (let x = 0; x < off.width; x++) {
-            const a = id[(y*off.width + x)*4 + 3];
-            if (a > 0) {
-                if (x < minX) minX = x;
-                if (y < minY) minY = y;
-                if (x > maxX) maxX = x;
-                if (y > maxY) maxY = y;
-            }
-            }
-        }
-        if (maxX < 0 || maxY < 0) return off; // empty signature
-
-        const w = maxX - minX + 1;
-        const h = maxY - minY + 1;
-
-        const cropped = document.createElement('canvas');
-        cropped.width = w;
-        cropped.height = h;
-        const cctx = cropped.getContext('2d');
-        cctx.drawImage(off, minX, minY, w, h, 0, 0, w, h);
-        return cropped;
-    }
-
-
-// find tight bounding box around non-transparent pixels
-function cropToInk(srcCanvas){
-  const w = srcCanvas.width, h = srcCanvas.height;
-  const ctx2 = document.createElement('canvas').getContext('2d');
-  ctx2.canvas.width = w; ctx2.canvas.height = h;
-  ctx2.drawImage(srcCanvas, 0, 0);
-  const { data } = ctx2.getImageData(0, 0, w, h);
-
-  let minX = w, minY = h, maxX = -1, maxY = -1;
-  for (let y = 0; y < h; y++){
-    for (let x = 0; x < w; x++){
-      const i = (y*w + x) * 4;
-      const a = data[i+3];
-      if (a > 5){ // any visible ink
-        if (x < minX) minX = x;
-        if (x > maxX) maxX = x;
-        if (y < minY) minY = y;
-        if (y > maxY) maxY = y;
-      }
-    }
-  }
-  if (maxX < minX || maxY < minY) return null; // nothing drawn
-
-  const pad = 12; // tiny breathing room
-  minX = Math.max(0, minX - pad);
-  minY = Math.max(0, minY - pad);
-  maxX = Math.min(w-1, maxX + pad);
-  maxY = Math.min(h-1, maxY + pad);
-
-  const cw = maxX - minX + 1;
-  const ch = maxY - minY + 1;
-
-  const out = document.createElement('canvas');
-  out.width = cw; out.height = ch;
-  out.getContext('2d').drawImage(ctx2.canvas, minX, minY, cw, ch, 0, 0, cw, ch);
-  return out;
-}
-
-function stripWhiteToTransparent(srcCanvas, threshold = 248){
-  const off = document.createElement('canvas');
-  off.width = srcCanvas.width;
-  off.height = srcCanvas.height;
-  const octx = off.getContext('2d');
-  octx.drawImage(srcCanvas, 0, 0);
-  const img = octx.getImageData(0, 0, off.width, off.height);
-  const d = img.data;
-  for (let i = 0; i < d.length; i += 4){
-    const r = d[i], g = d[i+1], b = d[i+2];
-    if (r >= threshold && g >= threshold && b >= threshold) d[i+3] = 0;
-  }
-  octx.putImageData(img, 0, 0);
-  return off;
-}
-
-
 
     // open / close modal
     $('#addSigDriver').addEventListener('click', () => openSigModal('driver'));
@@ -1058,6 +1020,7 @@ function stripWhiteToTransparent(srcCanvas, threshold = 248){
     canvas.addEventListener('mousedown', startDraw);
     canvas.addEventListener('mousemove', moveDraw);
     window.addEventListener('mouseup', endDraw);
+
     // touch
     canvas.addEventListener('touchstart', (e)=>{ e.preventDefault(); startDraw(e); }, {passive:false});
     canvas.addEventListener('touchmove',  (e)=>{ e.preventDefault(); moveDraw(e); }, {passive:false});
@@ -1069,29 +1032,23 @@ function stripWhiteToTransparent(srcCanvas, threshold = 248){
 
     $('#clearSig').addEventListener('click', clearSignature);
 
-    // REPLACE your existing '#saveSig' click handler with this:
     $('#saveSig').addEventListener('click', async () => {
-    if (!SIG_WHO) return;
-    if (!hasStroke) {
+      if (!SIG_WHO) return;
+      if (!hasStroke){
         alert('Please draw your signature first.');
         return;
-    }
+      }
 
-    // 1) make near-white fully transparent (gets rid of the white box & halo)
-    //    use a fairly strict threshold; bump to 255 if you still see glow
-    const alphaFixed = stripWhiteToTransparent(canvas, 254);
-
-    // 2) tight-crop to ink after transparency is applied
-    const cropped = cropToInk(alphaFixed);
-    if (!cropped) {
+      const alphaFixed = stripWhiteToTransparent(canvas, 254);
+      const cropped = cropToInk(alphaFixed);
+      if (!cropped){
         alert('Signature is empty.');
         return;
-    }
+      }
 
-    // 3) optional downscale (keeps PNG crisp but not huge)
-    const MAX_W = 2000;
-    let toUpload = cropped;
-    if (cropped.width > MAX_W) {
+      const MAX_W = 2000;
+      let toUpload = cropped;
+      if (cropped.width > MAX_W){
         const scale = MAX_W / cropped.width;
         const tmp = document.createElement('canvas');
         tmp.width = Math.round(cropped.width * scale);
@@ -1101,34 +1058,35 @@ function stripWhiteToTransparent(srcCanvas, threshold = 248){
         tctx.imageSmoothingQuality = 'high';
         tctx.drawImage(cropped, 0, 0, tmp.width, tmp.height);
         toUpload = tmp;
-    }
+      }
 
-    // 4) export as PNG (preserves transparency) and upload
-    toUpload.toBlob(async (blob) => {
+      toUpload.toBlob(async (blob) => {
         try {
-        await uploadSignatureBlob(blob, SIG_WHO);
-        await loadSignaturePreview(SIG_WHO);
-        closeSigModal();
-        } catch (err) {
-        console.error(err);
-        alert(err.message || 'Could not save signature.');
+          await uploadSignatureBlob(blob, SIG_WHO);
+          await loadSignaturePreview(SIG_WHO);
+          closeSigModal();
+        } catch (err){
+          console.error(err);
+          alert(err.message || 'Could not save signature.');
         }
-    }, 'image/png');
+      }, 'image/png');
     });
 
-
-
-    // remove signature (server keeps last one you uploaded; here we just hide chip if you want UI-only)
+    // remove signature (UI-only)
     async function removeSignature(who){
-      // If you later want a delete endpoint, call it here. For now, just hide the chip.
-      if (who === 'driver'){ $('#chipDriver').style.display = 'none'; $('#imgSigDriver').removeAttribute('src'); }
-      else { $('#chipReceived').style.display = 'none'; $('#imgSigReceived').removeAttribute('src'); }
+      if (who === 'driver'){
+        $('#chipDriver').style.display = 'none';
+        $('#imgSigDriver').removeAttribute('src');
+      } else {
+        $('#chipReceived').style.display = 'none';
+        $('#imgSigReceived').removeAttribute('src');
+      }
       alert('To actually remove the stored image, we can add a DELETE endpoint later if needed.');
     }
     $('#rmSigDriver').addEventListener('click', () => removeSignature('driver'));
     $('#rmSigReceived').addEventListener('click', () => removeSignature('received'));
 
-    // ------ submit
+    // -------------------- submit
     $('#tagForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!TICKET_ID) return;
@@ -1139,7 +1097,6 @@ function stripWhiteToTransparent(srcCanvas, threshold = 248){
         setSubmitState();
         return;
       }
-
       showErr('');
 
       const form = new FormData(e.target);
@@ -1148,12 +1105,9 @@ function stripWhiteToTransparent(srcCanvas, threshold = 248){
         signedOutLoaded: form.get('signedOutLoaded') ?? '',
         howManyTonsLoads: form.get('howMany') ?? '',
         downtimeLunch: form.get('downtimeLunch') ?? '',
-
-        // NEW
         leaveYardTime: form.get('leaveYardTime') ?? '',
         truckStop: form.get('truckStop') ?? '',
         tagMode: TAG_MODE,
-
         notes: form.get('notes') ?? '',
         signOutTime: form.get('signOutTime') ?? '',
         receivedBy: form.get('receivedBy') ?? '',
@@ -1161,19 +1115,41 @@ function stripWhiteToTransparent(srcCanvas, threshold = 248){
         status: 'Done'
       };
 
-
       try {
         // 1) proof upload (optional)
         const proof = $('#proofFile').files[0];
         if (proof){
           const fd = new FormData();
           fd.append('file', proof);
-          const u = await fetch(`/api/tags/${encodeURIComponent(TICKET_ID)}/proof`, { method:'POST', body: fd });
+          const u = await fetch(apiPath('proofUpload'), { method:'POST', body: fd });
           const uj = await u.json().catch(()=> ({}));
           if (!u.ok || uj.ok === false) throw new Error(uj.message || 'Proof upload failed');
         }
 
-        // 2) save scale items
+        // Draft flow
+        if (IS_DRAFT){
+          const rD = await fetch(apiPath('saveDraft'), {
+            method:'PUT',
+            headers:{ 'Content-Type':'application/json' },
+            body: JSON.stringify({
+              tagMode: TAG_MODE,
+              payloadPatch: driverPayload,
+              items: (noScaleReq && noScaleReq.checked) ? [] : SCALE_ITEMS
+            })
+          });
+          const jD = await rD.json().catch(()=> ({}));
+          if (!rD.ok || jD.ok === false) throw new Error(jD.message || 'Failed to save draft');
+
+          const rS = await fetch(apiPath('sendDraft'), { method:'POST' });
+          const jS = await rS.json().catch(()=> ({}));
+          if (!rS.ok || jS.ok === false) throw new Error(jS.message || 'Failed to send draft');
+
+          alert('Draft sent to Admin.');
+          location.href = '/dashboard';
+          return;
+        }
+
+        // Normal ticket flow
         const r1 = await fetch(`/api/tags/${encodeURIComponent(TICKET_ID)}/scale-items`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1181,12 +1157,10 @@ function stripWhiteToTransparent(srcCanvas, threshold = 248){
             mode: TAG_MODE,
             items: (noScaleReq && noScaleReq.checked) ? [] : SCALE_ITEMS
           })
-
         });
         const j1 = await r1.json().catch(()=>({}));
         if (!r1.ok || j1.ok === false) throw new Error(j1.message || 'Scale items save failed');
 
-        // 3) save driver form (marks Done)
         const r2 = await fetch(`/api/tags/${encodeURIComponent(TICKET_ID)}/driver`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1196,47 +1170,86 @@ function stripWhiteToTransparent(srcCanvas, threshold = 248){
         if (!r2.ok || j2.ok === false) throw new Error(j2.message || 'Save failed');
 
         alert('Submitted. Ticket marked as Done.');
-        location.href = '/dashboard.html';
+        location.href = '/dashboard';
       } catch (err){
         console.error(err);
         alert(err.message || 'Could not submit. Please try again.');
       }
     });
 
-    // ------ PDF preview (kept hidden by default, we set URL though)
+    // -------------------- PDF preview (only for real tickets)
     $('#openPdf').addEventListener('click', (e) => {
       e.preventDefault();
-      if (!TICKET_ID) return;
+      if (!TICKET_ID || IS_DRAFT) return;
       window.open(`/api/tags/${encodeURIComponent(TICKET_ID)}/pdf?download=0`, '_blank', 'noopener');
     });
 
-    // ------ boot
+    // -------------------- boot
     (async () => {
       TICKET_ID = qParam('id');
-      if (!TICKET_ID) { location.href = '/dashboard.html'; return; }
+      if (!TICKET_ID){ location.href = '/dashboard'; return; }
+
+      IS_DRAFT = isUuid(TICKET_ID);
+
+      // UI tweaks
+      $('#submitBtn').textContent = IS_DRAFT ? 'Send Draft' : 'Submit';
+      if (IS_DRAFT){
+        $('#openPdf').hidden = true;
+        const sub = $('#subTitle');
+        if (sub) sub.textContent = 'Fill and send your draft (Admin will assign Ticket No)';
+      }
 
       try {
+        if (IS_DRAFT){
+          const d = await loadDraft(TICKET_ID);
+          renderDraftCard(d);
+
+          const payload = (d.payload && typeof d.payload === 'object') ? d.payload : {};
+          payload.tagMode = (d.tag_mode || payload.tagMode || 'scale');
+
+          prefillDriverForm(payload);
+
+          SCALE_ITEMS = Array.isArray(d.items) ? d.items : [];
+          renderItemsTable();
+          clearMiniForm();
+          toggleScaleUI();
+
+          applyTagMode(tagModeSel ? tagModeSel.value : 'scale');
+
+          await Promise.all([
+            loadSignaturePreview('driver'),
+            loadSignaturePreview('received')
+          ]);
+
+          setSubmitState();
+          return;
+        }
+
+        // normal ticket
         const [admin, driver] = await Promise.all([
           loadAdminTicket(TICKET_ID),
           loadDriverTag(TICKET_ID),
         ]);
+
         renderAdminCard(admin);
         prefillDriverForm(driver);
         await loadScaleItems(TICKET_ID);
+
         toggleScaleUI();
-        // ensure mode UI is applied even on first load
         applyTagMode(tagModeSel ? tagModeSel.value : 'scale');
-        
-        // load signature previews if present
-        await Promise.all([ loadSignaturePreview('driver'), loadSignaturePreview('received') ]);
+
+        await Promise.all([
+          loadSignaturePreview('driver'),
+          loadSignaturePreview('received')
+        ]);
+
+        // set PDF URL even if link is hidden
+        $('#openPdf').href = `/api/tags/${encodeURIComponent(TICKET_ID)}/pdf?download=0`;
       } catch (e){
         console.error(e);
         alert('Failed to load ticket.');
-        location.href = '/dashboard.html';
+        location.href = '/dashboard';
       }
-
-      // set PDF URL even if link is hidden
-      $('#openPdf').href = `/api/tags/${encodeURIComponent(TICKET_ID)}/pdf?download=0`;
     })();
   </script>
 </body>
