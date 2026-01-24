@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Draft Tickets — Admin</title>
+
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./admin.css">
+
+  <style>
+    .admin-card{padding:18px}
+    .table-card{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-top:10px}
+    .table-card table{width:100%;border-collapse:collapse;background:#fff}
+    .table-card thead{background:#f8fafc}
+    .table-card th,.table-card td{padding:12px 14px;border-bottom:1px solid #eef2f7;font-size:14px}
+    .table-card tbody tr:hover{background:#fafcff}
+    .scroll-area{max-height:60vh;overflow:auto}
+
+    .col-id{width:180px;white-space:nowrap}
+    .col-email{width:260px}
+    .col-updated{width:200px;white-space:nowrap}
+
+    .badge{display:inline-flex;align-items:center;font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid transparent}
+    .b-draft{background:#eef2ff;color:#3730a3;border-color:#c7d2fe}
+    .b-sent{background:#fff7ed;color:#9a3412;border-color:#fed7aa}
+    .b-conv{background:#ecfdf5;color:#065f46;border-color:#bbf7d0}
+
+    .toolbar{display:flex;gap:10px;justify-content:flex-end;align-items:center}
+    .pill-btn{border:1px solid var(--border);background:#fff;border-radius:999px;padding:6px 10px;cursor:pointer}
+    .muted-small{color:#6b7280;font-size:12px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    label{font-size:12px;color:#555;display:block;margin-bottom:6px}
+    input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;box-sizing:border-box}
+
+    /* Modal */
+    .modal{position:fixed;inset:0;display:none;z-index:1000}
+    .modal.show{display:block}
+    .modal .backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45)}
+    .modal .sheet{position:relative;max-width:980px;margin:4vh auto;background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:20px 22px}
+    .modal .close{position:absolute;right:10px;top:10px;border:0;background:transparent;font-size:24px;cursor:pointer}
+    .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+    .danger{background:#ef4444!important;color:#fff!important;border-color:#ef4444!important}
+    .warn{background:#f59e0b!important;color:#fff!important;border-color:#f59e0b!important}
+
+    .mini{font-size:12px;color:#6b7280}
+    .kvs{display:grid;grid-template-columns:160px 1fr;gap:6px 12px;font-size:13px}
+    .kvs div{padding:2px 0}
+    .kvs b{color:#111827}
+
+    .items-table{width:100%;border-collapse:collapse}
+    .items-table th,.items-table td{border-bottom:1px solid #eef2f7;padding:8px 10px;font-size:13px}
+    .items-table thead{background:#f8fafc}
+  </style>
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="container header-inner" style="grid-template-columns:auto 1fr;">
+      <div class="brand">
+        <img src="./assets/img/logo.png" class="logo" alt="Sixty – 3 logo">
+        <span class="brand-text">Sixty – 3 Trucking Inc</span>
+      </div>
+      <nav class="title-wrap" style="justify-content:flex-start;">
+        <h1 class="page-title" style="margin-right:8px;">Draft Tickets</h1>
+        <span class="subtitle">Driver-submitted drafts (Sent) for conversion</span>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container" style="padding-bottom:28px;">
+    <section class="card admin-card" style="margin-top:22px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div>
+          <h2 id="adminName" style="margin:0 0 6px;">Welcome, …</h2>
+          <p class="muted" style="margin:0;">Open a draft to review details and convert it to a real Ticket No.</p>
+        </div>
+
+        <div class="toolbar">
+          <button id="backBtn" class="pill-btn" type="button">← Back to Admin</button>
+          <button id="refreshBtn" class="pill-btn" type="button">↻ Refresh</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card admin-card" style="margin-top:16px;">
+      <div style="display:grid;grid-template-columns:220px 1fr;gap:12px;align-items:end;">
+        <div>
+          <label for="statusSel">Status</label>
+          <select id="statusSel">
+            <option value="Sent" selected>Sent</option>
+            <option value="Draft">Draft</option>
+            <option value="Converted">Converted</option>
+          </select>
+        </div>
+        <div>
+          <label for="searchBox">Search (driver, email, draft id, converted ticket)</label>
+          <input id="searchBox" type="search" placeholder="Search…">
+        </div>
+      </div>
+
+      <div id="resultMeta" class="muted" style="margin:10px 0 6px;font-size:13px;">Showing 0 results</div>
+
+      <div class="table-card">
+        <div class="scroll-area">
+          <table aria-label="Draft tickets table">
+            <thead>
+              <tr>
+                <th class="col-id">Draft ID</th>
+                <th>Driver</th>
+                <th class="col-email">Email</th>
+                <th>Status</th>
+                <th>Mode</th>
+                <th>Converted</th>
+                <th class="col-updated">Updated</th>
+              </tr>
+            </thead>
+            <tbody id="rows">
+              <tr><td colspan="7" class="muted-small" style="text-align:center;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <small>© <span id="y"></span> Sixty – 3 Trucking Inc</small>
+    </div>
+  </footer>
+
+  <!-- View/Convert Modal -->
+  <div id="viewModal" class="modal" aria-hidden="true">
+    <div class="backdrop" data-close></div>
+    <div class="sheet">
+      <button class="close" data-close aria-label="Close">&times;</button>
+
+      <h3 style="margin:0 0 6px;">Draft <span id="viewId">—</span></h3>
+      <div class="mini" id="viewMeta">—</div>
+
+      <div style="margin-top:14px; display:grid; grid-template-columns:1fr; gap:14px;">
+        <div class="card" style="border:1px solid var(--border); box-shadow:none;">
+          <h4 style="margin:0 0 8px;">Driver payload</h4>
+          <div class="kvs" id="payloadKvs"></div>
+        </div>
+
+        <div class="card" style="border:1px solid var(--border); box-shadow:none;">
+          <h4 style="margin:0 0 8px;">Scale / Equipment rows</h4>
+          <div style="overflow:auto; max-height:240px;">
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Tag #</th>
+                  <th>Yard/Weight</th>
+                  <th>Material</th>
+                  <th>Yard Arr</th>
+                  <th>Yard Lv</th>
+                  <th>Site Arr</th>
+                  <th>Site Lv</th>
+                </tr>
+              </thead>
+              <tbody id="itemsRows">
+                <tr><td colspan="7" class="muted-small" style="text-align:center;">No items</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card" style="border:1px solid var(--border); box-shadow:none;">
+          <h4 style="margin:0 0 8px;">Convert to Ticket</h4>
+
+          <form id="convertForm" autocomplete="off">
+            <div class="grid2">
+              <div>
+                <label>Ticket No (required)</label>
+                <input name="ticketNo" type="text" required placeholder="e.g., 49250">
+              </div>
+              <div>
+                <label>Date (required)</label>
+                <input name="date" type="date" required>
+              </div>
+            </div>
+
+            <div style="margin-top:10px;">
+              <label>Driver Name (required)</label>
+              <input name="driverName" type="text" required placeholder="Driver full name">
+              <div class="muted-small" style="margin-top:6px;">
+                Tip: prefilled from draft, edit if needed.
+              </div>
+            </div>
+
+            <div class="grid2" style="margin-top:10px;">
+              <div>
+                <label>Truck Start</label>
+                <input name="truckStart" type="text" placeholder="e.g., 7:00 AM">
+              </div>
+              <div>
+                <label>Truck No</label>
+                <input name="truckNo" type="text" placeholder="e.g., 21">
+              </div>
+            </div>
+
+            <div class="grid2" style="margin-top:10px;">
+              <div>
+                <label>Trailer Type</label>
+                <input name="trailerType" type="text">
+              </div>
+              <div>
+                <label>PO No</label>
+                <input name="poNo" type="text">
+              </div>
+            </div>
+
+            <div class="grid2" style="margin-top:10px;">
+              <div>
+                <label>Job Name</label>
+                <input name="jobName" type="text">
+              </div>
+              <div>
+                <label>Job No</label>
+                <input name="jobNo" type="text">
+              </div>
+            </div>
+
+            <div class="grid2" style="margin-top:10px;">
+              <div>
+                <label>Origin</label>
+                <input name="origin" type="text">
+              </div>
+              <div>
+                <label>Destination</label>
+                <input name="destination" type="text">
+              </div>
+            </div>
+
+            <div class="actions">
+              <button type="button" class="btn" data-close>Cancel</button>
+              <button type="submit" class="btn btn-primary">Convert / Submit</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('y').textContent = new Date().getFullYear();
+
+    const $  = (s, root=document) => root.querySelector(s);
+    const ltrim = (v) => String(v ?? '').trim().toLowerCase();
+
+    function setOpen(modal, on=true){
+      modal.classList.toggle('show', on);
+      modal.setAttribute('aria-hidden', on ? 'false' : 'true');
+    }
+    function fmtDateTime(t){
+      if (!t) return '';
+      const d = new Date(t);
+      if (isNaN(d)) return String(t);
+      return d.toLocaleString([], {year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+    }
+    function badge(status){
+      const s = String(status || '');
+      const k = ltrim(s);
+      const cls = k==='draft' ? 'b-draft' : k==='sent' ? 'b-sent' : k==='converted' ? 'b-conv' : 'b-sent';
+      return `<span class="badge ${cls}">${s || '-'}</span>`;
+    }
+
+    let DRAFTS = [];
+    let VIEW = [];
+    let CURRENT_ID = null;
+    let CURRENT_DRAFT = null;
+
+    function applyFilters(){
+      const q = ltrim($('#searchBox').value);
+      VIEW = DRAFTS.filter(r => {
+        if (!q) return true;
+        const hay = [
+          r.id, r.driver_name, r.driver_email, r.status, r.tag_mode, r.converted_ticket_no
+        ].join(' ').toLowerCase();
+        return hay.includes(q);
+      });
+      renderRows();
+    }
+
+    function renderRows(){
+      const tb = $('#rows');
+      if (!VIEW.length){
+        tb.innerHTML = `<tr><td colspan="7" class="muted-small" style="text-align:center;">No results.</td></tr>`;
+        $('#resultMeta').textContent = 'Showing 0 results';
+        return;
+      }
+      tb.innerHTML = VIEW.map(r => `
+        <tr data-id="${String(r.id).replace(/"/g,'&quot;')}">
+          <td class="col-id"><a href="#" class="open">${String(r.id).slice(0,8)}…</a></td>
+          <td>${r.driver_name || '-'}</td>
+          <td class="col-email">${r.driver_email || '-'}</td>
+          <td>${badge(r.status)}</td>
+          <td>${r.tag_mode || '-'}</td>
+          <td>${r.converted_ticket_no || '-'}</td>
+          <td class="col-updated">${fmtDateTime(r.updated_at || '')}</td>
+        </tr>
+      `).join('');
+      $('#resultMeta').textContent = `Showing ${VIEW.length} result${VIEW.length>1?'s':''}`;
+    }
+
+    async function loadList(){
+      const status = $('#statusSel').value;
+      const r = await fetch(`/api/admin/drafts?status=${encodeURIComponent(status)}`, { credentials:'include' });
+      if (r.status === 401 || r.status === 403) { location.href = '/'; return; }
+      const j = await r.json().catch(()=>({}));
+      if (!j.ok) { alert(j.message || 'Failed to load drafts'); return; }
+      DRAFTS = Array.isArray(j.drafts) ? j.drafts : [];
+      applyFilters();
+    }
+
+    async function loadMe(){
+      const r = await fetch('/api/me', { credentials:'include' });
+      const j = await r.json().catch(()=>({}));
+      const p = j.profile || {};
+      $('#adminName').textContent = `Welcome, ${p.fullName || p.name || p.email || 'Admin'}`;
+    }
+
+    function renderPayloadKvs(draft){
+      const p = (draft?.payload && typeof draft.payload === 'object') ? draft.payload : {};
+      const pairs = [
+        ['Bridgefare', p.bridgefare],
+        ['Signed Out Loaded', p.signedOutLoaded],
+        ['How Many Tons/Loads', p.howManyTonsLoads],
+        ['Downtime/Lunch', p.downtimeLunch],
+        ['Leave Yard Time', p.leaveYardTime],
+        ['Truck Stop', p.truckStop],
+        ['Notes', p.notes],
+        ['Sign Out Time', p.signOutTime],
+        ['Received By', p.receivedBy],
+      ];
+
+      const el = $('#payloadKvs');
+      el.innerHTML = pairs.map(([k,v]) => `
+        <div><b>${k}</b></div>
+        <div>${(v===undefined || v===null || String(v).trim()==='') ? '<span class="muted-small">—</span>' : String(v)}</div>
+      `).join('');
+    }
+
+    function renderItems(draft){
+      const items = Array.isArray(draft?.items) ? draft.items : [];
+      const tb = $('#itemsRows');
+      if (!items.length){
+        tb.innerHTML = `<tr><td colspan="7" class="muted-small" style="text-align:center;">No items</td></tr>`;
+        return;
+      }
+      tb.innerHTML = items.slice(0, 50).map(it => `
+        <tr>
+          <td>${it.scaleTagNo || ''}</td>
+          <td>${it.yardOrWeight || ''}</td>
+          <td>${it.material || ''}</td>
+          <td>${it.yardArrival || ''}</td>
+          <td>${it.yardLeave || ''}</td>
+          <td>${it.siteArrival || ''}</td>
+          <td>${it.siteLeave || ''}</td>
+        </tr>
+      `).join('');
+    }
+
+    function prefillConvertForm(draft){
+      const f = $('#convertForm');
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth()+1).padStart(2,'0');
+      const dd = String(today.getDate()).padStart(2,'0');
+
+      f.ticketNo.value = '';
+      f.date.value = `${yyyy}-${mm}-${dd}`;
+      f.driverName.value = draft?.driver_name || '';
+
+      // optional: leave blank; admin fills if needed
+      f.truckStart.value = '';
+      f.truckNo.value = '';
+      f.trailerType.value = '';
+      f.poNo.value = '';
+      f.jobName.value = '';
+      f.jobNo.value = '';
+      f.origin.value = '';
+      f.destination.value = '';
+    }
+
+    async function openDraft(id){
+      CURRENT_ID = id;
+      const r = await fetch(`/api/admin/drafts/${encodeURIComponent(id)}`, { credentials:'include' });
+      if (r.status === 401 || r.status === 403) { location.href = '/'; return; }
+      const j = await r.json().catch(()=>({}));
+      if (!j.ok) { alert(j.message || 'Draft not found'); return; }
+
+      CURRENT_DRAFT = j.draft;
+
+      $('#viewId').textContent = String(id).slice(0,8) + '…';
+      $('#viewMeta').textContent =
+        `Driver: ${CURRENT_DRAFT.driver_name || '-'} • ${CURRENT_DRAFT.driver_email || '-'} • Status: ${CURRENT_DRAFT.status || '-'} • Updated: ${fmtDateTime(CURRENT_DRAFT.updated_at || '')}`;
+
+      renderPayloadKvs(CURRENT_DRAFT);
+      renderItems(CURRENT_DRAFT);
+      prefillConvertForm(CURRENT_DRAFT);
+
+      setOpen($('#viewModal'), true);
+    }
+
+    $('#rows').addEventListener('click', (e) => {
+      const a = e.target.closest('a.open');
+      if (!a) return;
+      e.preventDefault();
+      const tr = e.target.closest('tr[data-id]');
+      if (!tr) return;
+      openDraft(tr.dataset.id);
+    });
+
+    $('#convertForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!CURRENT_ID) return;
+
+      const fd = new FormData(e.target);
+      const body = Object.fromEntries(fd.entries());
+
+      if (!body.ticketNo || !body.date || !body.driverName){
+        alert('Ticket No, Date, and Driver Name are required.');
+        return;
+      }
+
+      const r = await fetch(`/api/admin/drafts/${encodeURIComponent(CURRENT_ID)}/submit`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'include',
+        body: JSON.stringify(body),
+      });
+
+      const j = await r.json().catch(()=>({}));
+      if (!r.ok || j.ok === false){
+        alert(j.message || 'Failed to convert draft.');
+        return;
+      }
+
+      alert(`Converted to Ticket ${j.ticketNo}`);
+      setOpen($('#viewModal'), false);
+      await loadList();
+    });
+
+    $$('#viewModal [data-close]').forEach(el => el.addEventListener('click', () => setOpen($('#viewModal'), false)));
+
+    $('#statusSel').addEventListener('change', loadList);
+    $('#searchBox').addEventListener('input', applyFilters);
+    $('#refreshBtn').addEventListener('click', loadList);
+    $('#backBtn').addEventListener('click', () => location.href = '/admin');
+
+    // go
+    (async () => {
+      await loadMe();
+      await loadList();
+    })();
+  </script>
+</body>
+</html>

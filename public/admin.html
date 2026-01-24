@@ -123,6 +123,16 @@
     Tag Lists
   </button>
 
+  <button type="button" id="openDraftTickets" role="menuitem">
+  <!-- Pencil Square -->
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+      d="M16.862 3.487a2.25 2.25 0 013.182 3.182L8.25 18.463 3 21l2.537-5.25L16.862 3.487z" />
+  </svg>
+  Draft Tickets
+</button>
+
+
   <button type="button" id="openUsers" role="menuitem">
     <!-- User -->
     <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
@@ -656,9 +666,15 @@
     location.href = '/tag-lists';
   });
   document.getElementById('openUsers').addEventListener('click', () => {
-  kebab.classList.remove('open');
-  location.href = '/admin/users';
-});
+    kebab.classList.remove('open');
+    location.href = '/admin/users';
+  });
+
+  document.getElementById('openDraftTickets').addEventListener('click', () => {
+    kebab.classList.remove('open');
+    location.href = '/draft-tickets';
+  });
+
 
 
     // ---------- click ticket → view/edit ----------
