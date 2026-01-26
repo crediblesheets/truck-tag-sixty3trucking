@@ -437,11 +437,8 @@
           <div id="formErr" class="form-error" role="alert" style="display:none"></div>
           <div class="actions" style="margin-top:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
             <a id="openPdf" class="btn" href="#" target="_blank" rel="noopener" hidden>Preview PDF</a>
-
             <span id="draftStatus" class="muted-small" style="white-space:nowrap;"></span>
-
             <span style="flex:1"></span>
-
             <button id="saveDraftBtn" type="button" class="btn">Save Draft</button>
             <button id="submitBtn" type="submit" class="btn btn-primary" disabled>Submit</button>
           </div>
@@ -528,139 +525,146 @@
     }
 
     // -------------------- server draft state + helpers
-let DIRTY = false;
+    let DIRTY = false;
 
-const saveDraftBtn  = document.getElementById('saveDraftBtn');
-const draftStatusEl = document.getElementById('draftStatus');
+    const saveDraftBtn  = document.getElementById('saveDraftBtn');
+    const draftStatusEl = document.getElementById('draftStatus');
 
-function markDirty(){
-  DIRTY = true;
-  if (draftStatusEl) draftStatusEl.textContent = 'Unsaved changes';
-}
-
-function markSaved(){
-  DIRTY = false;
-  if (draftStatusEl) draftStatusEl.textContent = `Draft saved: ${new Date().toLocaleString()}`;
-}
-
-function buildDriverPayloadFromForm_(includeDoneStatus){
-  const form = new FormData(document.getElementById('tagForm'));
-
-  const payload = {
-    bridgefare: form.get('bridgefare') ?? '',
-    signedOutLoaded: form.get('signedOutLoaded') ?? '',
-    howManyTonsLoads: form.get('howMany') ?? '',
-    downtimeLunch: form.get('downtimeLunch') ?? '',
-    leaveYardTime: form.get('leaveYardTime') ?? '',
-    truckStop: form.get('truckStop') ?? '',
-    tagMode: TAG_MODE,
-    notes: form.get('notes') ?? '',
-    signOutTime: form.get('signOutTime') ?? '',
-    receivedBy: form.get('receivedBy') ?? '',
-    driverSignature: form.get('driverSignature') ?? ''
-  };
-
-  // Only submit should mark Done
-  if (includeDoneStatus) payload.status = 'Done';
-
-  return payload;
-}
-
-async function saveDraftToServer(){
-  if (!TICKET_ID) return;
-
-  if (saveDraftBtn){
-    saveDraftBtn.disabled = true;
-    saveDraftBtn.textContent = 'Saving...';
-  }
-  if (draftStatusEl) draftStatusEl.textContent = 'Saving draft...';
-
-  const payloadPatch = buildDriverPayloadFromForm_(false);
-  const itemsToSave = (noScaleReq && noScaleReq.checked) ? [] : SCALE_ITEMS;
-
-  const errs = [];
-
-  try {
-    // Optional: upload proof now (so it’s kept even before submit)
-    const proof = document.getElementById('proofFile')?.files?.[0];
-    if (proof){
-      const fd = new FormData();
-      fd.append('file', proof);
-      const u = await fetch(apiPath('proofUpload'), { method:'POST', body: fd });
-      const uj = await u.json().catch(()=> ({}));
-      if (!u.ok || uj.ok === false) errs.push(uj.message || 'Proof upload failed');
+    function markDirty(){
+      DIRTY = true;
+      if (draftStatusEl) draftStatusEl.textContent = 'Unsaved changes';
     }
 
-    // If this page is editing a UUID draft, use /api/drafts/:id
-    if (IS_DRAFT){
-      const rD = await fetch(apiPath('saveDraft'), {
-        method:'PUT',
-        headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({
-          tagMode: TAG_MODE,
-          payloadPatch,
-          items: itemsToSave
-        })
-      });
-      const jD = await rD.json().catch(()=> ({}));
-      if (!rD.ok || jD.ok === false) throw new Error(jD.message || 'Failed to save draft');
-    } else {
-      // Normal ticket: save partial edits WITHOUT marking Done
-
-      // 1) scale items (best effort)
-      try {
-        const r1 = await fetch(`/api/tags/${encodeURIComponent(TICKET_ID)}/scale-items`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            mode: TAG_MODE,
-            items: itemsToSave
-          })
-        });
-        const j1 = await r1.json().catch(()=> ({}));
-        if (!r1.ok || j1.ok === false) errs.push(j1.message || 'Scale items draft save failed');
-      } catch (e){
-        errs.push('Scale items draft save failed');
-      }
-
-      // 2) driver fields (best effort)
-      try {
-        const r2 = await fetch(`/api/tags/${encodeURIComponent(TICKET_ID)}/driver`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payloadPatch) // <-- IMPORTANT: no status:'Done'
-        });
-        const j2 = await r2.json().catch(()=> ({}));
-        if (!r2.ok || j2.ok === false) errs.push(j2.message || 'Driver draft save failed');
-      } catch (e){
-        errs.push('Driver draft save failed');
-      }
+    function markSaved(){
+      DIRTY = false;
+      if (draftStatusEl) draftStatusEl.textContent = `Draft saved: ${new Date().toLocaleString()}`;
     }
-
-    if (errs.length){
-      alert('Saved with warnings:\n- ' + errs.join('\n- '));
-      // still mark saved if driver fields went through; keep it simple:
-      markSaved();
-    } else {
-      markSaved();
-      alert('Draft saved (still Pending).');
-    }
-  } catch (err){
-    console.error(err);
-    alert(err.message || 'Could not save draft.');
-    if (draftStatusEl) draftStatusEl.textContent = 'Draft save failed';
-  } finally {
-    if (saveDraftBtn){
-      saveDraftBtn.disabled = false;
-      saveDraftBtn.textContent = 'Save Draft';
-    }
-  }
-}
-
 
     // -------------------- mode (Scale vs Equipment)
     const tagModeSel = document.getElementById('tagMode');
     let TAG_MODE = 'scale';
+
+    function buildDriverPayloadFromForm_(includeDoneStatus){
+      const form = new FormData(document.getElementById('tagForm'));
+
+      const payload = {
+        bridgefare: form.get('bridgefare') ?? '',
+        signedOutLoaded: form.get('signedOutLoaded') ?? '',
+        howManyTonsLoads: form.get('howMany') ?? '',
+        downtimeLunch: form.get('downtimeLunch') ?? '',
+        leaveYardTime: form.get('leaveYardTime') ?? '',
+        truckStop: form.get('truckStop') ?? '',
+        tagMode: TAG_MODE,
+        notes: form.get('notes') ?? '',
+        signOutTime: form.get('signOutTime') ?? '',
+        receivedBy: form.get('receivedBy') ?? '',
+        driverSignature: form.get('driverSignature') ?? ''
+      };
+
+      if (includeDoneStatus) payload.status = 'Done';
+      return payload;
+    }
+
+    async function saveDraftToServer(){
+      // Helpful debug:
+      console.log('[SaveDraft] clicked', { TICKET_ID, IS_DRAFT, TAG_MODE, items: SCALE_ITEMS.length });
+
+      if (!TICKET_ID){
+        alert('No ticket id found in URL. Make sure the page is opened as /driver-ticket?id=XXXX');
+        return;
+      }
+
+      if (saveDraftBtn){
+        saveDraftBtn.disabled = true;
+        saveDraftBtn.textContent = 'Saving...';
+      }
+      if (draftStatusEl) draftStatusEl.textContent = 'Saving draft...';
+
+      const payloadPatch = buildDriverPayloadFromForm_(false);
+      const itemsToSave = (noScaleReq && noScaleReq.checked) ? [] : SCALE_ITEMS;
+
+      const errs = [];
+
+      try {
+        // Optional: upload proof now
+        const proof = document.getElementById('proofFile')?.files?.[0];
+        if (proof){
+          const fd = new FormData();
+          fd.append('file', proof);
+          const u = await fetch(apiPath('proofUpload'), { method:'POST', body: fd });
+          const uj = await u.json().catch(()=> ({}));
+          if (!u.ok || uj.ok === false) errs.push(uj.message || 'Proof upload failed');
+        }
+
+        if (IS_DRAFT){
+          // UUID draft save
+          const rD = await fetch(apiPath('saveDraft'), {
+            method:'PUT',
+            headers:{ 'Content-Type':'application/json' },
+            body: JSON.stringify({
+              tagMode: TAG_MODE,
+              payloadPatch,
+              items: itemsToSave
+            })
+          });
+          const jD = await rD.json().catch(()=> ({}));
+          if (!rD.ok || jD.ok === false) throw new Error(jD.message || 'Failed to save draft');
+        } else {
+          // Normal ticket: save partial edits WITHOUT marking Done
+
+          // 1) scale items
+          try {
+            const r1 = await fetch(`/api/tags/${encodeURIComponent(TICKET_ID)}/scale-items`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                mode: TAG_MODE,
+                items: itemsToSave
+              })
+            });
+            const j1 = await r1.json().catch(()=> ({}));
+            if (!r1.ok || j1.ok === false) errs.push(j1.message || 'Scale items draft save failed');
+          } catch {
+            errs.push('Scale items draft save failed');
+          }
+
+          // 2) driver fields
+          try {
+            const r2 = await fetch(`/api/tags/${encodeURIComponent(TICKET_ID)}/driver`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payloadPatch)
+            });
+            const j2 = await r2.json().catch(()=> ({}));
+            if (!r2.ok || j2.ok === false) errs.push(j2.message || 'Driver draft save failed');
+          } catch {
+            errs.push('Driver draft save failed');
+          }
+        }
+
+        if (errs.length){
+          markSaved();
+          alert('Saved with warnings:\n- ' + errs.join('\n- '));
+        } else {
+          markSaved();
+          alert('Draft saved (still Pending).');
+        }
+      } catch (err){
+        console.error(err);
+        alert(err.message || 'Could not save draft.');
+        if (draftStatusEl) draftStatusEl.textContent = 'Draft save failed';
+      } finally {
+        if (saveDraftBtn){
+          saveDraftBtn.disabled = false;
+          saveDraftBtn.textContent = 'Save Draft';
+        }
+      }
+    }
+
+    // ✅ SAVE DRAFT CLICK WIRING (THIS WAS MISSING IN YOUR PASTE)
+    if (saveDraftBtn){
+      saveDraftBtn.addEventListener('click', saveDraftToServer);
+    }
 
     const initialPH = {
       tag: $('#f_scaleTagNo')?.placeholder || 'e.g., 1002345',
@@ -752,7 +756,6 @@ async function saveDraftToServer(){
       markDirty();
       setSubmitState();
     });
-
 
     function toggleScaleUI(){
       const hide = noScaleReq && noScaleReq.checked;
@@ -886,7 +889,8 @@ async function saveDraftToServer(){
         $('#addItem').textContent = 'Add item';
         $('#cancelEdit').style.display = 'none';
       }
-        markDirty(); // <-- add this
+
+      markDirty();
       renderItemsTable();
       clearMiniForm();
       $('#f_scaleTagNo').focus();
@@ -905,7 +909,7 @@ async function saveDraftToServer(){
       const ed  = e.target.getAttribute('data-edit');
       if (del != null){
         SCALE_ITEMS.splice(Number(del),1);
-         markDirty(); // <-- add this
+        markDirty();
         renderItemsTable();
       } else if (ed != null){
         EDIT_INDEX = Number(ed);
@@ -1333,7 +1337,6 @@ async function saveDraftToServer(){
 
       IS_DRAFT = isUuid(TICKET_ID);
 
-      // UI tweaks
       $('#submitBtn').textContent = IS_DRAFT ? 'Send Draft' : 'Submit';
       if (IS_DRAFT){
         $('#openPdf').hidden = true;
@@ -1364,6 +1367,7 @@ async function saveDraftToServer(){
           ]);
 
           setSubmitState();
+          if (draftStatusEl) draftStatusEl.textContent = 'Loaded draft';
           return;
         }
 
@@ -1385,8 +1389,8 @@ async function saveDraftToServer(){
           loadSignaturePreview('received')
         ]);
 
-        // set PDF URL even if link is hidden
         $('#openPdf').href = `/api/tags/${encodeURIComponent(TICKET_ID)}/pdf?download=0`;
+        if (draftStatusEl) draftStatusEl.textContent = '';
       } catch (e){
         console.error(e);
         alert('Failed to load ticket.');
