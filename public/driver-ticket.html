@@ -435,18 +435,11 @@
           </div>
 
           <div id="formErr" class="form-error" role="alert" style="display:none"></div>
-          <div class="actions" style="margin-top:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+          <div class="actions" style="margin-top:12px;">
             <a id="openPdf" class="btn" href="#" target="_blank" rel="noopener" hidden>Preview PDF</a>
-
             <span style="flex:1"></span>
-
-            <span id="draftStatus" class="muted-small" style="white-space:nowrap;"></span>
-
-            <button id="saveDraftBtn" type="button" class="btn">Save Draft</button>
-
             <button id="submitBtn" type="submit" class="btn btn-primary" disabled>Submit</button>
           </div>
-
         </form>
       </section>
     </div>
@@ -495,164 +488,6 @@
     const $$ = (s) => Array.from(document.querySelectorAll(s));
     const noScaleReq = document.getElementById('noScaleReq');
     const getTrim = (v) => String(v ?? '').trim();
-
-
-
-    // -------------------- local draft (device/browser) state
-let DIRTY = false;
-let LAST_SAVED_AT = null;
-
-const saveDraftBtn = document.getElementById('saveDraftBtn');
-const draftStatusEl = document.getElementById('draftStatus');
-
-function draftKey(){
-  return `driverTagDraft:${String(TICKET_ID || '')}`;
-}
-
-function fmtSavedAt(iso){
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (isNaN(d)) return '';
-  return d.toLocaleString();
-}
-
-function updateDraftStatus(){
-  if (!draftStatusEl) return;
-  if (LAST_SAVED_AT){
-    draftStatusEl.textContent = `Saved: ${fmtSavedAt(LAST_SAVED_AT)}${DIRTY ? ' (unsaved changes)' : ''}`;
-  } else {
-    draftStatusEl.textContent = DIRTY ? 'Unsaved changes' : '';
-  }
-}
-
-function markDirty(){
-  DIRTY = true;
-  updateDraftStatus();
-}
-
-function collectDraftData(){
-  const f = document.getElementById('tagForm');
-
-  const proof = document.getElementById('proofFile')?.files?.[0] || null;
-
-  return {
-    v: 1,
-    ticketId: TICKET_ID,
-    savedAt: new Date().toISOString(),
-    tagMode: TAG_MODE,
-    noScaleReq: !!(noScaleReq && noScaleReq.checked),
-    form: {
-      bridgefare: f.bridgefare?.value ?? '',
-      signedOutLoaded: f.signedOutLoaded?.value ?? '',
-      howMany: f.howMany?.value ?? '',
-      downtimeLunch: f.downtimeLunch?.value ?? '',
-      leaveYardTime: f.leaveYardTime?.value ?? '',
-      truckStop: f.truckStop?.value ?? '',
-      notes: f.notes?.value ?? '',
-      signOutTime: f.signOutTime?.value ?? '',
-      receivedBy: document.getElementById('receivedBy')?.value ?? '',
-      driverSignature: document.getElementById('driverSignature')?.value ?? '',
-    },
-    items: Array.isArray(SCALE_ITEMS) ? SCALE_ITEMS : [],
-    mini: readMiniForm(),          // saves the currently-typed mini form too
-    editIndex: EDIT_INDEX,         // restores edit mode if they were editing an item
-    proofHint: proof ? { name: proof.name, size: proof.size, type: proof.type } : null
-  };
-}
-
-function applyDraftData(d){
-  if (!d || d.ticketId !== TICKET_ID) return;
-
-  const f = document.getElementById('tagForm');
-  const form = d.form || {};
-
-  // restore mode first
-  const savedMode = (d.tagMode || 'scale').toLowerCase();
-  if (tagModeSel) tagModeSel.value = (savedMode === 'equipment') ? 'equipment' : 'scale';
-  applyTagMode(tagModeSel ? tagModeSel.value : savedMode);
-
-  // restore checkbox + UI
-  if (noScaleReq) noScaleReq.checked = !!d.noScaleReq;
-  toggleScaleUI();
-
-  // restore form fields (no validity required)
-  if (f.bridgefare)       f.bridgefare.value = form.bridgefare ?? '';
-  if (f.signedOutLoaded)  f.signedOutLoaded.value = form.signedOutLoaded ?? '';
-  if (f.howMany)          f.howMany.value = form.howMany ?? '';
-  if (f.downtimeLunch)    f.downtimeLunch.value = form.downtimeLunch ?? '';
-  if (f.leaveYardTime)    f.leaveYardTime.value = (form.leaveYardTime || '').slice(0,5);
-  if (f.truckStop)        f.truckStop.value = (form.truckStop || '').slice(0,5);
-  if (f.notes)            f.notes.value = form.notes ?? '';
-  if (f.signOutTime)      f.signOutTime.value = (form.signOutTime || '').slice(0,5);
-
-  const rb = document.getElementById('receivedBy');
-  const ds = document.getElementById('driverSignature');
-  if (rb) rb.value = form.receivedBy ?? '';
-  if (ds) ds.value = form.driverSignature ?? '';
-
-  // restore items
-  SCALE_ITEMS = Array.isArray(d.items) ? d.items : [];
-  renderItemsTable();
-
-  // restore mini form + edit mode
-  fillMiniForm(d.mini || {});
-  EDIT_INDEX = (typeof d.editIndex === 'number') ? d.editIndex : null;
-  if (EDIT_INDEX !== null){
-    document.getElementById('addItem').textContent = 'Save item';
-    document.getElementById('cancelEdit').style.display = 'inline-flex';
-  } else {
-    document.getElementById('addItem').textContent = 'Add item';
-    document.getElementById('cancelEdit').style.display = 'none';
-  }
-
-  // proof cannot be restored (browser security) — show hint
-  if (d.proofHint?.name){
-    const info = document.getElementById('proofInfo');
-    if (info){
-      info.textContent = `Previously selected: ${d.proofHint.name} (please re-select to upload)`;
-      info.style.display = 'block';
-    }
-  }
-
-  LAST_SAVED_AT = d.savedAt || null;
-  DIRTY = false;
-  updateDraftStatus();
-  setSubmitState();
-}
-
-function saveDraftLocal(showAlert = true){
-  if (!TICKET_ID) return;
-
-  try {
-    const data = collectDraftData();
-    localStorage.setItem(draftKey(), JSON.stringify(data));
-    LAST_SAVED_AT = data.savedAt;
-    DIRTY = false;
-    updateDraftStatus();
-    if (showAlert) alert('Draft saved on this device.');
-  } catch (e){
-    console.error(e);
-    alert('Could not save draft (storage may be full).');
-  }
-}
-
-function loadDraftLocal(){
-  try {
-    const raw = localStorage.getItem(draftKey());
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
-function clearDraftLocal(){
-  try { localStorage.removeItem(draftKey()); } catch {}
-  LAST_SAVED_AT = null;
-  DIRTY = false;
-  updateDraftStatus();
-}
-
 
     function isUuid(s){
       return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(s||''));
@@ -776,11 +611,7 @@ function clearDraftLocal(){
       showErr(itemsOk ? '' : `Add at least one complete ${isEquipMode() ? 'Equipment Move' : 'Scale Tag'} item.`);
     }
 
-    $('#tagForm').addEventListener('input', () => {
-      markDirty();
-      setSubmitState();
-    });
-
+    $('#tagForm').addEventListener('input', setSubmitState);
 
     function toggleScaleUI(){
       const hide = noScaleReq && noScaleReq.checked;
@@ -914,7 +745,6 @@ function clearDraftLocal(){
         $('#addItem').textContent = 'Add item';
         $('#cancelEdit').style.display = 'none';
       }
-      markDirty(); // <-- HERE (right after items change)
 
       renderItemsTable();
       clearMiniForm();
@@ -934,7 +764,6 @@ function clearDraftLocal(){
       const ed  = e.target.getAttribute('data-edit');
       if (del != null){
         SCALE_ITEMS.splice(Number(del),1);
-         markDirty(); // <-- HERE (right after delete)
         renderItemsTable();
       } else if (ed != null){
         EDIT_INDEX = Number(ed);
@@ -1354,10 +1183,6 @@ function clearDraftLocal(){
       if (!TICKET_ID || IS_DRAFT) return;
       window.open(`/api/tags/${encodeURIComponent(TICKET_ID)}/pdf?download=0`, '_blank', 'noopener');
     });
-
-    if (saveDraftBtn){
-  saveDraftBtn.addEventListener('click', () => saveDraftLocal(true));
-}
 
     // -------------------- boot
     (async () => {
