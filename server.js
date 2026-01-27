@@ -1004,13 +1004,14 @@ app.post('/api/tags/:id/scale-items', verifySession, ensureActiveUser, async (re
 });
 
 // Driver main form submit
+// Driver main form submit OR draft-save (does NOT auto-mark Done)
 app.post('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, res) => {
   try {
-    const ticketNo = String(req.params.id);
+    const ticketNo = String(req.params.id || '').trim();
 
     const { data: stub, error: e0 } = await sb
       .from('driver_tags')
-      .select('ticket_no')
+      .select('ticket_no, status')
       .eq('ticket_no', ticketNo)
       .maybeSingle();
     if (e0) throw e0;
@@ -1022,7 +1023,6 @@ app.post('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, re
       howManyTonsLoads = '',
       downtimeLunch = '',
 
-      // NEW ✅
       leaveYardTime = '',
       truckStop = '',
 
@@ -1030,40 +1030,47 @@ app.post('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, re
       signOutTime = '',
       receivedBy = '',
       driverSignature = '',
-      tagMode = 'scale',      // ✅ ADD THIS
-      status = 'Done',
+      tagMode = 'scale',
+
+      // IMPORTANT: no default here
+      status, // 'Done' only when Submit is clicked
     } = req.body || {};
 
+    const patch = {
+      email: String(req.user.email).toLowerCase(),
+      bridgefare,
+      signed_out_loaded: signedOutLoaded,
+      how_many_tons_loads: howManyTonsLoads,
+      downtime_lunch: downtimeLunch,
+      leave_yard_time: leaveYardTime,
+      truck_stop: truckStop,
+      notes,
+      sign_out_time: signOutTime,
+      received_by: receivedBy,
+      driver_signature: driverSignature,
+      tag_mode: String(tagMode || 'scale').toLowerCase(),
+      updated_at: new Date().toISOString(),
+    };
 
-    const { error } = await sb
-      .from('driver_tags')
-      .update({
-        email: String(req.user.email).toLowerCase(),
-        bridgefare,
-        signed_out_loaded: signedOutLoaded,
-        how_many_tons_loads: howManyTonsLoads,
-        downtime_lunch: downtimeLunch,
-        // NEW
-        leave_yard_time: leaveYardTime,
-        truck_stop: truckStop,
-        notes,
-        sign_out_time: signOutTime,
-        received_by: receivedBy,
-        driver_signature: driverSignature,
-        tag_mode: String(tagMode || 'scale').toLowerCase(),
-        status,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('ticket_no', ticketNo);
+    // Only update status when explicitly provided by the client
+    if (status !== undefined && status !== null && String(status).trim() !== '') {
+      const s = String(status).trim();
+      if (!['Pending', 'Done'].includes(s)) {
+        return res.status(400).json({ ok: false, message: 'Invalid status value.' });
+      }
+      patch.status = s;
+    }
 
+    const { error } = await sb.from('driver_tags').update(patch).eq('ticket_no', ticketNo);
     if (error) throw error;
 
     return res.json({ ok: true });
   } catch (e) {
-    console.error(e);
+    console.error('POST /api/tags/:id/driver', e);
     return res.status(500).json({ ok: false, message: 'Save failed.' });
   }
 });
+
 
 // Admin: send a driver tag back to the driver (set status back to Pending)
 app.post(
