@@ -386,58 +386,88 @@ app.post('/api/auth/logout', (req, res) => {
 });
 
 // ======================== DRIVER API ========================
+// ======================== DRIVER / ME ========================
 app.get('/api/me', verifySession, ensureActiveUser, async (req, res) => {
   try {
-    const me = String(req.user.email).toLowerCase();
+    const me = String(req.user.email || '').toLowerCase();
 
+    // --- 1) Pending tags (same logic you already have) ---
     const { data: tags, error: e1 } = await sb
       .from('driver_tags')
       .select('ticket_no, email, status, updated_at')
       .eq('status', 'Pending');
     if (e1) throw e1;
 
-    if (!tags?.length) {
-      return res.json({ ok: true, profile: req.user, tags: [] });
+    let out = [];
+
+    if (tags?.length) {
+      const ticketNos = tags.map((t) => t.ticket_no).filter(Boolean);
+
+      const { data: at, error: e2 } = await sb
+        .from('admin_tickets')
+        .select('ticket_no, driver_name')
+        .in('ticket_no', ticketNos);
+      if (e2) throw e2;
+
+      const byTicket = new Map((at || []).map((r) => [r.ticket_no, r.driver_name || '']));
+
+      const names = Array.from(new Set((at || []).map((r) => r.driver_name).filter(Boolean)));
+
+      let byDriverEmail = new Map();
+      if (names.length) {
+        const { data: us, error: e3 } = await sb
+          .from('users')
+          .select('full_name, email')
+          .in('full_name', names);
+        if (e3) throw e3;
+
+        byDriverEmail = new Map(
+          (us || []).map((u) => [u.full_name, String(u.email || '').toLowerCase()])
+        );
+      }
+
+      const mine = (tags || []).filter((t) => {
+        const dname = byTicket.get(t.ticket_no) || '';
+        const email = byDriverEmail.get(dname) || '';
+        return email === me;
+      });
+
+      out = mine.map((r) => ({
+        id: r.ticket_no,
+        ticketNo: r.ticket_no,
+        email: (r.email || req.user.email || '').toLowerCase(),
+        status: r.status || 'Pending',
+        updatedAt: r.updated_at,
+      }));
     }
 
-    const ticketNos = tags.map((t) => t.ticket_no);
+    // --- 2) My drafts (NEW) ---
+    let drafts = [];
+    const role = String(req.user.role || '').toLowerCase();
+    if (role === 'driver') {
+      const { data: ds, error: de } = await sb
+        .from('ticket_drafts')
+        .select('id, status, tag_mode, updated_at, created_at, sent_at, converted_ticket_no')
+        .eq('driver_email', me)
+        .neq('status', 'Converted')
+        .order('updated_at', { ascending: false });
 
-    const { data: at, error: e2 } = await sb
-      .from('admin_tickets')
-      .select('ticket_no, driver_name')
-      .in('ticket_no', ticketNos);
-    if (e2) throw e2;
+      if (de) throw de;
 
-    const byTicket = new Map(at.map((r) => [r.ticket_no, r.driver_name || '']));
-
-    const names = Array.from(new Set(at.map((r) => r.driver_name).filter(Boolean)));
-    let byDriverEmail = new Map();
-    if (names.length) {
-      const { data: us, error: e3 } = await sb
-        .from('users')
-        .select('full_name, email')
-        .in('full_name', names);
-      if (e3) throw e3;
-      byDriverEmail = new Map(us.map((u) => [u.full_name, String(u.email || '').toLowerCase()]));
+      drafts = (ds || []).map((d) => ({
+        id: d.id,
+        status: d.status,
+        tagMode: d.tag_mode,
+        updatedAt: d.updated_at,
+        createdAt: d.created_at,
+        sentAt: d.sent_at,
+        convertedTicketNo: d.converted_ticket_no,
+      }));
     }
 
-    const mine = tags.filter((t) => {
-      const dname = byTicket.get(t.ticket_no) || '';
-      const email = byDriverEmail.get(dname) || '';
-      return email === me;
-    });
-
-    const out = mine.map((r) => ({
-      id: r.ticket_no,
-      ticketNo: r.ticket_no,
-      email: r.email || req.user.email,
-      status: r.status || 'Pending',
-      updatedAt: r.updated_at,
-    }));
-
-    return res.json({ ok: true, profile: req.user, tags: out });
+    return res.json({ ok: true, profile: req.user, tags: out, drafts });
   } catch (e) {
-    console.error(e);
+    console.error('GET /api/me', e);
     return res.status(500).json({ ok: false, message: 'Failed to load data.' });
   }
 });
