@@ -9,305 +9,1114 @@
   <link rel="stylesheet" href="./admin.css">
 
   <style>
-    .admin-card{padding:18px}
-    .table-card{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-top:10px}
-    .table-card table{width:100%;border-collapse:collapse;background:#fff}
-    .table-card thead{background:#f8fafc}
-    .table-card th,.table-card td{padding:12px 14px;border-bottom:1px solid #eef2f7;font-size:14px}
-    .table-card tbody tr:hover{background:#fafcff}
-    .scroll-area{max-height:60vh;overflow:auto}
-    .col-ticket{width:120px;white-space:nowrap}
-    .col-email{width:260px}
-    .col-updated{width:200px;white-space:nowrap}
-
-    .badge{display:inline-flex;align-items:center;font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid transparent}
-    .badge-pending{background:#fff7ed;color:#9a3412;border-color:#fed7aa}
-    .badge-done{background:#ecfdf5;color:#065f46;border-color:#bbf7d0}
-    .badge-other{background:#eef2ff;color:#3730a3;border-color:#c7d2fe}
-
-    .toolbar{display:flex;gap:10px;justify-content:flex-end}
-    .pill-btn{border:1px solid var(--border);background:#fff;border-radius:999px;padding:6px 10px;cursor:pointer}
-    .menu{position:relative}
-    .menu-btn{border:1px solid var(--border);background:#fff;border-radius:10px;padding:8px 10px;cursor:pointer}
-    .menu-list{position:absolute;right:0;top:42px;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow);min-width:200px;display:none;z-index:20}
-    .menu.open .menu-list{display:block}
-    .menu-list button{display:block;width:100%;text-align:left;padding:10px 12px;border:0;background:transparent;cursor:pointer}
-    .menu-list button:hover{background:#f8fafc}
-
-    /* Modals (add/view) */
-    .modal{position:fixed;inset:0;display:none;z-index:1000}
-    .modal.show{display:block}
-    .modal .backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45)}
-    .modal .sheet{position:relative;max-width:920px;margin:4vh auto;background:#fff;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:20px 22px}
-    .modal .close{position:absolute;right:10px;top:10px;border:0;background:transparent;font-size:24px;cursor:pointer}
-
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
-    label{font-size:12px;color:#555;display:block;margin-bottom:6px}
-    input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;box-sizing:border-box}
-    .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
-    .muted-small{color:#6b7280;font-size:12px}
-    .danger{background:#ef4444!important;color:#fff!important;border-color:#ef4444!important}
-    .warn{background:#f59e0b!important;color:#fff!important;border-color:#f59e0b!important}
-    @media (max-width:900px){.grid2,.grid3{grid-template-columns:1fr}}
-
-    /* Loading overlay (used for CSV import and long ops) */
-    #loading{position:fixed;inset:0;display:none;z-index:2000}
-    #loading.show{display:flex}
-    #loading .backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45)}
-    #loading .panel{
-      position:relative;margin:auto;background:#fff;border-radius:12px;min-width:280px;
-      padding:18px 20px;text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25)
+    /* ========== NOTION-STYLE DESIGN SYSTEM ========== */
+    
+    :root {
+      /* Colors - Notion-inspired palette */
+      --bg-primary: #FFFFFF;
+      --bg-secondary: #F7F7F5;
+      --bg-tertiary: #FAFAF9;
+      --bg-hover: #F1F1EF;
+      
+      --border-subtle: #E9E9E7;
+      --border-medium: #DDDDD9;
+      
+      --text-primary: #37352F;
+      --text-secondary: #787774;
+      --text-tertiary: #9B9A97;
+      
+      --accent-blue: #2383E2;
+      --accent-blue-hover: #1a6bbf;
+      --accent-blue-light: #EBF4FC;
+      
+      --status-pending: #FFB224;
+      --status-pending-bg: #FEF5E7;
+      --status-done: #0F7B6C;
+      --status-done-bg: #E8F5F3;
+      --status-other: #8B5CF6;
+      --status-other-bg: #F3F0FF;
+      
+      --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08);
+      --shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
+      --shadow-hover: 0 2px 12px rgba(0, 0, 0, 0.1);
+      
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-xl: 16px;
+      
+      --transition: all 0.15s ease;
     }
-    .spinner{width:28px;height:28px;border-radius:50%;border:3px solid #e5e7eb;border-top-color:#3b82f6;margin:0 auto 10px;animation:spin 0.8s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
+
+    /* ========== RESET & BASE ========== */
+    
+    * {
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text-primary);
+      background: #FAFAF9;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* ========== HEADER ========== */
+    
+    .site-header {
+      background: var(--bg-primary);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 16px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .header-inner {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 0 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 32px;
+    }
+    
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    
+    .logo {
+      height: 36px;
+      width: auto;
+    }
+    
+    .brand-text {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+    }
+    
+    .title-wrap {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      flex: 1;
+    }
+    
+    .page-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0;
+    }
+    
+    .subtitle {
+      font-size: 14px;
+      color: var(--text-tertiary);
+      font-weight: 400;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* ========== MAIN CONTAINER ========== */
+    
+    .container {
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 32px 40px 48px;
+    }
+
+    /* ========== WELCOME SECTION ========== */
+    
+    .welcome-section {
+      background: var(--bg-primary);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-subtle);
+    }
+    
+    .welcome-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    
+    .welcome-info h2 {
+      font-size: 22px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0 0 6px;
+    }
+    
+    .welcome-info p {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin: 0;
+      max-width: 600px;
+    }
+    
+    .welcome-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* ========== BUTTONS ========== */
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-medium);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: var(--transition);
+      white-space: nowrap;
+    }
+    
+    .btn:hover {
+      background: var(--bg-hover);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .btn-primary {
+      background: var(--accent-blue);
+      color: white;
+      border-color: var(--accent-blue);
+    }
+    
+    .btn-primary:hover {
+      background: var(--accent-blue-hover);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .btn-icon {
+      padding: 8px;
+      min-width: 36px;
+      justify-content: center;
+    }
+    
+    .btn-danger {
+      background: #E03E3E;
+      color: white;
+      border-color: #E03E3E;
+    }
+    
+    .btn-danger:hover {
+      background: #C92A2A;
+      box-shadow: var(--shadow-md);
+    }
+    
+    .btn-warning {
+      background: #FFB224;
+      color: white;
+      border-color: #FFB224;
+    }
+    
+    .btn-warning:hover {
+      background: #F59E0B;
+      box-shadow: var(--shadow-md);
+    }
+
+    .icon {
+      width: 18px;
+      height: 18px;
+      stroke-width: 2;
+    }
+
+    /* ========== DROPDOWN MENU ========== */
+    
+    .dropdown {
+      position: relative;
+    }
+    
+    .dropdown-content {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 4px);
+      background: var(--bg-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      min-width: 220px;
+      padding: 6px;
+      display: none;
+      z-index: 200;
+    }
+    
+    .dropdown.open .dropdown-content {
+      display: block;
+    }
+    
+    .dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 10px 12px;
+      border: none;
+      background: transparent;
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 400;
+      text-align: left;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    
+    .dropdown-item:hover {
+      background: var(--bg-hover);
+    }
+
+    /* ========== FILTER SECTION ========== */
+    
+    .filter-section {
+      background: var(--bg-primary);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--border-subtle);
+    }
+    
+    .filter-row {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 16px;
+      align-items: end;
+    }
+    
+    .filter-row-dates {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 16px;
+      align-items: end;
+      margin-top: 16px;
+    }
+    
+    @media (max-width: 1024px) {
+      .filter-row,
+      .filter-row-dates {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .filter-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+      display: block;
+    }
+    
+    .filter-input,
+    .filter-select {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 14px;
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      transition: var(--transition);
+    }
+    
+    .filter-input:focus,
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px var(--accent-blue-light);
+    }
+    
+    .filter-input::placeholder {
+      color: var(--text-tertiary);
+    }
+
+    /* ========== RESULTS META ========== */
+    
+    .results-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 16px 0 12px;
+      padding: 0 4px;
+    }
+    
+    .results-count {
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* ========== TABLE / LIST VIEW ========== */
+    
+    .data-list {
+      background: var(--bg-primary);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-subtle);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .data-list-header {
+      display: grid;
+      grid-template-columns: 140px 1fr 280px 120px 200px;
+      gap: 16px;
+      padding: 14px 20px;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    
+    .data-list-body {
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    
+    .data-list-row {
+      display: grid;
+      grid-template-columns: 140px 1fr 280px 120px 200px;
+      gap: 16px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      transition: var(--transition);
+      cursor: pointer;
+      align-items: center;
+    }
+    
+    .data-list-row:last-child {
+      border-bottom: none;
+    }
+    
+    .data-list-row:hover {
+      background: var(--bg-tertiary);
+    }
+    
+    @media (max-width: 1200px) {
+      .data-list-header,
+      .data-list-row {
+        grid-template-columns: 120px 1fr 180px 100px;
+      }
+      .data-list-header .col-updated,
+      .data-list-row .col-updated {
+        display: none;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .data-list-header {
+        display: none;
+      }
+      .data-list-row {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        padding: 16px;
+      }
+    }
+    
+    .ticket-link {
+      font-weight: 600;
+      color: var(--accent-blue);
+      text-decoration: none;
+      font-size: 14px;
+      transition: var(--transition);
+    }
+    
+    .ticket-link:hover {
+      color: var(--accent-blue-hover);
+      text-decoration: underline;
+    }
+    
+    .driver-name {
+      font-size: 14px;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+    
+    .email-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    
+    .updated-text {
+      font-size: 13px;
+      color: var(--text-tertiary);
+    }
+
+    /* ========== STATUS BADGE ========== */
+    
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 4px;
+      white-space: nowrap;
+    }
+    
+    .status-pending {
+      background: var(--status-pending-bg);
+      color: var(--status-pending);
+    }
+    
+    .status-done {
+      background: var(--status-done-bg);
+      color: var(--status-done);
+    }
+    
+    .status-other {
+      background: var(--status-other-bg);
+      color: var(--status-other);
+    }
+
+    /* ========== EMPTY STATE ========== */
+    
+    .empty-state {
+      padding: 64px 24px;
+      text-align: center;
+    }
+    
+    .empty-state-icon {
+      width: 64px;
+      height: 64px;
+      margin: 0 auto 16px;
+      color: var(--text-tertiary);
+      opacity: 0.5;
+    }
+    
+    .empty-state-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0 0 8px;
+    }
+    
+    .empty-state-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin: 0;
+    }
+
+    /* ========== MODAL ========== */
+    
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: none;
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow-y: auto;
+    }
+    
+    .modal.show {
+      display: flex;
+    }
+    
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 15, 15, 0.6);
+      backdrop-filter: blur(2px);
+      z-index: -1;
+    }
+    
+/* ========== MODAL ========== */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.modal.show {
+  display: flex;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 15, 15, 0.6);
+  backdrop-filter: blur(2px);
+  z-index: -1;
+}
+
+.modal-content {
+  position: relative;
+  width: 100%;
+  max-width: 880px;
+  max-height: 90vh;
+  background: var(--bg-primary);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+}
+
+.modal-header {
+  padding: 24px 28px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.modal-close {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 24px;
+  cursor: pointer;
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.modal-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.modal-body {
+  padding: 28px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.modal-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-body::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+.modal-body::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+  border-radius: 4px;
+}
+
+.modal-body::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+.modal-footer {
+  padding: 20px 28px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  background: var(--bg-tertiary);
+  flex-shrink: 0;
+}
+    
+
+    /* ========== FORM ========== */
+    
+    .form-grid {
+      display: grid;
+      gap: 20px;
+    }
+    
+    .form-grid-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .form-grid-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+    
+    @media (max-width: 768px) {
+      .form-grid-2,
+      .form-grid-3 {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .form-field {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .form-label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+    
+    .form-input,
+    .form-select {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 14px;
+      border: 1px solid var(--border-medium);
+      border-radius: var(--radius-md);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      transition: var(--transition);
+    }
+    
+    .form-input:focus,
+    .form-select:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px var(--accent-blue-light);
+    }
+    
+    .form-input:disabled,
+    .form-select:disabled {
+      background: var(--bg-tertiary);
+      color: var(--text-tertiary);
+      cursor: not-allowed;
+    }
+    
+    .form-note {
+      font-size: 13px;
+      color: var(--text-tertiary);
+      margin-top: 8px;
+    }
+    
+    .form-section {
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border-subtle);
+    }
+    
+    .form-section:first-child {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+    }
+    
+    .form-section-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0 0 16px;
+    }
+
+    /* ========== LOADING OVERLAY ========== */
+    
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+    }
+    
+    .loading-overlay.show {
+      display: flex;
+    }
+    
+    .loading-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 15, 15, 0.6);
+      backdrop-filter: blur(2px);
+    }
+    
+    .loading-panel {
+      position: relative;
+      background: var(--bg-primary);
+      border-radius: var(--radius-lg);
+      padding: 32px 40px;
+      min-width: 280px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+    
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border-subtle);
+      border-top-color: var(--accent-blue);
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .loading-text {
+      font-size: 14px;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* ========== FOOTER ========== */
+    
+    .site-footer {
+      background: var(--bg-primary);
+      border-top: 1px solid var(--border-subtle);
+      padding: 24px 0;
+      margin-top: 48px;
+    }
+    
+    .site-footer .container {
+      padding-bottom: 0;
+    }
+    
+    .site-footer small {
+      color: var(--text-tertiary);
+      font-size: 13px;
+    }
+
+    /* ========== UTILITIES ========== */
+    
+    .text-muted {
+      color: var(--text-secondary);
+    }
+    
+    .text-small {
+      font-size: 13px;
+    }
+    
+    .mt-1 { margin-top: 8px; }
+    .mt-2 { margin-top: 16px; }
+    .mt-3 { margin-top: 24px; }
+    .mb-1 { margin-bottom: 8px; }
+    .mb-2 { margin-bottom: 16px; }
+    .mb-3 { margin-bottom: 24px; }
+
+    @media (max-width: 768px) {
+      .header-inner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+        padding: 0 24px;
+      }
+      
+      .container {
+        padding: 24px 24px 48px;
+      }
+
+      .welcome-section {
+        padding: 20px;
+      }
+
+      .filter-section {
+        padding: 20px;
+      }
+
+      .title-wrap {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 <body>
+  <!-- Header -->
   <header class="site-header">
-    <div class="container header-inner" style="grid-template-columns:auto 1fr;">
+    <div class="header-inner">
       <div class="brand">
-        <img src="./assets/img/logo.png" class="logo" alt="Sixty – 3 logo">
-        <span class="brand-text">Sixty – 3 Trucking Inc</span>
+        <img src="./assets/img/logo.png" class="logo" alt="Sixty-3 logo">
+        <span class="brand-text">Sixty-3 Trucking Inc</span>
       </div>
-      <nav class="title-wrap" style="justify-content:flex-start;">
-        <h1 class="page-title" style="margin-right:8px;">Admin Console</h1>
+      <div class="title-wrap">
+        <h1 class="page-title">Admin Console</h1>
         <span class="subtitle">Manage driver tags</span>
-      </nav>
+      </div>
+      <div class="header-actions">
+        <button id="refreshBtn" class="btn btn-icon" title="Refresh">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+        </button>
+        
+        <div class="dropdown" id="actionsDropdown">
+          <button class="btn btn-icon" title="More actions">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z" />
+            </svg>
+          </button>
+          
+          <div class="dropdown-content">
+            <button type="button" class="dropdown-item" id="openAdd">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Add ticket
+            </button>
+            
+            <button type="button" class="dropdown-item" id="openUpload">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+              </svg>
+              Upload CSV
+            </button>
+            
+            <button type="button" class="dropdown-item" id="openTagLists">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
+              </svg>
+              Tag Lists
+            </button>
+            
+            <button type="button" class="dropdown-item" id="openDraftTickets">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10" />
+              </svg>
+              Draft Tickets
+            </button>
+            
+            <button type="button" class="dropdown-item" id="openUsers">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+              </svg>
+              Manage Users
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </header>
 
-  <main class="container" style="padding-bottom:28px;">
-    <section class="card admin-card" style="margin-top:22px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-        <div>
-          <h2 id="adminName" style="margin:0 0 6px;">Welcome, …</h2>
-          <p class="muted" style="margin:0;">Use filters to review Driver Tags. Click a Ticket # to preview/edit Admin Ticket data.</p>
-        </div>
-
-        <div class="toolbar">
-          <button id="refreshBtn" class="pill-btn" title="Refresh">↻ Refresh</button>
-          <div class="menu" id="kebab">
-            <button class="menu-btn" aria-haspopup="true" aria-expanded="false" title="More">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                  stroke-width="1.5" stroke="currentColor" class="icon">
-                <path stroke-linecap="round" stroke-linejoin="round"
-                      d="M3.75 6.75h16.5M3.75 12h16.5M12 17.25h8.25" />
-              </svg>
-            </button>
-
-            <div class="menu-list" role="menu" aria-label="Admin actions">
-  <button type="button" id="openAdd" role="menuitem">
-    <!-- Plus Circle -->
-    <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-    </svg>
-    Add ticket
-  </button>
-
-  <button type="button" id="openUpload" role="menuitem">
-    <!-- Arrow Up Tray -->
-    <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-        d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M16 12l-4-4m0 0l-4 4m4-4v12" />
-    </svg>
-    Upload CSV
-  </button>
-
-  <button type="button" id="openTagLists" role="menuitem">
-    <!-- Clipboard Document List -->
-    <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-        d="M9 5h6M9 3h6a2 2 0 012 2v1H7V5a2 2 0 012-2zM7 9h10M7 13h10M7 17h10" />
-    </svg>
-    Tag Lists
-  </button>
-
-  <button type="button" id="openDraftTickets" role="menuitem">
-  <!-- Pencil Square -->
-  <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-      d="M16.862 3.487a2.25 2.25 0 013.182 3.182L8.25 18.463 3 21l2.537-5.25L16.862 3.487z" />
-  </svg>
-  Draft Tickets
-</button>
-
-
-  <button type="button" id="openUsers" role="menuitem">
-    <!-- User -->
-    <svg xmlns="http://www.w3.org/2000/svg" class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-        d="M5.121 17.804A9 9 0 1112 21a9 9 0 01-6.879-3.196zM15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-    Manage Users
-  </button>
-</div>
-
-
-
-          </div>
+  <!-- Main Content -->
+  <main class="container">
+    <!-- Welcome Section -->
+    <section class="welcome-section">
+      <div class="welcome-header">
+        <div class="welcome-info">
+          <h2 id="adminName">Welcome, …</h2>
+          <p>Use filters to review Driver Tags. Click a ticket number to preview or edit admin ticket data.</p>
         </div>
       </div>
     </section>
 
-    <section class="card admin-card" style="margin-top:16px;">
-      <div style="display:grid;grid-template-columns:220px 1fr;gap:12px;align-items:end;">
-        <div>
-          <label for="statusSel">Status</label>
-          <select id="statusSel">
+    <!-- Filter Section -->
+    <section class="filter-section">
+      <div class="filter-row">
+        <div class="form-field">
+          <label class="filter-label" for="statusSel">Status</label>
+          <select id="statusSel" class="filter-select">
             <option value="all">All</option>
             <option value="pending" selected>Pending</option>
             <option value="done">Done</option>
           </select>
         </div>
-        <div>
-          <label for="searchBox">Search (ticket, driver, email, material)</label>
-          <input id="searchBox" type="search" placeholder="Search…">
+        <div class="form-field">
+          <label class="filter-label" for="searchBox">Search tickets, drivers, emails, or materials</label>
+          <input id="searchBox" type="search" class="filter-input" placeholder="Type to search...">
         </div>
       </div>
-      <!-- Date range filter -->
-        <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:12px;align-items:end;margin-top:8px;">
-          <div>
-            <label for="startDate">Start date (Updated)</label>
-            <input id="startDate" type="date" />
-          </div>
-          <div>
-            <label for="endDate">End date (Updated)</label>
-            <input id="endDate" type="date" />
-          </div>
-          <div>
-            <label style="visibility:hidden">Clear</label>
-            <button id="clearDates" type="button" class="pill-btn" title="Clear dates">Clear dates</button>
-          </div>
+      
+      <div class="filter-row-dates">
+        <div class="form-field">
+          <label class="filter-label" for="startDate">Start date (Updated)</label>
+          <input id="startDate" type="date" class="filter-input" />
         </div>
-
-
-      <div id="resultMeta" class="muted" style="margin:10px 0 6px;font-size:13px;">Showing 0 results</div>
-
-      <div class="table-card">
-        <div class="scroll-area">
-          <table aria-label="Driver tags table">
-            <thead>
-              <tr>
-                <th class="col-ticket">Ticket</th>
-                <th>Driver</th>
-                <th class="col-email">Email</th>
-                <th>Status</th>
-                <th class="col-updated">Updated</th>
-              </tr>
-            </thead>
-            <tbody id="rows">
-              <tr><td colspan="5" class="muted-small" style="text-align:center;">Loading…</td></tr>
-            </tbody>
-          </table>
+        <div class="form-field">
+          <label class="filter-label" for="endDate">End date (Updated)</label>
+          <input id="endDate" type="date" class="filter-input" />
+        </div>
+        <div class="form-field">
+          <label class="filter-label" style="visibility:hidden;">Clear</label>
+          <button id="clearDates" type="button" class="btn" title="Clear dates">Clear dates</button>
         </div>
       </div>
     </section>
+
+    <!-- Results -->
+    <div class="results-meta">
+      <span id="resultMeta" class="results-count">Showing 0 results</span>
+    </div>
+
+    <!-- Data List -->
+    <div class="data-list">
+      <div class="data-list-header">
+        <div>Ticket</div>
+        <div>Driver</div>
+        <div>Email</div>
+        <div>Status</div>
+        <div class="col-updated">Updated</div>
+      </div>
+      <div class="data-list-body">
+        <div id="dataRows">
+          <!-- Rows will be inserted here -->
+        </div>
+      </div>
+    </div>
   </main>
 
+  <!-- Footer -->
   <footer class="site-footer">
     <div class="container">
-      <small>© <span id="y"></span> Sixty – 3 Trucking Inc</small>
+      <small>© <span id="footerYear"></span> Sixty-3 Trucking Inc</small>
     </div>
   </footer>
 
   <!-- Add Ticket Modal -->
   <div id="addModal" class="modal" aria-hidden="true">
-    <div class="backdrop" data-close></div>
-    <div class="sheet">
-      <button class="close" data-close aria-label="Close">&times;</button>
-      <h3 style="margin:0 0 12px;">Add Ticket</h3>
-
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Add Ticket</h3>
+        <button class="modal-close" data-close aria-label="Close">&times;</button>
+      </div>
+      
       <form id="addForm" autocomplete="off">
-        <div class="grid3">
-          <div>
-            <label>Date</label>
-            <input type="date" name="date" required>
+        <div class="modal-body">
+          <div class="form-section">
+            <h4 class="form-section-title">Basic Information</h4>
+            <div class="form-grid form-grid-3">
+              <div class="form-field">
+                <label class="form-label">Date *</label>
+                <input type="date" name="date" class="form-input" required>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Ticket No *</label>
+                <input type="text" name="ticketNo" class="form-input" required placeholder="e.g., 49250">
+              </div>
+              <div class="form-field">
+                <label class="form-label">Driver Name *</label>
+                <select name="driverName" id="driverSel" class="form-select" required>
+                  <option value="">Loading…</option>
+                </select>
+              </div>
+            </div>
           </div>
-          <div>
-            <label>Ticket No</label>
-            <input type="text" name="ticketNo" required placeholder="e.g., 49250">
+
+          <div class="form-section">
+            <h4 class="form-section-title">Truck Details</h4>
+            <div class="form-grid form-grid-3">
+              <div class="form-field">
+                <label class="form-label">Truck Start</label>
+                <input type="text" name="truckStart" class="form-input" placeholder="e.g., 7:00 AM">
+              </div>
+              <div class="form-field">
+                <label class="form-label">Truck No</label>
+                <input type="text" name="truckNo" class="form-input" placeholder="e.g., 21">
+              </div>
+              <div class="form-field">
+                <label class="form-label">Trailer Type</label>
+                <select name="trailerType" id="trailerSel" class="form-select">
+                  <option value="">Loading…</option>
+                </select>
+              </div>
+            </div>
           </div>
-          <div>
-            <label>Driver Name</label>
-            <select name="driverName" id="driverSel" required>
-              <option value="">Loading…</option>
-            </select>
+
+          <div class="form-section">
+            <h4 class="form-section-title">Carrier Information</h4>
+            <div class="form-grid form-grid-2">
+              <div class="form-field">
+                <label class="form-label">Sub Hauler</label>
+                <input type="text" name="subHauler" class="form-input">
+              </div>
+              <div class="form-field">
+                <label class="form-label">Prime Carrier</label>
+                <input type="text" name="primeCarrier" class="form-input" value="Sixty-3 Trucking">
+              </div>
+            </div>
           </div>
+
+          <div class="form-section">
+            <h4 class="form-section-title">Origin & Destination</h4>
+            <div class="form-grid form-grid-2 mb-2">
+              <div class="form-field">
+                <label class="form-label">Shipper</label>
+                <input type="text" name="shipper" class="form-input">
+              </div>
+              <div class="form-field">
+                <label class="form-label">Point of Origin</label>
+                <input type="text" name="origin" class="form-input">
+              </div>
+            </div>
+            
+            <div class="form-grid form-grid-3 mb-2">
+              <div class="form-field">
+                <label class="form-label">Origin City</label>
+                <input type="text" name="originCity" class="form-input" placeholder="e.g., San Francisco">
+              </div>
+              <div class="form-field">
+                <label class="form-label">Destination</label>
+                <input type="text" name="destination" class="form-input" placeholder="e.g., (Unloaded at) 5">
+              </div>
+              <div class="form-field">
+                <label class="form-label">Destination City</label>
+                <input type="text" name="city" class="form-input" placeholder="e.g., San Francisco">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4 class="form-section-title">Job Information</h4>
+            <div class="form-grid form-grid-3">
+              <div class="form-field">
+                <label class="form-label">PO No</label>
+                <input type="text" name="poNo" class="form-input">
+              </div>
+              <div class="form-field">
+                <label class="form-label">Job Name</label>
+                <input type="text" name="jobName" class="form-input">
+              </div>
+              <div class="form-field">
+                <label class="form-label">Job No</label>
+                <input type="text" name="jobNo" class="form-input">
+              </div>
+            </div>
+          </div>
+
+          <p class="form-note">Note: Email is linked to the driver's account automatically.</p>
         </div>
-
-        <div class="grid3" style="margin-top:10px;">
-          <div>
-            <label>Truck Start</label>
-            <input type="text" name="truckStart" placeholder="e.g., 7:00 AM">
-          </div>
-          <div>
-            <label>Truck No</label>
-            <input type="text" name="truckNo" placeholder="e.g., 21">
-          </div>
-          <div>
-            <label>Trailer Type</label>
-            <select name="trailerType" id="trailerSel">
-              <option value="">Loading…</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="grid2" style="margin-top:10px;">
-          <div>
-            <label>Sub Hauler</label>
-            <input type="text" name="subHauler">
-          </div>
-          <div>
-            <label>Prime Carrier</label>
-            <input type="text" name="primeCarrier" value="Sixty-3 Trucking">
-          </div>
-        </div>
-
-        <div class="grid2" style="margin-top:10px;">
-          <div>
-            <label>Shipper</label>
-            <input type="text" name="shipper">
-          </div>
-          <div>
-            <label>Point of Origin</label>
-            <input type="text" name="origin">
-          </div>
-        </div>
-
-        <div class="grid3" style="margin-top:10px;">
-          <div>
-            <label>Origin City</label>
-            <input type="text" name="originCity" placeholder="e.g., San Francisco">
-          </div>
-          <div>
-            <label>PO No</label>
-            <input type="text" name="poNo">
-          </div>
-          <div>
-            <label>Job Name</label>
-            <input type="text" name="jobName">
-          </div>
-        </div>
-
-        <div class="grid3" style="margin-top:10px;">
-          <div>
-            <label>Job No</label>
-            <input type="text" name="jobNo">
-          </div>
-          <div>
-            <label>Destination</label>
-            <input type="text" name="destination" placeholder="e.g., (Unloaded at) 5">
-          </div>
-          <div>
-            <label>Destination City</label>
-            <input type="text" name="city" placeholder="e.g., San Francisco">
-          </div>
-        </div>
-
-        <p class="muted-small" style="margin:8px 0 0;">Note: Email is linked to the driver’s account automatically.</p>
-
-        <div class="actions">
+        
+        <div class="modal-footer">
           <button type="button" class="btn" data-close>Cancel</button>
           <button type="submit" class="btn btn-primary">Save Ticket</button>
         </div>
@@ -317,115 +1126,134 @@
 
   <!-- View/Edit Ticket Modal -->
   <div id="viewModal" class="modal" aria-hidden="true">
-    <div class="backdrop" data-close></div>
-    <div class="sheet">
-      <button class="close" data-close aria-label="Close">&times;</button>
-      <h3 style="margin:0 0 12px;">Ticket <span id="viewId">—</span></h3>
-
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Ticket <span id="viewId">—</span></h3>
+        <button class="modal-close" data-close aria-label="Close">&times;</button>
+      </div>
+      
       <form id="viewForm" autocomplete="off">
-        <div class="grid3">
-          <div>
-            <label>Date</label>
-            <input type="date" name="date" required disabled>
+        <div class="modal-body">
+          <div class="form-section">
+            <h4 class="form-section-title">Basic Information</h4>
+            <div class="form-grid form-grid-3">
+              <div class="form-field">
+                <label class="form-label">Date *</label>
+                <input type="date" name="date" class="form-input" required disabled>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Ticket No *</label>
+                <input type="text" name="ticketNo" class="form-input" required disabled>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Driver Name *</label>
+                <select name="driverName" id="viewDriverSel" class="form-select" required disabled>
+                  <option value="">Loading…</option>
+                </select>
+              </div>
+            </div>
           </div>
-          <div>
-            <label>Ticket No</label>
-            <input type="text" name="ticketNo" required disabled>
+
+          <div class="form-section">
+            <h4 class="form-section-title">Truck Details</h4>
+            <div class="form-grid form-grid-3">
+              <div class="form-field">
+                <label class="form-label">Truck Start</label>
+                <input type="text" name="truckStart" class="form-input" disabled>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Truck No</label>
+                <input type="text" name="truckNo" class="form-input" disabled>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Trailer Type</label>
+                <select name="trailerType" id="viewTrailerSel" class="form-select" disabled>
+                  <option value="">Loading…</option>
+                </select>
+              </div>
+            </div>
           </div>
-          <div>
-            <label>Driver Name</label>
-            <select name="driverName" id="viewDriverSel" required disabled>
-              <option value="">Loading…</option>
-            </select>
+
+          <div class="form-section">
+            <h4 class="form-section-title">Carrier Information</h4>
+            <div class="form-grid form-grid-2">
+              <div class="form-field">
+                <label class="form-label">Sub Hauler</label>
+                <input type="text" name="subHauler" class="form-input" disabled>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Prime Carrier</label>
+                <input type="text" name="primeCarrier" class="form-input" disabled>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4 class="form-section-title">Origin & Destination</h4>
+            <div class="form-grid form-grid-2 mb-2">
+              <div class="form-field">
+                <label class="form-label">Shipper</label>
+                <input type="text" name="shipper" class="form-input" disabled>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Point of Origin</label>
+                <input type="text" name="origin" class="form-input" disabled>
+              </div>
+            </div>
+            
+            <div class="form-grid form-grid-3 mb-2">
+              <div class="form-field">
+                <label class="form-label">Origin City</label>
+                <input type="text" name="originCity" class="form-input" disabled>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Destination</label>
+                <input type="text" name="destination" class="form-input" disabled>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Destination City</label>
+                <input type="text" name="city" class="form-input" disabled>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h4 class="form-section-title">Job Information</h4>
+            <div class="form-grid form-grid-3">
+              <div class="form-field">
+                <label class="form-label">PO No</label>
+                <input type="text" name="poNo" class="form-input" disabled>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Job Name</label>
+                <input type="text" name="jobName" class="form-input" disabled>
+              </div>
+              <div class="form-field">
+                <label class="form-label">Job No</label>
+                <input type="text" name="jobNo" class="form-input" disabled>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div class="grid3" style="margin-top:10px;">
-          <div>
-            <label>Truck Start</label>
-            <input type="text" name="truckStart" disabled>
-          </div>
-          <div>
-            <label>Truck No</label>
-            <input type="text" name="truckNo" disabled>
-          </div>
-          <div>
-            <label>Trailer Type</label>
-            <select name="trailerType" id="viewTrailerSel" disabled>
-              <option value="">Loading…</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="grid2" style="margin-top:10px;">
-          <div>
-            <label>Sub Hauler</label>
-            <input type="text" name="subHauler" disabled>
-          </div>
-          <div>
-            <label>Prime Carrier</label>
-            <input type="text" name="primeCarrier" disabled>
-          </div>
-        </div>
-
-        <div class="grid2" style="margin-top:10px;">
-          <div>
-            <label>Shipper</label>
-            <input type="text" name="shipper" disabled>
-          </div>
-          <div>
-            <label>Point of Origin</label>
-            <input type="text" name="origin" disabled>
-          </div>
-        </div>
-
-        <div class="grid3" style="margin-top:10px;">
-          <div>
-            <label>Origin City</label>
-            <input type="text" name="originCity" disabled>
-          </div>
-          <div>
-            <label>PO No</label>
-            <input type="text" name="poNo" disabled>
-          </div>
-          <div>
-            <label>Job Name</label>
-            <input type="text" name="jobName" disabled>
-          </div>
-        </div>
-
-        <div class="grid3" style="margin-top:10px;">
-          <div>
-            <label>Job No</label>
-            <input type="text" name="jobNo" disabled>
-          </div>
-          <div>
-            <label>Destination</label>
-            <input type="text" name="destination" disabled>
-          </div>
-          <div>
-            <label>Destination City</label>
-            <input type="text" name="city" disabled>
-          </div>
-        </div>
-
-        <div class="actions">
-          <button type="button" id="deleteBtn" class="btn danger">Delete</button>
+        
+        <div class="modal-footer">
+          <button type="button" id="deleteBtn" class="btn btn-danger">Delete</button>
           <span style="flex:1"></span>
-          <button type="button" id="editBtn" class="btn warn">Edit</button>
-          <button type="submit" id="saveBtn" class="btn btn-primary" style="display:none">Save</button>
+          <button type="button" id="editBtn" class="btn btn-warning">Edit</button>
+          <button type="submit" id="saveBtn" class="btn btn-primary" style="display:none">Save Changes</button>
           <button type="button" id="cancelEditBtn" class="btn" style="display:none">Cancel</button>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- Loading overlay -->
-  <div id="loading" aria-hidden="true">
-    <div class="backdrop"></div>
-    <div class="panel" role="dialog" aria-live="polite">
-      <div class="spinner"></div>
-      <div id="loadingMsg" class="muted-small">Working…</div>
+  <!-- Loading Overlay -->
+  <div id="loading" class="loading-overlay" aria-hidden="true">
+    <div class="loading-backdrop"></div>
+    <div class="loading-panel" role="dialog" aria-live="polite">
+      <div class="loading-spinner"></div>
+      <div id="loadingMsg" class="loading-text">Working…</div>
     </div>
   </div>
 
@@ -433,147 +1261,174 @@
   <input id="csvInput" type="file" accept=".csv,text/csv" style="display:none" />
 
   <script>
-    document.getElementById('y').textContent = new Date().getFullYear();
+    // Set footer year
+    document.getElementById('footerYear').textContent = new Date().getFullYear();
 
-    // ---------- tiny helpers ----------
-    const $  = (s, root=document) => root.querySelector(s);
-    const $$ = (s, root=document) => Array.from(root.querySelectorAll(s));
+    // ---------- Utility Functions ----------
+    const $ = (s, root = document) => root.querySelector(s);
+    const $$ = (s, root = document) => Array.from(root.querySelectorAll(s));
     const ltrim = (v) => String(v ?? '').trim().toLowerCase();
 
-    function fmtDateTime(t){
+    function fmtDateTime(t) {
       if (!t) return '';
       const d = new Date(t);
       if (isNaN(d)) return String(t);
-      return d.toLocaleString([], {year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+      return d.toLocaleString([], { 
+        year: 'numeric', 
+        month: 'short', 
+        day: '2-digit', 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
     }
-    function toISODate(s){
+
+    function toISODate(s) {
       if (!s) return '';
       const d = new Date(s);
       if (!isNaN(d)) {
-        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       }
       const m = String(s).match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
-      if (m) { const [_, mm, dd, yyyy] = m; return `${yyyy.padStart(4,'20')}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; }
+      if (m) {
+        const [_, mm, dd, yyyy] = m;
+        return `${yyyy.padStart(4, '20')}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`;
+      }
       return '';
     }
-    function statusBadge(s){
+
+    function statusBadgeHTML(s) {
       const k = ltrim(s);
-      const cls = k==='pending' ? 'badge-pending' : k==='done' ? 'badge-done' : 'badge-other';
-      return `<span class="badge ${cls}">${s || '-'}</span>`;
+      const cls = k === 'pending' ? 'status-pending' : k === 'done' ? 'status-done' : 'status-other';
+      return `<span class="status-badge ${cls}">${s || '-'}</span>`;
     }
-    function setOpen(modal, on=true){
+
+    function setOpen(modal, on = true) {
       modal.classList.toggle('show', on);
       modal.setAttribute('aria-hidden', on ? 'false' : 'true');
     }
-    function v(obj, ...keys){
-      for (const k of keys){
+
+    function v(obj, ...keys) {
+      for (const k of keys) {
         const val = obj?.[k];
         if (val !== undefined && String(val).trim() !== '') return String(val);
       }
       return '';
     }
-    function setSelectValue(sel, value){
+
+    function setSelectValue(sel, value) {
       if (!sel) return;
       const val = String(value || '');
       const has = Array.from(sel.options).some(o => o.value === val);
-      if (val && !has){
+      if (val && !has) {
         const opt = document.createElement('option');
-        opt.value = val; opt.textContent = val;
+        opt.value = val;
+        opt.textContent = val;
         sel.appendChild(opt);
       }
       sel.value = val;
     }
 
-    // Loading overlay helpers
-    function showLoading(msg='Working…'){
+    function showLoading(msg = 'Working…') {
       $('#loadingMsg').textContent = msg;
       $('#loading').classList.add('show');
-      $('#loading').setAttribute('aria-hidden','false');
-    }
-    function hideLoading(){
-      $('#loading').classList.remove('show');
-      $('#loading').setAttribute('aria-hidden','true');
+      $('#loading').setAttribute('aria-hidden', 'false');
     }
 
-    // ---------- state ----------
+    function hideLoading() {
+      $('#loading').classList.remove('show');
+      $('#loading').setAttribute('aria-hidden', 'true');
+    }
+
+    function toMidnightTS(iso) {
+      if (!iso) return null;
+      const d = new Date(iso + 'T00:00:00');
+      return isNaN(d) ? null : d.getTime();
+    }
+
+    function endOfDayTS(iso) {
+      const t = toMidnightTS(iso);
+      return t == null ? null : (t + 24 * 60 * 60 * 1000 - 1);
+    }
+
+    // ---------- State ----------
     let TAGS = [];
     let VIEW = [];
     let CURRENT_TICKET = null;
 
-    // ---------- filters & table ----------
-    function applyFilters(){
-  const q  = ltrim($('#searchBox').value);
-  const st = $('#statusSel').value;
+    // ---------- Filters & Table ----------
+    function applyFilters() {
+      const q = ltrim($('#searchBox').value);
+      const st = $('#statusSel').value;
+      const startTS = toMidnightTS($('#startDate').value);
+      const endTS = endOfDayTS($('#endDate').value);
 
-  const startTS = toMidnightTS($('#startDate').value); // may be null
-  const endTS   = endOfDayTS($('#endDate').value);     // may be null
+      VIEW = TAGS.filter(row => {
+        const statusOk = st === 'all' ? true : (ltrim(row.status) === st);
+        if (!statusOk) return false;
 
-  VIEW = TAGS.filter(row => {
-    // status
-    const statusOk = st === 'all' ? true : (ltrim(row.status) === st);
-    if (!statusOk) return false;
+        if (q) {
+          const hay = [
+            row.ticketNo || row.id || '',
+            row.driverName || '',
+            row.email || '',
+            row.material || '',
+          ].join(' ').toLowerCase();
+          if (!hay.includes(q)) return false;
+        }
 
-    // search text (ticket/driver/email/material)
-    if (q){
-      const hay = [
-        row.ticketNo || row.id || '',
-        row.driverName || '',
-        row.email || '',
-        row.material || '',
-      ].join(' ').toLowerCase();
-      if (!hay.includes(q)) return false;
+        const u = row.updatedAt || row.UpdatedAt || '';
+        if (startTS != null || endTS != null) {
+          const ts = isNaN(new Date(u)) ? null : new Date(u).getTime();
+          if (ts == null) return false;
+          if (startTS != null && ts < startTS) return false;
+          if (endTS != null && ts > endTS) return false;
+        }
+
+        return true;
+      });
+
+      renderRows();
     }
 
-    // date window (uses updatedAt; keep rows with no updatedAt if no dates set)
-    const u = row.updatedAt || row.UpdatedAt || '';
-    if (startTS != null || endTS != null){
-      const ts = isNaN(new Date(u)) ? null : new Date(u).getTime();
-      if (ts == null) return false; // if filtering by date, skip rows without a valid date
-      if (startTS != null && ts < startTS) return false;
-      if (endTS   != null && ts > endTS)   return false;
-    }
-
-    return true;
-  });
-
-  renderRows();
-}
-
-    function toMidnightTS(iso){ // "YYYY-MM-DD" -> timestamp at 00:00 local
-        if (!iso) return null;
-        const d = new Date(iso + 'T00:00:00');
-        return isNaN(d) ? null : d.getTime();
-      }
-      function endOfDayTS(iso){  // inclusive end-of-day
-        const t = toMidnightTS(iso);
-        return t == null ? null : (t + 24*60*60*1000 - 1);
-      }
-
-
-    function renderRows(){
-      const tb = $('#rows');
-      if (!VIEW.length){
-        tb.innerHTML = `<tr><td colspan="5" class="muted-small" style="text-align:center;">No results.</td></tr>`;
+    function renderRows() {
+      const container = $('#dataRows');
+      if (!VIEW.length) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <svg class="empty-state-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+            </svg>
+            <h3 class="empty-state-title">No results found</h3>
+            <p class="empty-state-text">Try adjusting your filters or search query</p>
+          </div>
+        `;
         $('#resultMeta').textContent = 'Showing 0 results';
         return;
       }
-      tb.innerHTML = VIEW.map(r => `
-        <tr>
-          <td class="col-ticket"><a href="#" class="ticket-link" data-id="${(r.ticketNo||r.id||'').toString().replace(/"/g,'&quot;')}">${r.ticketNo || r.id || '-'}</a></td>
-          <td>${r.driverName || '-'}</td>
-          <td class="col-email">${r.email || '-'}</td>
-          <td class="status-cell">${statusBadge(r.status || '-')}</td>
-          <td class="col-updated">${fmtDateTime(r.updatedAt || r.UpdatedAt || '')}</td>
-        </tr>
+
+      container.innerHTML = VIEW.map(r => `
+        <div class="data-list-row" data-id="${(r.ticketNo || r.id || '').toString().replace(/"/g, '&quot;')}">
+          <div>
+            <a href="#" class="ticket-link" data-id="${(r.ticketNo || r.id || '').toString().replace(/"/g, '&quot;')}">${r.ticketNo || r.id || '-'}</a>
+          </div>
+          <div class="driver-name">${r.driverName || '-'}</div>
+          <div class="email-text">${r.email || '-'}</div>
+          <div>${statusBadgeHTML(r.status || '-')}</div>
+          <div class="col-updated updated-text">${fmtDateTime(r.updatedAt || r.UpdatedAt || '')}</div>
+        </div>
       `).join('');
-      $('#resultMeta').textContent = `Showing ${VIEW.length} result${VIEW.length>1?'s':''}`;
+
+      $('#resultMeta').textContent = `Showing ${VIEW.length} result${VIEW.length > 1 ? 's' : ''}`;
     }
 
-    async function loadTable(){
+    async function loadTable() {
       try {
         showLoading('Loading data…');
         const r = await fetch('/api/admin/tags');
-        if (r.status === 401 || r.status === 403) { location.href = '/'; return; }
+        if (r.status === 401 || r.status === 403) {
+          location.href = '/';
+          return;
+        }
         const j = await r.json();
         const p = j.profile || {};
         $('#adminName').textContent = `Welcome, ${p.fullName || p.name || p.email || 'Admin'}`;
@@ -590,7 +1445,7 @@
 
         $('#statusSel').value = 'pending';
         applyFilters();
-      } catch (e){
+      } catch (e) {
         console.error(e);
         alert('Failed to load table.');
       } finally {
@@ -598,56 +1453,77 @@
       }
     }
 
-    // ---------- meta dropdowns ----------
-    async function loadMeta(selectIds = {driver:'#driverSel', trailer:'#trailerSel'}){
+    // ---------- Meta Dropdowns ----------
+    async function loadMeta(selectIds = { driver: '#driverSel', trailer: '#trailerSel' }) {
       const r = await fetch('/api/admin/meta');
-      if (r.status === 401 || r.status === 403) { location.href = '/'; return; }
+      if (r.status === 401 || r.status === 403) {
+        location.href = '/';
+        return;
+      }
       const j = await r.json();
       const drivers = Array.isArray(j.drivers) ? j.drivers : [];
-      const types   = Array.isArray(j.trailerTypes) ? j.trailerTypes : [];
+      const types = Array.isArray(j.trailerTypes) ? j.trailerTypes : [];
 
       const dSel = $(selectIds.driver);
       const tSel = $(selectIds.trailer);
 
       if (dSel) {
         dSel.innerHTML = `<option value="">Select driver…</option>` +
-          drivers.map(n => `<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('');
+  drivers.map(n => `<option value="${n.replace(/"/g, '&quot;')}">${n}</option>`).join('');
       }
       if (tSel) {
         tSel.innerHTML = `<option value="">Select type…</option>` +
-          types.map(n => `<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('');
+  types.map(n => `<option value="${n.replace(/"/g, '&quot;')}">${n}</option>`).join('');
       }
     }
 
-    // ---------- menu & open add ----------
-    const kebab = $('#kebab');
-    kebab.querySelector('.menu-btn').addEventListener('click', () => {
-      kebab.classList.toggle('open');
-      kebab.querySelector('.menu-btn').setAttribute('aria-expanded', kebab.classList.contains('open') ? 'true' : 'false');
+    // ---------- Dropdown Menu ----------
+    const actionsDropdown = $('#actionsDropdown');
+    actionsDropdown.addEventListener('click', (e) => {
+      if (e.target.closest('.btn')) {
+        actionsDropdown.classList.toggle('open');
+      }
     });
-    document.addEventListener('click', (e) => { if (!kebab.contains(e.target)) kebab.classList.remove('open'); });
 
+    document.addEventListener('click', (e) => {
+      if (!actionsDropdown.contains(e.target)) {
+        actionsDropdown.classList.remove('open');
+      }
+    });
+
+    // ---------- Add Ticket ----------
     $('#openAdd').addEventListener('click', async () => {
-      kebab.classList.remove('open');
-      await loadMeta({driver:'#driverSel', trailer:'#trailerSel'});
+      actionsDropdown.classList.remove('open');
+      await loadMeta({ driver: '#driverSel', trailer: '#trailerSel' });
       $('#addForm').reset();
       const d = new Date();
-      const yyyy = d.getFullYear(), mm = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
       $('#addForm').date.value = `${yyyy}-${mm}-${dd}`;
       setOpen($('#addModal'), true);
     });
 
-    $$('#addModal [data-close]').forEach(el => el.addEventListener('click', () => setOpen($('#addModal'), false)));
+    $$('#addModal [data-close]').forEach(el => {
+      el.addEventListener('click', () => setOpen($('#addModal'), false));
+    });
 
     $('#addForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
       const body = Object.fromEntries(fd.entries());
-      if (!body.date || !body.ticketNo || !body.driverName) { alert('Date, Ticket No and Driver Name are required.'); return; }
+      if (!body.date || !body.ticketNo || !body.driverName) {
+        alert('Date, Ticket No and Driver Name are required.');
+        return;
+      }
 
       try {
         showLoading('Saving ticket…');
-        const r = await fetch('/api/admin/tickets', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+        const r = await fetch('/api/admin/tickets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
         const j = await r.json();
         if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to add ticket');
         setOpen($('#addModal'), false);
@@ -661,68 +1537,83 @@
       }
     });
 
-    document.getElementById('openTagLists').addEventListener('click', () => {
-    kebab.classList.remove('open');
-    location.href = '/tag-lists';
-  });
-  document.getElementById('openUsers').addEventListener('click', () => {
-    kebab.classList.remove('open');
-    location.href = '/admin/users';
-  });
-
-  document.getElementById('openDraftTickets').addEventListener('click', () => {
-    kebab.classList.remove('open');
-    location.href = '/draft-tickets';
-  });
-
-
-
-    // ---------- click ticket → view/edit ----------
-    $('#rows').addEventListener('click', async (e) => {
-      const a = e.target.closest('.ticket-link');
-      if (!a) return;
-      e.preventDefault();
-      await openView(a.dataset.id);
+    // ---------- Navigation Links ----------
+    $('#openTagLists').addEventListener('click', () => {
+      actionsDropdown.classList.remove('open');
+      location.href = '/tag-lists';
     });
 
-    async function openView(ticketId){
+    $('#openUsers').addEventListener('click', () => {
+      actionsDropdown.classList.remove('open');
+      location.href = '/admin/users';
+    });
+
+    $('#openDraftTickets').addEventListener('click', () => {
+      actionsDropdown.classList.remove('open');
+      location.href = '/draft-tickets';
+    });
+
+    // ---------- View/Edit Ticket ----------
+    $('#dataRows').addEventListener('click', async (e) => {
+      const link = e.target.closest('.ticket-link');
+      if (link) {
+        e.preventDefault();
+        await openView(link.dataset.id);
+        return;
+      }
+
+      const row = e.target.closest('.data-list-row');
+      if (row && !e.target.closest('.ticket-link')) {
+        await openView(row.dataset.id);
+      }
+    });
+
+    async function openView(ticketId) {
       CURRENT_TICKET = ticketId;
-      await loadMeta({driver:'#viewDriverSel', trailer:'#viewTrailerSel'});
+      await loadMeta({ driver: '#viewDriverSel', trailer: '#viewTrailerSel' });
       const r = await fetch(`/api/admin/tickets/${encodeURIComponent(ticketId)}`);
-      if (r.status === 401 || r.status === 403) { location.href = '/'; return; }
+      if (r.status === 401 || r.status === 403) {
+        location.href = '/';
+        return;
+      }
       const j = await r.json();
-      if (!j.ok) { alert(j.message || 'Not found'); return; }
+      if (!j.ok) {
+        alert(j.message || 'Not found');
+        return;
+      }
       $('#viewId').textContent = ticketId;
       fillViewForm(j.ticket);
       setViewMode(true);
       setOpen($('#viewModal'), true);
     }
 
-    function fillViewForm(t = {}){
+    function fillViewForm(t = {}) {
       const f = $('#viewForm');
-      f.date.value        = toISODate(v(t,'Date'));
-      f.ticketNo.value    = v(t,'Ticket No','Ticket No.');
-      setSelectValue($('#viewDriverSel'), v(t,'Driver Name','Driver'));
+      f.date.value = toISODate(v(t, 'Date'));
+      f.ticketNo.value = v(t, 'Ticket No', 'Ticket No.');
+      setSelectValue($('#viewDriverSel'), v(t, 'Driver Name', 'Driver'));
 
-      f.truckStart.value  = v(t,'Truck Start');
-      f.truckNo.value     = v(t,'Truck No');
-      setSelectValue($('#viewTrailerSel'), v(t,'Trailer Type','Trailer type','Trailer'));
+      f.truckStart.value = v(t, 'Truck Start');
+      f.truckNo.value = v(t, 'Truck No');
+      setSelectValue($('#viewTrailerSel'), v(t, 'Trailer Type', 'Trailer type', 'Trailer'));
 
-      f.subHauler.value   = v(t,'Sub Hauler');
-      f.primeCarrier.value= v(t,'Prime Carrier');
-      f.shipper.value     = v(t,'Shipper');
-      f.origin.value      = v(t,'Point of Origin');
+      f.subHauler.value = v(t, 'Sub Hauler');
+      f.primeCarrier.value = v(t, 'Prime Carrier');
+      f.shipper.value = v(t, 'Shipper');
+      f.origin.value = v(t, 'Point of Origin');
 
-      f.originCity.value  = v(t,'Origin City','City');
-      f.poNo.value        = v(t,'PO No','PO#','PO no');
-      f.jobName.value     = v(t,'Job Name');
-      f.jobNo.value       = v(t,'Job No');
-      f.destination.value = v(t,'Destination');
-      f.city.value        = v(t,'City');
+      f.originCity.value = v(t, 'Origin City', 'City');
+      f.poNo.value = v(t, 'PO No', 'PO#', 'PO no');
+      f.jobName.value = v(t, 'Job Name');
+      f.jobNo.value = v(t, 'Job No');
+      f.destination.value = v(t, 'Destination');
+      f.city.value = v(t, 'City');
     }
 
-    function setViewMode(locked){
-      $$('#viewForm input, #viewForm select').forEach(el => { el.disabled = locked; });
+    function setViewMode(locked) {
+      $$('#viewForm input, #viewForm select').forEach(el => {
+        el.disabled = locked;
+      });
       $('#viewForm').ticketNo.disabled = true;
       $('#editBtn').style.display = locked ? 'inline-flex' : 'none';
       $('#saveBtn').style.display = locked ? 'none' : 'inline-flex';
@@ -730,21 +1621,31 @@
     }
 
     $('#editBtn').addEventListener('click', () => setViewMode(false));
-    $('#cancelEditBtn').addEventListener('click', () => { setViewMode(true); if (CURRENT_TICKET) openView(CURRENT_TICKET); });
-    $$('#viewModal [data-close]').forEach(el => el.addEventListener('click', () => setOpen($('#viewModal'), false)));
+
+    $('#cancelEditBtn').addEventListener('click', () => {
+      setViewMode(true);
+      if (CURRENT_TICKET) openView(CURRENT_TICKET);
+    });
+
+    $$('#viewModal [data-close]').forEach(el => {
+      el.addEventListener('click', () => setOpen($('#viewModal'), false));
+    });
 
     $('#viewForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!CURRENT_TICKET) return;
       const fd = new FormData(e.target);
       const body = Object.fromEntries(fd.entries());
-      if (!body.date || !body.driverName) { alert('Date and Driver Name are required.'); return; }
+      if (!body.date || !body.driverName) {
+        alert('Date and Driver Name are required.');
+        return;
+      }
 
       try {
         showLoading('Updating ticket…');
         const r = await fetch(`/api/admin/tickets/${encodeURIComponent(CURRENT_TICKET)}`, {
           method: 'PUT',
-          headers: {'Content-Type':'application/json'},
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(body)
         });
         const j = await r.json();
@@ -766,7 +1667,9 @@
       if (!confirm(`Delete ticket ${CURRENT_TICKET}? This also removes its Driver stub.`)) return;
       try {
         showLoading('Deleting…');
-        const r = await fetch(`/api/admin/tickets/${encodeURIComponent(CURRENT_TICKET)}`, { method:'DELETE' });
+        const r = await fetch(`/api/admin/tickets/${encodeURIComponent(CURRENT_TICKET)}`, {
+          method: 'DELETE'
+        });
         const j = await r.json();
         if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to delete');
         setOpen($('#viewModal'), false);
@@ -780,9 +1683,9 @@
       }
     });
 
-    // ---------- CSV upload ----------
+    // ---------- CSV Upload ----------
     $('#openUpload').addEventListener('click', () => {
-      kebab.classList.remove('open');
+      actionsDropdown.classList.remove('open');
       $('#csvInput').value = '';
       $('#csvInput').click();
     });
@@ -798,13 +1701,13 @@
         const text = await file.text();
         const r = await fetch('/api/admin/import-csv', {
           method: 'POST',
-          headers: {'Content-Type': 'application/json'},
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ csv: text })
         });
         const j = await r.json();
         if (!r.ok || j.ok === false) throw new Error(j.message || 'Import failed.');
         const s = j.summary || {};
-        alert(`Import complete.\nAdded: ${s.added||0}\nUpdated: ${s.updated||0}\nSkipped (Carrier present): ${s.skippedCarrier||0}\nInvalid rows: ${s.invalid||0}`);
+        alert(`Import complete.\nAdded: ${s.added || 0}\nUpdated: ${s.updated || 0}\nSkipped (Carrier present): ${s.skippedCarrier || 0}\nInvalid rows: ${s.invalid || 0}`);
         await loadTable();
       } catch (err) {
         console.error(err);
@@ -814,12 +1717,10 @@
       }
     });
 
-    // ---------- misc ----------
+    // ---------- Filter Events ----------
     $('#statusSel').addEventListener('change', applyFilters);
     $('#searchBox').addEventListener('input', applyFilters);
     $('#refreshBtn').addEventListener('click', loadTable);
-
-
     $('#startDate').addEventListener('change', applyFilters);
     $('#endDate').addEventListener('change', applyFilters);
     $('#clearDates').addEventListener('click', () => {
@@ -828,11 +1729,7 @@
       applyFilters();
     });
 
-
-    
-
-
-    // go!
+    // Initialize
     loadTable();
   </script>
 </body>
