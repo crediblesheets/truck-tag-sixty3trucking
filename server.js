@@ -50,7 +50,7 @@ function isCrossSiteRequest(origin) {
 }
 
 /** Build cookie options for the current environment. */
-function cookieOpts(origin) {
+function cookieOpts(origin, maxAgeMs) {
   const crossSite = isCrossSiteRequest(origin) || !!FRONTEND_ORIGIN;
   const sameSite = crossSite ? 'none' : 'lax';
   const secure = crossSite ? true : NODE_ENV === 'production';
@@ -62,8 +62,10 @@ function cookieOpts(origin) {
     path: '/',
   };
   if (COOKIE_DOMAIN) base.domain = COOKIE_DOMAIN;
+  if (typeof maxAgeMs === 'number') base.maxAge = maxAgeMs; // ✅ NEW
   return base;
 }
+
 
 // ---------- PDF helpers ----------
 const IMG_W = 5100;
@@ -216,11 +218,30 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, env: NODE_ENV, time: new Date().toISOString() });
 });
 
+// ---------- session TTLs ----------
+const ADMIN_TTL  = '2h';
+const DRIVER_TTL = '24h'; // ✅ idle up to 24 hours
+
+function ttlToMs(ttl) {
+  const m = String(ttl || '').trim().match(/^(\d+)\s*([smhd])$/i);
+  if (!m) return undefined;
+  const n = parseInt(m[1], 10);
+  const u = m[2].toLowerCase();
+  const mult =
+    u === 's' ? 1000 :
+    u === 'm' ? 60 * 1000 :
+    u === 'h' ? 60 * 60 * 1000 :
+    24 * 60 * 60 * 1000; // 'd'
+  return n * mult;
+}
+
+
 // ---------- auth/session helpers ----------
 const ltrim = (v) => String(v ?? '').trim().toLowerCase();
-function signSession(payload) {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '2h' });
+function signSession(payload, ttl) {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: ttl || ADMIN_TTL });
 }
+
 function verifySession(req, res, next) {
   const tok = req.cookies['t'];
   if (!tok) return res.status(401).json({ ok: false, message: 'No session' });
@@ -249,7 +270,18 @@ async function ensureActiveUser(req, res, next) {
 
     req.user.role = ltrim(u.role) === 'admin' ? 'admin' : 'driver';
     req.user.fullName = u.full_name || req.user.fullName || email;
+
+    // ✅ Sliding idle timeout for drivers: extend to now + 24h on each request
+    if (req.user.role === 'driver') {
+      const token = signSession(
+        { email: req.user.email, fullName: req.user.fullName, role: 'driver' },
+        DRIVER_TTL
+      );
+      res.cookie('t', token, cookieOpts(req.headers.origin, ttlToMs(DRIVER_TTL)));
+    }
+
     next();
+
   } catch (e) {
     console.error('ensureActiveUser', e);
     return res.status(500).json({ ok: false, message: 'User check failed.' });
@@ -307,13 +339,18 @@ app.post('/api/auth/login', async (req, res) => {
     }
 
     const role = (u.role || '').toLowerCase() === 'admin' ? 'admin' : 'driver';
-    const token = signSession({ email: em, fullName: u.full_name || em, role });
 
-    // FIX: set cookie with cross-site safe flags based on Origin
-    const opts = cookieOpts(req.headers.origin);
+    // ✅ admin stays short, driver gets 24h
+    const ttl = role === 'driver' ? DRIVER_TTL : ADMIN_TTL;
+
+    const token = signSession({ email: em, fullName: u.full_name || em, role }, ttl);
+
+    // cookie matches same TTL (so it persists even if browser refreshes)
+    const opts = cookieOpts(req.headers.origin, ttlToMs(ttl));
     res.cookie('t', token, opts);
 
     return res.json({ ok: true, role });
+
   } catch (e) {
     console.error('POST /api/auth/login', e);
     return res.status(500).json({ ok: false, message: 'Login failed.' });
@@ -364,12 +401,15 @@ app.post('/api/auth/set-password', async (req, res) => {
 
     // Log them in right away (cookie with cross-site flags)
     const role = (u.role || '').toLowerCase() === 'admin' ? 'admin' : 'driver';
-    const token = signSession({ email: em, fullName: u.full_name || em, role });
+    const ttl = role === 'driver' ? DRIVER_TTL : ADMIN_TTL;
 
-    const opts = cookieOpts(req.headers.origin);
+    const token = signSession({ email: em, fullName: u.full_name || em, role }, ttl);
+
+    const opts = cookieOpts(req.headers.origin, ttlToMs(ttl));
     res.cookie('t', token, opts);
 
     return res.json({ ok: true, role });
+
   } catch (e) {
     console.error('POST /api/auth/set-password', e);
     return res.status(500).json({ ok: false, message: 'Could not set password.' });
@@ -378,12 +418,13 @@ app.post('/api/auth/set-password', async (req, res) => {
 
 app.post('/api/auth/logout', (req, res) => {
   try {
-    res.clearCookie('t', { path: '/' });
+    res.clearCookie('t', cookieOpts(req.headers.origin));
     res.json({ ok: true });
   } catch {
     res.json({ ok: true });
   }
 });
+
 
 // ======================== DRIVER API ========================
 // ======================== DRIVER / ME ========================
