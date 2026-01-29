@@ -6,6 +6,7 @@
   --border: #e5e7eb;
   --primary: #0ea5e9; /* light, professional blue */
   --shadow: 0 4px 18px rgba(2, 8, 23, 0.06);
+  --shadow-md: 0 10px 28px rgba(2, 8, 23, 0.08);
   --radius: 16px;
   --container: 1100px;
 }
@@ -748,30 +749,38 @@ body.auth-body #setPwdBtn.loading::after{
 }
 
 
+/* ===== Button loading state (spinner on button) ===== */
+.btn[data-loading="true"]{
+  position: relative;
+  padding-right: 44px;
+  cursor: progress;
+}
+.btn[data-loading="true"]::after{
+  content: "";
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  border-radius: 999px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: spin .75s linear infinite;
+  opacity: .9;
+}
+/* Keep disabled look consistent */
+.btn[data-loading="true"][disabled]{ opacity: .75; }
 
-/* ===== Shared button loading (Truck Tag Admin) ===== */
-.btn, .pill-btn { position: relative; }
-.btn-block{ width:100%; display:inline-flex; align-items:center; justify-content:center; gap:10px; }
-.btn.is-loading, .pill-btn.is-loading, .navlink.is-loading, .chipbtn.is-loading{
-  pointer-events:none;
-  opacity: .85;
-}
-.btn.is-loading, .pill-btn.is-loading, .navlink.is-loading{
-  padding-left: 42px;
-}
-.btn.is-loading::before,
-.pill-btn.is-loading::before,
-.navlink.is-loading::before{
-  content:"";
-  position:absolute;
-  left:14px;
-  top:50%;
-  width:16px;
-  height:16px;
-  margin-top:-8px;
-  border-radius:50%;
-  border:2px solid rgba(100,116,139,.35);
-  border-top-color: var(--primary);
-  animation: spin .8s linear infinite;
+.icon{
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  flex: 0 0 auto;
 }
 
+@keyframes spin{ to{ transform: rotate(360deg); } }
+
+
+/* Utility */
+.muted{ color: var(--muted); }

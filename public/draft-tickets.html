@@ -104,39 +104,21 @@
   </header>
 
   <main class="container" style="padding-bottom:28px;">
-    <div class="admin-shell">
-<aside class="admin-sidebar">
-      <div class="card admin-card nav-card">
-        <div class="nav-title">Admin</div>
-        <div class="nav-sub">Draft tickets workflow</div>
-
-        <div class="nav-list" aria-label="Admin pages">
-          <a class="navlink" href="/admin">Dashboard</a>
-          <a class="navlink" href="/tag-lists">Tag Lists</a>
-          <a class="navlink active" href="/draft-tickets">Draft Tickets</a>
-          <a class="navlink" href="/admin/users">Manage Users</a>
-        </div>
-
-        <div class="nav-divider"></div>
-
-        <div class="nav-actions">
-          <button id="refreshBtn" class="btn btn-block">↻ Refresh</button>
-          <button id="backBtn" class="btn btn-block">← Back to Admin</button>
-        </div>
-
-        <div class="muted-small" style="margin-top:12px;">Open a row to review and convert.</div>
-      </div>
-    </aside>
-      <div class="admin-main">
-<section class="card admin-card">
-      <div class="admin-welcome">
+    <section class="card admin-card" style="margin-top:22px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
         <div>
           <h2 id="adminName" style="margin:0 0 6px;">Welcome, …</h2>
           <p class="muted" style="margin:0;">Open a draft to review details and convert it to a real Ticket No.</p>
         </div>
+
+        <div class="toolbar">
+          <button id="backBtn" class="pill-btn" type="button">← Back to Admin</button>
+          <button id="refreshBtn" class="pill-btn" type="button">↻ Refresh</button>
+        </div>
       </div>
     </section>
-<section class="card admin-card">
+
+    <section class="card admin-card" style="margin-top:16px;">
       <div style="display:grid;grid-template-columns:220px 1fr;gap:12px;align-items:end;">
         <div>
           <label for="statusSel">Status</label>
@@ -175,9 +157,7 @@
         </div>
       </div>
     </section>
-      </div>
-    </div>
-</main>
+  </main>
 
   <footer class="site-footer">
     <div class="container">
@@ -305,29 +285,6 @@
     const $  = (s, root=document) => root.querySelector(s);
     const $$ = (s, root=document) => Array.from(root.querySelectorAll(s));
     const ltrim = (v) => String(v ?? '').trim().toLowerCase();
-
-    // ---------- button loading helpers ----------
-    const Btn = {
-      set(btn, on=true){
-        if (!btn) return;
-        btn.classList.toggle('is-loading', !!on);
-        btn.toggleAttribute('disabled', !!on);
-      },
-      async run(btn, fn){
-        Btn.set(btn, true);
-        try{
-          const r = fn?.();
-          if (r && typeof r.then === 'function') return await r;
-          return r;
-        } finally {
-          Btn.set(btn, false);
-        }
-      },
-      flash(btn, ms=450){
-        Btn.set(btn, true);
-        window.setTimeout(() => Btn.set(btn, false), ms);
-      }
-    };
 
 
     function setOpen(modal, on=true){
@@ -498,47 +455,40 @@
 
     $('#convertForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      const submitBtn = e.submitter || $('#convertBtn') || $('#convertForm button[type="submit"]');
-      Btn.set(submitBtn, true);
+      if (!CURRENT_ID) return;
 
-      try{
-        if (!CURRENT_ID) return;
+      const fd = new FormData(e.target);
+      const body = Object.fromEntries(fd.entries());
 
-        const fd = new FormData(e.target);
-        const body = Object.fromEntries(fd.entries());
-
-        if (!body.ticketNo || !body.date || !body.driverName){
-          alert('Ticket No, Date, and Driver Name are required.');
-          return;
-        }
-
-        const r = await fetch(`/api/admin/drafts/${encodeURIComponent(CURRENT_ID)}/submit`, {
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          credentials:'include',
-          body: JSON.stringify(body),
-        });
-
-        const j = await r.json().catch(()=>({}));
-        if (!r.ok || j.ok === false){
-          alert(j.message || 'Failed to convert draft.');
-          return;
-        }
-
-        alert(`Converted to Ticket ${j.ticketNo}`);
-        setOpen($('#viewModal'), false);
-        await loadList();
-      } finally {
-        Btn.set(submitBtn, false);
+      if (!body.ticketNo || !body.date || !body.driverName){
+        alert('Ticket No, Date, and Driver Name are required.');
+        return;
       }
+
+      const r = await fetch(`/api/admin/drafts/${encodeURIComponent(CURRENT_ID)}/submit`, {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        credentials:'include',
+        body: JSON.stringify(body),
+      });
+
+      const j = await r.json().catch(()=>({}));
+      if (!r.ok || j.ok === false){
+        alert(j.message || 'Failed to convert draft.');
+        return;
+      }
+
+      alert(`Converted to Ticket ${j.ticketNo}`);
+      setOpen($('#viewModal'), false);
+      await loadList();
     });
 
     $$('#viewModal [data-close]').forEach(el => el.addEventListener('click', () => setOpen($('#viewModal'), false)));
 
     $('#statusSel').addEventListener('change', loadList);
     $('#searchBox').addEventListener('input', applyFilters);
-    $('#refreshBtn').addEventListener('click', (e) => Btn.run(e.currentTarget, loadList));
-    $('#backBtn').addEventListener('click', (e) => Btn.run(e.currentTarget, () => { location.href = '/admin'; }));
+    $('#refreshBtn').addEventListener('click', loadList);
+    $('#backBtn').addEventListener('click', () => location.href = '/admin');
 
     // go
     (async () => {
