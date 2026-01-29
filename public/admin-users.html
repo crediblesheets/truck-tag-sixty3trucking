@@ -58,7 +58,7 @@
 <body>
   <!-- Header -->
   <header class="site-header">
-    <div class="container header-inner" style="grid-template-columns:auto 1fr auto;">
+    <div class="container header-inner" style="grid-template-columns:auto 1fr;">
       <div class="brand">
         <img src="/assets/img/logo.png" class="logo" alt="Sixty – 3 logo">
         <span class="brand-text">Sixty – 3 Trucking Inc</span>
@@ -67,16 +67,29 @@
         <h1 class="page-title">Manage Users</h1>
         <p class="subtitle">Add admins/drivers, activate/deactivate, and bulk delete</p>
       </div>
-      <div>
-        <a href="/admin" class="btn">← Back to Admin</a>
       </div>
-    </div>
   </header>
 
   <main class="container" style="padding-bottom:28px;">
     <div class="page-wrap">
       <!-- Sidebar -->
       <aside class="sidebar">
+        <div class="card admin-card nav-card" style="margin-bottom:12px;">
+          <div class="nav-title">Admin</div>
+          <div class="nav-sub">Navigation</div>
+          <div class="nav-list">
+            <a class="navlink" href="/admin">Dashboard</a>
+            <a class="navlink" href="/tag-lists">Tag Lists</a>
+            <a class="navlink" href="/draft-tickets">Draft Tickets</a>
+            <a class="navlink active" href="/admin/users">Manage Users</a>
+          </div>
+          <div class="nav-divider"></div>
+          <div class="nav-actions">
+            <a class="btn btn-block" href="/admin">← Back to Admin</a>
+          </div>
+        </div>
+
+
         <div class="card admin-card">
           <label for="userSearch">Search users</label>
           <input id="userSearch" class="search-box" type="search" placeholder="Name, email, or role" autocomplete="off">
@@ -543,11 +556,11 @@ async function clearPasswordForCurrent(){
     $('#addBtn').addEventListener('click', () => { clearForm(); $('#f_email').focus(); });
 
     // save / delete / bulk
-    $('#saveBtn').addEventListener('click', saveCurrent);
-    $('#deleteBtn').addEventListener('click', deleteCurrent);
-    $('#bulkDeleteBtn').addEventListener('click', bulkDelete);
-    $('#btnSetPw').addEventListener('click', setPasswordForCurrent);
-    $('#btnClearPw').addEventListener('click', clearPasswordForCurrent);
+    $('#saveBtn').addEventListener('click', (e) => Btn.run(e.currentTarget, saveCurrent));
+    $('#deleteBtn').addEventListener('click', (e) => Btn.run(e.currentTarget, deleteCurrent));
+    $('#bulkDeleteBtn').addEventListener('click', (e) => Btn.run(e.currentTarget, bulkDelete));
+    $('#btnSetPw').addEventListener('click', (e) => Btn.run(e.currentTarget, setPasswordForCurrent));
+    $('#btnClearPw').addEventListener('click', (e) => Btn.run(e.currentTarget, clearPasswordForCurrent));
 
     // boot
     loadUsers();

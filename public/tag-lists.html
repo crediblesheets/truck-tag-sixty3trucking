@@ -76,7 +76,7 @@
 </head>
 <body>
   <header class="site-header">
-    <div class="container header-inner" style="grid-template-columns:auto 1fr auto;">
+    <div class="container header-inner" style="grid-template-columns:auto 1fr;">
       <div class="brand">
         <img src="./assets/img/logo.png" class="logo" alt="Sixty – 3 logo">
         <span class="brand-text">Sixty – 3 Trucking Inc</span>
@@ -85,16 +85,30 @@
         <h1 class="page-title">Tag Lists</h1>
         <p class="subtitle">Browse tickets and edit Admin Tag details</p>
       </div>
-      <div>
-        <a href="/admin" class="btn">← Back to Admin</a>
       </div>
-    </div>
   </header>
 
   <main class="container" style="padding-bottom:28px;">
     <div class="page-wrap">
       <!-- Sidebar: Search + tickets -->
       <aside class="sidebar">
+        <div class="card admin-card nav-card">
+          <div class="nav-title">Admin</div>
+          <div class="nav-sub">Navigation</div>
+          <div class="nav-list">
+            <a class="navlink" href="/admin">Dashboard</a>
+            <a class="navlink active" href="/tag-lists">Tag Lists</a>
+            <a class="navlink" href="/draft-tickets">Draft Tickets</a>
+            <a class="navlink" href="/admin/users">Manage Users</a>
+          </div>
+          <div class="nav-divider"></div>
+          <div class="nav-actions">
+            <button id="refreshBtn" class="btn btn-block">↻ Refresh list</button>
+            <a class="btn btn-block" href="/admin">← Back to Admin</a>
+          </div>
+        </div>
+
+
         <div class="card admin-card">
           <label for="q">Search ticket</label>
           <input id="q" class="search-box" type="search" placeholder="Ticket # or driver name">
@@ -457,6 +471,7 @@
   }
 
   $('#q').addEventListener('input', applyFilter);
+  $('#refreshBtn').addEventListener('click', (e) => Btn.run(e.currentTarget, loadAll));
 
   $('#list').addEventListener('click', async (e) => {
     const btn = e.target.closest('.ticket-btn');
@@ -809,6 +824,8 @@
 
   $('#form').addEventListener('submit', async (e) => {
     e.preventDefault();
+    const submitBtn = e.submitter || $('#saveBtn');
+    Btn.set(submitBtn, true);
     if (!SELECTED_ID) return;
 
     const fd = new FormData(e.target);
@@ -884,12 +901,13 @@
       console.error(err);
       alert(err.message || 'Could not save.');
     } finally {
+      Btn.set(submitBtn, false);
       showOverlay(false);
     }
   });
 
   // ===== delete =====
-  $('#deleteBtn').addEventListener('click', async () => {
+  $('#deleteBtn').addEventListener('click', (e) => Btn.run(e.currentTarget, async () => {
     if (!SELECTED_ID) return;
     if (!confirm(`Delete ticket ${SELECTED_ID}? This also removes its Driver stub.`)) return;
 
@@ -911,10 +929,10 @@
     } finally {
       showOverlay(false);
     }
-  });
+  }));
 
   // ===== NEW: send back to driver (set status to Pending) =====
-  $('#sendBackBtn').addEventListener('click', async () => {
+  $('#sendBackBtn').addEventListener('click', (e) => Btn.run(e.currentTarget, async () => {
   if (!SELECTED_ID || !CURRENT) return;
 
   const ok = confirm(
@@ -951,7 +969,7 @@
   } finally {
     showOverlay(false);
   }
-});
+}));
 
 
   // (legacy helper for proof, kept as-is)
@@ -991,7 +1009,7 @@
   }
 
   // ===== convert to PDF & download =====
-  $('#pdfBtn').addEventListener('click', () => {
+  $('#pdfBtn').addEventListener('click', (e) => { Btn.flash(e.currentTarget, 650);
     if (!SELECTED_ID) return;
     window.open(`/api/tags/${encodeURIComponent(SELECTED_ID)}/pdf?download=1`, '_blank');
   });
