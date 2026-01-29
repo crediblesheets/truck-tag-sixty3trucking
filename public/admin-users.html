@@ -9,49 +9,644 @@
   <link rel="stylesheet" href="/admin.css">
 
   <style>
-    /* Page-specific layout that mirrors tag-lists */
-    .page-wrap{ display:grid; grid-template-columns: 300px 1fr; gap:16px; align-items:start }
-    .sidebar{ position:sticky; top:16px }
-    .search-box{ display:block; width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px; box-sizing:border-box }
+    /* ============================================================
+       ENHANCED ADMIN USERS PAGE — Modern, Professional, Premium
+       ============================================================ */
 
-    /* segmented filter chips */
-    .seg{ display:flex; gap:8px; margin-top:8px; flex-wrap:wrap }
-    .seg .chipbtn{
-      border:1px solid var(--border); background:#fff; border-radius:999px; padding:6px 10px; cursor:pointer;
-      font-size:12px; font-weight:600;
+    /* Overall page improvements */
+    .page-wrap {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 20px;
+      align-items: start;
     }
-    .chipbtn.active{ background:#eef2ff; border-color:#c7d2fe; }
 
-    /* grouped lists */
-    .stack{ display:flex; flex-direction:column; gap:12px; margin-top:10px }
-    .list-wrap{ border:1px solid var(--border); border-radius:12px; background:#fff; overflow:hidden; display:flex; flex-direction:column; max-height:34vh }
-    .list-wrap .meta{ padding:8px 10px; font-size:12px; color:#6b7280; border-bottom:1px solid #eef2f7; background:#f8fafc; display:flex; justify-content:space-between; align-items:center }
-    .list-items{ overflow:auto }
-    .user-btn{
-      display:flex; align-items:center; justify-content:space-between; gap:10px;
-      width:100%; padding:10px 12px; border:0; background:#fff; cursor:pointer; text-align:left;
-      border-bottom:1px solid #f1f5f9; font-weight:600;
+    .sidebar {
+      position: sticky;
+      top: 20px;
     }
-    .user-btn:hover{ background:#f8fafc }
-    .user-btn.active{ background:#eef2ff }
-    .user-sub{ font-size:12px; color:#6b7280; font-weight:400 }
 
-    /* detail side */
-    .detail-card{ padding:18px }
-    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
-    .grid4{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px }
-    label{ font-size:12px; color:#555; display:block; margin-bottom:6px }
-    input,select{ width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px; box-sizing:border-box }
+    /* ========== SIDEBAR CARD IMPROVEMENTS ========== */
+    .card.admin-card {
+      background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,.95) 100%);
+      border: 1px solid rgba(148,163,184,.22);
+      box-shadow: 0 8px 24px rgba(2,8,23,.08);
+      border-radius: 16px;
+      padding: 18px;
+    }
 
-    /* table */
-    .table-card{ margin-top:12px }
-    .row-chk{ width:36px }
+    .admin-card label {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .4px;
+      text-transform: uppercase;
+      color: #334155;
+      display: block;
+      margin-bottom: 8px;
+    }
 
-    @media (max-width: 980px){
-      .page-wrap{ grid-template-columns: 1fr }
-      .sidebar{ position:static }
-      .grid2,.grid4{ grid-template-columns:1fr }
-      .list-wrap{ max-height:unset }
+    .search-box {
+      display: block;
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid rgba(148,163,184,.30);
+      border-radius: 12px;
+      box-sizing: border-box;
+      background: rgba(255,255,255,.9);
+      font-size: 14px;
+      color: var(--text);
+      transition: all .2s ease;
+    }
+
+    .search-box:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(14,165,233,.15);
+      background: #fff;
+    }
+
+    .search-box::placeholder {
+      color: rgba(100,116,139,.65);
+    }
+
+    /* Filter chips */
+    .seg {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .seg .chipbtn {
+      border: 1.5px solid rgba(148,163,184,.28);
+      background: rgba(255,255,255,.7);
+      border-radius: 12px;
+      padding: 10px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 700;
+      color: #334155;
+      transition: all .2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .seg .chipbtn:hover:not(.active) {
+      background: rgba(255,255,255,.9);
+      border-color: rgba(148,163,184,.35);
+    }
+
+    .chipbtn.active {
+      background: linear-gradient(135deg, rgba(14,165,233,.15) 0%, rgba(14,165,233,.10) 100%);
+      border-color: rgba(14,165,233,.40);
+      color: #0369a1;
+      box-shadow: 0 4px 12px rgba(14,165,233,.12);
+    }
+
+    .muted-small {
+      font-size: 11px;
+      color: rgba(100,116,139,.75);
+      font-weight: 600;
+    }
+
+    /* Action buttons in sidebar */
+    .actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      justify-content: flex-start;
+      margin-top: 14px;
+    }
+
+    .btn {
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: .2px;
+      transition: all .15s ease;
+    }
+
+    .btn:not(.danger) {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: #fff;
+      border: none;
+      box-shadow: 0 4px 12px rgba(37,99,235,.18);
+    }
+
+    .btn:not(.danger):hover:not([disabled]) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(37,99,235,.25);
+    }
+
+    .btn.danger {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: #fff;
+      border: none;
+      box-shadow: 0 4px 12px rgba(239,68,68,.18);
+    }
+
+    .btn.danger:hover:not([disabled]) {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 20px rgba(239,68,68,.25);
+    }
+
+    /* User lists in sidebar */
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .list-wrap {
+      border: 1.5px solid rgba(148,163,184,.22);
+      border-radius: 14px;
+      background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,.95) 100%);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-height: 36vh;
+      box-shadow: 0 4px 12px rgba(2,8,23,.04);
+    }
+
+    .list-wrap .meta {
+      padding: 12px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      color: #334155;
+      border-bottom: 1.5px solid rgba(148,163,184,.15);
+      background: linear-gradient(135deg, #f8fafc 0%, rgba(248,250,252,.95) 100%);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      letter-spacing: .3px;
+    }
+
+    .list-items {
+      overflow: auto;
+      flex: 1;
+    }
+
+    .list-items::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .list-items::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .list-items::-webkit-scrollbar-thumb {
+      background: rgba(148,163,184,.25);
+      border-radius: 3px;
+    }
+
+    .list-items::-webkit-scrollbar-thumb:hover {
+      background: rgba(148,163,184,.40);
+    }
+
+    .user-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      width: 100%;
+      padding: 11px 12px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      text-align: left;
+      border-bottom: 1px solid rgba(148,163,184,.12);
+      font-weight: 600;
+      color: #334155;
+      transition: all .15s ease;
+      position: relative;
+    }
+
+    .user-btn:last-child {
+      border-bottom: none;
+    }
+
+    .user-btn:hover {
+      background: rgba(14,165,233,.05);
+    }
+
+    .user-btn.active {
+      background: linear-gradient(90deg, rgba(14,165,233,.12) 0%, rgba(14,165,233,.06) 100%);
+      color: #0369a1;
+      border-left: 3px solid var(--primary);
+      padding-left: 9px;
+    }
+
+    .user-btn:active {
+      transform: translateY(1px);
+    }
+
+    .user-sub {
+      font-size: 12px;
+      color: rgba(100,116,139,.75);
+      font-weight: 500;
+    }
+
+    /* ========== MAIN DETAIL CARD ========== */
+    .detail-card {
+      background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,.97) 100%);
+      border: 1.5px solid rgba(148,163,184,.22);
+      border-radius: 16px;
+      box-shadow: 0 8px 28px rgba(2,8,23,.08);
+      padding: 24px;
+    }
+
+    .detail-card > div:first-child {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+      border-bottom: 1.5px solid rgba(148,163,184,.15);
+      padding-bottom: 16px;
+    }
+
+    #userHdr {
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: -.3px;
+      color: #0f172a;
+    }
+
+    .detail-card .actions {
+      margin: 0;
+    }
+
+    /* Form improvements */
+    .grid2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .grid4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .detail-card label {
+      font-size: 12px;
+      color: #334155;
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 700;
+      letter-spacing: .3px;
+      text-transform: uppercase;
+    }
+
+    .detail-card input,
+    .detail-card select {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid rgba(148,163,184,.28);
+      border-radius: 12px;
+      box-sizing: border-box;
+      background: rgba(255,255,255,.9);
+      font-size: 14px;
+      color: var(--text);
+      transition: all .2s ease;
+      font-weight: 500;
+    }
+
+    .detail-card input:focus,
+    .detail-card select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 4px rgba(14,165,233,.15);
+      background: #fff;
+    }
+
+    .detail-card input::placeholder {
+      color: rgba(100,116,139,.65);
+    }
+
+    /* Password section styling */
+    .detail-card section.card {
+      border: 1.5px solid rgba(148,163,184,.20);
+      background: linear-gradient(135deg, rgba(248,250,252,.8) 0%, rgba(248,250,252,.95) 100%);
+      margin-top: 16px;
+    }
+
+    .detail-card section h3 {
+      font-size: 14px;
+      font-weight: 800;
+      color: #334155;
+      letter-spacing: .3px;
+      text-transform: uppercase;
+    }
+
+    .detail-card section .muted-small {
+      color: rgba(100,116,139,.80);
+      line-height: 1.5;
+    }
+
+    #f_newPw {
+      font-family: 'Courier New', monospace;
+    }
+
+    /* ========== TABLE IMPROVEMENTS ========== */
+    .table-card {
+      margin-top: 20px;
+      border: 1.5px solid rgba(148,163,184,.22);
+      border-radius: 14px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: 0 4px 16px rgba(2,8,23,.06);
+    }
+
+    .scroll-area {
+      max-height: calc(100vh - 380px);
+      overflow: auto;
+    }
+
+    .scroll-area::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    .scroll-area::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .scroll-area::-webkit-scrollbar-thumb {
+      background: rgba(148,163,184,.22);
+      border-radius: 4px;
+    }
+
+    .scroll-area::-webkit-scrollbar-thumb:hover {
+      background: rgba(148,163,184,.35);
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 14px;
+    }
+
+    .data-table thead th {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: linear-gradient(135deg, #f8fafc 0%, rgba(248,250,252,.95) 100%);
+      text-align: left;
+      padding: 14px 16px;
+      border-bottom: 1.5px solid rgba(148,163,184,.20);
+      font-weight: 800;
+      letter-spacing: .3px;
+      color: #334155;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    .data-table tbody td {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(226,232,240,.8);
+      color: #475569;
+    }
+
+    .data-table tbody tr {
+      transition: all .15s ease;
+    }
+
+    .data-table tbody tr:hover {
+      background: linear-gradient(90deg, rgba(14,165,233,.05) 0%, transparent 100%);
+    }
+
+    .data-table a.rowLink {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 700;
+      transition: all .15s ease;
+    }
+
+    .data-table a.rowLink:hover {
+      color: #0369a1;
+      text-decoration: underline;
+    }
+
+    /* Table columns */
+    .col-ticket {
+      width: 120px;
+      white-space: nowrap;
+    }
+
+    .col-email {
+      min-width: 280px;
+    }
+
+    .col-updated {
+      min-width: 200px;
+      white-space: nowrap;
+      color: var(--muted);
+    }
+
+    .col-status {
+      width: 140px;
+      white-space: nowrap;
+    }
+
+    .row-chk {
+      width: 44px;
+      text-align: center;
+    }
+
+    .data-table input[type="checkbox"] {
+      cursor: pointer;
+      width: 18px;
+      height: 18px;
+      accent-color: var(--primary);
+      transition: transform .1s ease;
+    }
+
+    .data-table input[type="checkbox"]:hover {
+      transform: scale(1.1);
+    }
+
+    /* Badge improvements */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      border: 1px solid transparent;
+      letter-spacing: .2px;
+      text-transform: uppercase;
+    }
+
+    .badge-done {
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      color: #065f46;
+      border-color: rgba(34,197,94,.25);
+      box-shadow: 0 4px 12px rgba(34,197,94,.12);
+    }
+
+    .badge-other {
+      background: linear-gradient(135deg, #eef2ff 0%, #dbeafe 100%);
+      color: #3730a3;
+      border-color: rgba(99,102,241,.25);
+      box-shadow: 0 4px 12px rgba(99,102,241,.12);
+    }
+
+    /* Loading overlay improvements */
+    #overlay {
+      position: fixed;
+      inset: 0;
+      display: none;
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #overlay.show {
+      display: flex;
+    }
+
+    #overlay::backdrop,
+    .loading-overlay {
+      background: rgba(15,23,42,.55);
+      backdrop-filter: blur(4px);
+      -webkit-backdrop-filter: blur(4px);
+    }
+
+    .loading-box,
+    .loading-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(15,23,42,.60);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .loading-box {
+      position: relative;
+      margin: auto;
+      background: #fff;
+      border-radius: 16px;
+      min-width: 280px;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(2,8,23,.20);
+      border: 1px solid rgba(148,163,184,.20);
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 3px solid rgba(148,163,184,.20);
+      border-top-color: var(--primary);
+      margin: 0 auto 12px;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-size: 14px;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    /* ========== RESPONSIVE IMPROVEMENTS ========== */
+    @media (max-width: 1200px) {
+      .grid4 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 980px) {
+      .page-wrap {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: static;
+      }
+
+      .grid2,
+      .grid4 {
+        grid-template-columns: 1fr;
+      }
+
+      .list-wrap {
+        max-height: unset;
+      }
+
+      .actions {
+        flex-direction: row;
+      }
+
+      .detail-card {
+        padding: 18px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .page-wrap {
+        gap: 12px;
+      }
+
+      .sidebar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        grid-column: 1 / -1;
+      }
+
+      .admin-card,
+      .list-wrap {
+        grid-column: auto;
+      }
+
+      .detail-card {
+        grid-column: 1 / -1;
+        padding: 14px;
+      }
+
+      .detail-card > div:first-child {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      #userHdr {
+        font-size: 18px;
+      }
+
+      .grid2,
+      .grid4 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Utility classes */
+    .form-error {
+      margin: 12px 0 0;
+      padding: 12px 14px;
+      border: 1.5px solid rgba(239,68,68,.25);
+      background: linear-gradient(135deg, #fef2f2 0%, rgba(254,242,242,.95) 100%);
+      color: #7f1d1d;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .input-invalid {
+      border-color: #ef4444 !important;
+      box-shadow: 0 0 0 4px rgba(239,68,68,.12) !important;
     }
   </style>
 </head>
@@ -78,17 +673,26 @@
       <!-- Sidebar -->
       <aside class="sidebar">
         <div class="card admin-card">
-          <label for="userSearch">Search users</label>
+          <label for="userSearch">🔍 Search users</label>
           <input id="userSearch" class="search-box" type="search" placeholder="Name, email, or role" autocomplete="off">
 
           <div class="seg" role="tablist" aria-label="Filter users">
-            <button id="segAll" class="chipbtn active" role="tab" aria-selected="true">All <span class="muted-small" id="userCountAll">(0)</span></button>
-            <button id="segDrivers" class="chipbtn" role="tab" aria-selected="false">Drivers</button>
-            <button id="segAdmins" class="chipbtn" role="tab" aria-selected="false">Admins</button>
+            <button id="segAll" class="chipbtn active" role="tab" aria-selected="true">
+              <span>All Users</span>
+              <span class="muted-small" id="userCountAll">(0)</span>
+            </button>
+            <button id="segDrivers" class="chipbtn" role="tab" aria-selected="false">
+              <span>Drivers</span>
+              <span class="muted-small" id="segDriversCount">(0)</span>
+            </button>
+            <button id="segAdmins" class="chipbtn" role="tab" aria-selected="false">
+              <span>Admins</span>
+              <span class="muted-small" id="segAdminsCount">(0)</span>
+            </button>
           </div>
 
-          <div class="actions" style="justify-content:flex-start; margin-top:10px;">
-            <button id="addBtn" class="btn">➕ Add User</button>
+          <div class="actions">
+            <button id="addBtn" class="btn">➕ Add New User</button>
             <button id="bulkDeleteBtn" class="btn danger">🗑 Delete Selected</button>
           </div>
         </div>
@@ -97,8 +701,8 @@
           <!-- Drivers group -->
           <div class="list-wrap" aria-label="Drivers list">
             <div class="meta">
-              <span>Drivers</span>
-              <span id="driverCount">0</span>
+              <span>👥 Drivers</span>
+              <span id="driverCount" style="background: rgba(14,165,233,.12); color: #0369a1; padding: 2px 8px; border-radius: 999px; font-size: 11px;">0</span>
             </div>
             <div id="driverList" class="list-items">
               <div class="muted-small" style="padding:12px;">No drivers.</div>
@@ -108,8 +712,8 @@
           <!-- Admins group -->
           <div class="list-wrap" aria-label="Admins list">
             <div class="meta">
-              <span>Admins</span>
-              <span id="adminCount">0</span>
+              <span>🔐 Admins</span>
+              <span id="adminCount" style="background: rgba(99,102,241,.12); color: #3730a3; padding: 2px 8px; border-radius: 999px; font-size: 11px;">0</span>
             </div>
             <div id="adminList" class="list-items">
               <div class="muted-small" style="padding:12px;">No admins.</div>
@@ -120,14 +724,15 @@
 
       <!-- Detail + table -->
       <section class="card detail-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-          <h2 id="userHdr" style="margin:0;">User —</h2>
-          <div class="actions" style="margin:0;">
-            <button id="saveBtn" class="btn btn-primary">Save</button>
+        <div>
+          <h2 id="userHdr">User —</h2>
+          <div class="actions">
+            <button id="saveBtn" class="btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff; border: none; box-shadow: 0 4px 12px rgba(16,185,129,.18);">✓ Save Changes</button>
           </div>
         </div>
 
-        <div class="grid4" style="margin-top:8px;">
+        <!-- User Details Form -->
+        <div class="grid4" style="margin-bottom: 20px;">
           <div>
             <label>Email (sign-in)</label>
             <input id="f_email" type="email" placeholder="name@company.com">
@@ -144,56 +749,46 @@
             </select>
           </div>
           <div>
-            <label>Active</label>
+            <label>Status</label>
             <select id="f_active">
-              <option value="true">Yes (can sign in)</option>
-              <option value="false">No (disabled)</option>
+              <option value="true">✓ Active</option>
+              <option value="false">✗ Disabled</option>
             </select>
           </div>
         </div>
 
-        <div class="actions" style="justify-content:flex-start;margin-top:10px;">
-          <button id="deleteBtn" class="btn danger">Delete</button>
+        <div class="actions" style="justify-content:flex-start; margin-bottom: 16px;">
+          <button id="deleteBtn" class="btn danger">🗑 Delete User</button>
         </div>
 
-
-      <!-- Password management -->
-        <section class="card detail-card" style="margin-top:12px;">
-          <h3 style="margin:0 0 6px; font-size:14px; font-weight:600; color:#374151;">
-            Password
-          </h3>
-          <p class="muted-small" style="margin:0 0 12px; font-size:12px; line-height:1.4;">
+        <!-- Password Management Section -->
+        <section class="card detail-card">
+          <h3 style="margin:0 0 8px;">🔑 Password Management</h3>
+          <p class="muted-small" style="margin:0 0 14px; line-height:1.5;">
             Set a temporary or new password, or clear it so the user must create one on next sign-in.
           </p>
 
-          <div class="grid2" style="margin-top:6px; align-items:end;">
+          <div class="grid2" style="margin-bottom: 14px; align-items:end;">
             <div>
-              <label style="font-size:12px; color:#555;">New password</label>
-              <input id="f_newPw" type="text" 
-                    placeholder="At least 8 chars, include a number"
-                    style="font-size:13px;">
+              <label>New password</label>
+              <input id="f_newPw" type="text" placeholder="Min. 8 chars, include a number" style="font-size:13px;">
             </div>
-            <div style="display:flex; gap:8px; flex:1;">
-              <button id="btnSetPw" class="btn btn-primary" 
-                      style="flex:1; font-size:13px; padding:10px 0;">
+            <div style="display:flex; gap:10px;">
+              <button id="btnSetPw" class="btn" style="flex:1; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #fff; border: none; box-shadow: 0 4px 12px rgba(37,99,235,.18); font-size: 13px;">
                 Set Password
               </button>
-              <button id="btnClearPw" class="btn danger" type="button" 
-                      style="flex:1; font-size:13px; padding:10px 0;">
-                Clear Current Password
+              <button id="btnClearPw" class="btn danger" type="button" style="flex:1; font-size: 13px;">
+                Clear Password
               </button>
             </div>
           </div>
 
-
-          <p class="muted-small" style="margin-top:10px; font-size:12px; line-height:1.4;">
-            Clearing sets password to <code>null</code>. On next login, the user must create one via the setup flow.
+          <p class="muted-small" style="margin:0; font-size:12px; line-height:1.5;">
+            ℹ Clearing sets password to null. On next login, user must create one via setup flow.
           </p>
         </section>
 
-
-
-        <!-- Users table -->
+        <!-- Users Data Table -->
         <div class="table-card">
           <div class="scroll-area">
             <table class="data-table" aria-label="Users">
@@ -201,13 +796,13 @@
                 <tr>
                   <th class="row-chk"><input id="chkAll" type="checkbox" aria-label="Select all"></th>
                   <th>Email</th>
-                  <th>Full name</th>
+                  <th>Full Name</th>
                   <th>Role</th>
-                  <th>Active</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody id="rows">
-                <tr><td colspan="5" class="muted-small" style="text-align:center;">Loading…</td></tr>
+                <tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--muted);">Loading…</td></tr>
               </tbody>
             </table>
           </div>
@@ -218,7 +813,7 @@
 
   <footer class="site-footer">
     <div class="container">
-      <small>© <span id="y"></span> Sixty – 3 Trucking Inc</small>
+      <small>© <span id="y"></span> Sixty – 3 Trucking Inc. All rights reserved.</small>
     </div>
   </footer>
 
@@ -296,12 +891,19 @@
       $('#driverCount').textContent = drivers.length;
       $('#adminCount').textContent  = admins.length;
       $('#userCountAll').textContent = `(${ALL.length})`;
+      $('#segDriversCount').textContent = `(${drivers.length})`;
+      $('#segAdminsCount').textContent = `(${admins.length})`;
 
       // helpers
       const mkBtn = (u) => `
         <button class="user-btn" data-email="${u.email.replace(/"/g,'&quot;')}">
-          <span>${u.full_name || u.email}</span>
-          <span class="user-sub">${u.email} • ${u.active ? 'Active' : 'Disabled'}</span>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${u.full_name || u.email}</div>
+            <div class="user-sub">${u.email}</div>
+          </div>
+          <div style="font-size: 11px; font-weight: 700; background: ${u.active ? 'rgba(34,197,94,.12)' : 'rgba(107,114,128,.12)'}; color: ${u.active ? '#065f46' : '#374151'}; padding: 2px 8px; border-radius: 999px; white-space: nowrap;">
+            ${u.active ? 'Active' : 'Disabled'}
+          </div>
         </button>`;
 
       // drivers
@@ -329,7 +931,7 @@
       if (FILTER === 'admin')  view = view.filter(u => u.role === 'admin');
 
       if (!view.length){
-        rows.innerHTML = `<tr><td colspan="5" class="muted-small" style="text-align:center;">No users.</td></tr>`;
+        rows.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--muted);">No users.</td></tr>`;
         return;
       }
 
@@ -337,9 +939,9 @@
         <tr data-email="${u.email}">
           <td class="row-chk"><input type="checkbox" class="rowChk" ${selectedEmails.has(u.email)?'checked':''}></td>
           <td><a href="#" class="rowLink">${u.email}</a></td>
-          <td>${u.full_name || '-'}</td>
-          <td>${u.role === 'admin' ? 'Admin' : 'Driver'}</td>
-          <td>${u.active ? '<span class="badge badge-done">Active</span>' : '<span class="badge badge-other">Disabled</span>'}</td>
+          <td>${u.full_name || '—'}</td>
+          <td style="text-transform: capitalize; font-weight: 700; color: #334155;">${u.role}</td>
+          <td>${u.active ? '<span class="badge badge-done">✓ Active</span>' : '<span class="badge badge-other">✗ Disabled</span>'}</td>
         </tr>
       `).join('');
     }
@@ -369,49 +971,48 @@
     }
 
     async function setPasswordForCurrent(){
-  if (!CURRENT){ toast('Select a user first.'); return; }
-  const pw = $('#f_newPw').value;
-  if (!pw || pw.length < 8){ toast('Enter a password with at least 8 characters (include a number).'); return; }
+      if (!CURRENT){ toast('Select a user first.'); return; }
+      const pw = $('#f_newPw').value;
+      if (!pw || pw.length < 8){ toast('Enter a password with at least 8 characters (include a number).'); return; }
 
-  try{
-    showOverlay('Updating password…');
-    const r = await fetch('/api/admin/users/' + encodeURIComponent(CURRENT.email) + '/password', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ newPassword: pw })
-    });
-    const j = await r.json();
-    if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to set password');
-    $('#f_newPw').value = '';
-    toast('Password updated.');
-  }catch(e){
-    console.error(e);
-    toast(e.message || 'Failed to set password.');
-  }finally{
-    hideOverlay();
-  }
-}
+      try{
+        showOverlay('Updating password…');
+        const r = await fetch('/api/admin/users/' + encodeURIComponent(CURRENT.email) + '/password', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ newPassword: pw })
+        });
+        const j = await r.json();
+        if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to set password');
+        $('#f_newPw').value = '';
+        toast('Password updated.');
+      }catch(e){
+        console.error(e);
+        toast(e.message || 'Failed to set password.');
+      }finally{
+        hideOverlay();
+      }
+    }
 
-async function clearPasswordForCurrent(){
-  if (!CURRENT){ toast('Select a user first.'); return; }
-  if (!confirm(`Clear password for ${CURRENT.email}? They will be forced to create a new one next time.`)) return;
+    async function clearPasswordForCurrent(){
+      if (!CURRENT){ toast('Select a user first.'); return; }
+      if (!confirm(`Clear password for ${CURRENT.email}? They will be forced to create a new one next time.`)) return;
 
-  try{
-    showOverlay('Clearing password…');
-    const r = await fetch('/api/admin/users/' + encodeURIComponent(CURRENT.email) + '/password', {
-      method: 'DELETE'
-    });
-    const j = await r.json();
-    if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to clear password');
-    toast('Password cleared. User must set a new one.');
-  }catch(e){
-    console.error(e);
-    toast(e.message || 'Failed to clear password.');
-  }finally{
-    hideOverlay();
-  }
-}
-
+      try{
+        showOverlay('Clearing password…');
+        const r = await fetch('/api/admin/users/' + encodeURIComponent(CURRENT.email) + '/password', {
+          method: 'DELETE'
+        });
+        const j = await r.json();
+        if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to clear password');
+        toast('Password cleared. User must set a new one.');
+      }catch(e){
+        console.error(e);
+        toast(e.message || 'Failed to clear password.');
+      }finally{
+        hideOverlay();
+      }
+    }
 
     // ---------- actions ----------
     async function saveCurrent(){
@@ -496,7 +1097,6 @@ async function clearPasswordForCurrent(){
     $('#segAll').addEventListener('click', () => { FILTER='all'; $('#segAll').classList.add('active'); $('#segDrivers').classList.remove('active'); $('#segAdmins').classList.remove('active'); renderTable(); });
     $('#segDrivers').addEventListener('click', () => { FILTER='driver'; $('#segDrivers').classList.add('active'); $('#segAll').classList.remove('active'); $('#segAdmins').classList.remove('active'); renderTable(); });
     $('#segAdmins').addEventListener('click', () => { FILTER='admin'; $('#segAdmins').classList.add('active'); $('#segAll').classList.remove('active'); $('#segDrivers').classList.remove('active'); renderTable(); });
-    
 
     // sidebar list click -> open
     $('#driverList').addEventListener('click', (e) => {
