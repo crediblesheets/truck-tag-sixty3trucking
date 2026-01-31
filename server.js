@@ -996,25 +996,34 @@ app.post('/api/tags/:id/scale-items', verifySession, ensureActiveUser, async (re
     }).eq('ticket_no', ticketNo);
 
 
-    const bad = itemsIn.find((it) => {
-      if (!it) return true;
-      if (!it.scaleTagNo) return true;
-      if (!it.yardArrival || !it.yardLeave || !it.siteArrival || !it.siteLeave) return true;
+    // If strict=1, enforce full completion (Submit).
+    // Otherwise allow partial rows (Draft save).
+    const strict = String(req.query.strict || '').trim() === '1';
 
-      // Only require yard/material for Scale Tags
-      if (!equip && (!it.yardOrWeight || !it.material)) return true;
+    if (strict) {
+      const bad = itemsIn.find((it) => {
+        if (!it) return true;
+        if (!it.scaleTagNo) return true;
 
-      return false;
-    });
+        // Require all time fields on strict submit
+        if (!it.yardArrival || !it.yardLeave || !it.siteArrival || !it.siteLeave) return true;
 
-    if (bad) {
-      return res.status(400).json({
-        ok: false,
-        message: equip
-          ? 'Material/Equipment and all time fields are required.'
-          : 'All scale tag fields are required.',
+        // Only require yard/material for Scale Tags (not equipment mode)
+        if (!equip && (!it.yardOrWeight || !it.material)) return true;
+
+        return false;
       });
+
+      if (bad) {
+        return res.status(400).json({
+          ok: false,
+          message: equip
+            ? 'All equipment fields and time fields are required.'
+            : 'All scale tag fields are required.',
+        });
+      }
     }
+
 
 
     const rows = itemsIn.map((it) => ({
@@ -1022,10 +1031,11 @@ app.post('/api/tags/:id/scale-items', verifySession, ensureActiveUser, async (re
       scale_tag_no: String(it.scaleTagNo),
       yard_or_weight: equip ? '' : String(it.yardOrWeight || ''),
       material:       equip ? '' : String(it.material || ''),
-      yard_arrival: String(it.yardArrival),
-      yard_leave: String(it.yardLeave),
-      site_arrival: String(it.siteArrival),
-      site_leave: String(it.siteLeave),
+      yard_arrival: String(it.yardArrival || ''),
+      yard_leave:   String(it.yardLeave || ''),
+      site_arrival: String(it.siteArrival || ''),
+      site_leave:   String(it.siteLeave || ''),
+
     }));
 
 
