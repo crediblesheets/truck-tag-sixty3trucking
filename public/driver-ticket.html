@@ -319,12 +319,12 @@
 
             <div>
               <label>Sign Out Time</label>
-              <input name="signOutTime" type="time" step="60" lang="en-US" required>
+              <input name="signOutTime" type="time" step="60" lang="en-US">
             </div>
             <div>
               <label>Received by</label>
               <div class="sig-row">
-                <input name="receivedBy" id="receivedBy" type="text" placeholder="Dispatcher / Receiver" required style="flex:1">
+                <input name="receivedBy" id="receivedBy" type="text" placeholder="Dispatcher / Receiver" style="flex:1">
                 <button type="button" id="addSigReceived" class="btn">Add signature</button>
                 <span class="sig-chip" id="chipReceived" style="display:none">
                   <img id="imgSigReceived" alt="Received signature">
@@ -874,12 +874,13 @@
         if (!data.yardOrWeight) ok = false;
         if (!data.material) ok = false;
       }
-      if (!data.yardArrival || !data.yardLeave || !data.siteArrival || !data.siteLeave) ok = false;
-
+      // Times are OPTIONAL so driver can log one at a time and Save Draft.
+      // We only enforce times when SUBMITTING (see itemsAreComplete()).
       if (!ok){
-        alert(`Please complete all required ${equip ? 'Equipment Move' : 'Scale Tag'} fields before saving the item.`);
+        alert(`Please complete required ${equip ? 'Equipment Move' : 'Scale Tag'} fields before saving the item.\n\n(Trip times can be filled later before submitting.)`);
         return;
-      }
+}
+
 
       if (EDIT_INDEX === null){
         SCALE_ITEMS.push(data);
