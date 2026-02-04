@@ -440,12 +440,33 @@
     }
     function toISODate(s){
       if (!s) return '';
-      const d = new Date(s);
-      if (!isNaN(d)) {
+      const raw = String(s).trim();
+
+      // 1) If already ISO date-only, DO NOT pass to Date() (prevents timezone day shift)
+      // e.g. "2026-01-05"
+      const isoDateOnly = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (isoDateOnly) return raw;
+
+      // 2) If ISO datetime, just take the date part
+      // e.g. "2026-01-05T00:00:00.000Z"
+      const isoDateTime = raw.match(/^(\d{4})-(\d{2})-(\d{2})T/);
+      if (isoDateTime) return raw.slice(0, 10);
+
+      // 3) If slash date, assume M/D/YYYY (your existing behavior)
+      const mdy = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+      if (mdy){
+        const mm = mdy[1], dd = mdy[2], yy = mdy[3];
+        const yyyy = yy.length === 2 ? ('20' + yy) : yy;
+        return `${yyyy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+      }
+
+      // 4) Fallback: try Date() only for “real” date strings (last resort)
+      const d = new Date(raw);
+      if (!isNaN(d)){
+        // build ISO using local calendar fields
         return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
       }
-      const m = String(s).match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
-      if (m) { const [_, mm, dd, yyyy] = m; return `${yyyy.padStart(4,'20')}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; }
+
       return '';
     }
     function statusBadge(s){

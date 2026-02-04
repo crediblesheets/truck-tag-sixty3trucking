@@ -1790,13 +1790,34 @@ app.post('/api/admin/import-csv', verifySession, ensureActiveUser, requireAdmin,
     const items = [];
     let skippedCarrier = 0, invalid = 0;
 
+    function normalizeCsvDateToISO(s){
+      const raw = String(s || '').trim();
+      if (!raw) return '';
+
+      // Already ISO date
+      if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw;
+
+      // ISO datetime -> date part
+      if (/^\d{4}-\d{2}-\d{2}T/.test(raw)) return raw.slice(0, 10);
+
+      // M/D/YYYY or M-D-YYYY
+      const m = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+      if (m){
+        const mm = m[1], dd = m[2], yy = m[3];
+        const yyyy = yy.length === 2 ? ('20' + yy) : yy;
+        return `${yyyy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+      }
+
+      return raw; // fallback: keep original
+    }
+
     for (let i = headerRow + 1; i < rows.length; i++) {
       const r = rows[i] || [];
       if (!r.length || r.every((c) => String(c || '').trim() === '')) continue;
 
       const ticketNo = pick(r, 'ticket');
       const driverName = pick(r, 'driver');
-      const date = pick(r, 'date');
+      const date = normalizeCsvDateToISO(pick(r, 'date'));
 
       if (!ticketNo || !driverName || !date) { invalid++; continue; }
 
