@@ -140,6 +140,13 @@ const TABLE_X_BY_COL = {
   siteLeave: COORD.tbl_siteLeave.x,
 };
 
+function numOrNull(v){
+  const s = String(v ?? '').trim();
+  if (!s) return null;
+  const n = Number(s.replace(/,/g, ''));
+  return Number.isFinite(n) ? n : null;
+}
+
 function drawText(doc, s, xpx, ypx, opts = {}) {
   if (s === undefined || s === null || String(s).trim() === '') return;
   doc.text(String(s), X(xpx), Y(ypx), { lineBreak: false, ...opts });
@@ -743,12 +750,10 @@ app.put('/api/admin/tags/:id/driver', verifySession, ensureActiveUser, requireAd
     } = req.body || {};
 
     const patch = {
-      bridgefare,
+      bridgefare: numOrNull(bridgefare),
       signed_out_loaded: signedOutLoaded,
-      how_many_tons_loads: howManyTonsLoads,
-      downtime_lunch: downtimeLunch,
-
-      // NEW ✅
+      how_many_tons_loads: numOrNull(howManyTonsLoads),
+      downtime_lunch: numOrNull(downtimeLunch),
       leave_yard_time: leaveYardTime,
       truck_stop: truckStop,
       tag_mode: tagMode,
@@ -1089,12 +1094,16 @@ app.post('/api/tags/:id/driver', verifySession, ensureActiveUser, async (req, re
 
     const patch = {
       email: String(req.user.email).toLowerCase(),
-      bridgefare,
+
+      // ✅ numeric columns: allow blank -> NULL
+      bridgefare: numOrNull(bridgefare),
+      how_many_tons_loads: numOrNull(howManyTonsLoads),
+      downtime_lunch: numOrNull(downtimeLunch),
+
       signed_out_loaded: signedOutLoaded,
-      how_many_tons_loads: howManyTonsLoads,
-      downtime_lunch: downtimeLunch,
       leave_yard_time: leaveYardTime,
       truck_stop: truckStop,
+
       notes,
       sign_out_time: signOutTime,
       received_by: receivedBy,
@@ -1333,7 +1342,7 @@ app.post('/api/admin/drafts/:id/submit', verifySession, ensureActiveUser, requir
 
       bridgefare: p.bridgefare ?? '',
       signed_out_loaded: p.signedOutLoaded ?? '',
-      how_many_tons_loads: p.howManyTonsLoads ?? '',
+      how_many_tons_loads: numOrNull(p.howManyTonsLoads),
       downtime_lunch: p.downtimeLunch ?? '',
       leave_yard_time: p.leaveYardTime ?? '',
       truck_stop: p.truckStop ?? '',

@@ -1247,6 +1247,12 @@
       showErr('');
 
       const form = new FormData(e.target);
+      // ✅ Require How Many Tons/Loads ONLY on Submit (not on Save Draft)
+      const howManyVal = String(form.get('howMany') ?? '').trim();
+      if (!IS_DRAFT && howManyVal === ''){
+        alert('How Many Tons/Loads is required before submitting.');
+        return;
+      }
       const driverPayload = {
         bridgefare: form.get('bridgefare') ?? '',
         signedOutLoaded: form.get('signedOutLoaded') ?? '',
