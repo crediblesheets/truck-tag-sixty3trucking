@@ -856,7 +856,7 @@
     $('#deleteBtn').addEventListener('click', async (e) => {
       if (!CURRENT_TICKET) return;
       if (!confirm(`Delete ticket ${CURRENT_TICKET}? This also removes its Driver stub.`)) return;
-
+      
       await withBtnLoading(e.currentTarget, async () => {
         try {
           showLoading('Deleting…');
