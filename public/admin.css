@@ -1007,6 +1007,7 @@
 .subpage-topbar{
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas: "actions copy brand";
   align-items: center;
   gap: 20px;
   min-height: 94px;
@@ -1014,13 +1015,16 @@
 }
 
 .subpage-topbar-brand{
+  grid-area: brand;
   display: flex;
   align-items: center;
+  justify-self: end;
   gap: 14px;
   min-width: 0;
 }
 
 .subpage-topbar-copy{
+  grid-area: copy;
   min-width: 0;
 }
 
@@ -1029,6 +1033,7 @@
   align-items: center;
   gap: 0;
   flex-wrap: wrap;
+  justify-content: center;
   min-width: 0;
 }
 
@@ -1042,9 +1047,11 @@
 }
 
 .subpage-topbar-actions{
+  grid-area: actions;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: flex-start;
+  justify-self: start;
   gap: 10px;
   flex-wrap: wrap;
 }
@@ -1383,10 +1390,18 @@
 
   .subpage-topbar{
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "actions"
+      "copy"
+      "brand";
     align-items: flex-start;
     gap: 14px;
     min-height: auto;
     padding: 16px 0;
+  }
+
+  .subpage-topbar-brand{
+    justify-self: start;
   }
 
   .subpage-topbar-actions{
