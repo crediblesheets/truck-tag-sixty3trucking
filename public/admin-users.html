@@ -3,852 +3,569 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Manage Users — Sixty-3 Trucking</title>
+  <title>Manage Users - Sixty-3 Trucking</title>
 
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/admin.css">
 
   <style>
-    /* ============================================================
-       ENHANCED ADMIN USERS PAGE — Modern, Professional, Premium
-       ============================================================ */
-
-    /* Overall page improvements */
-    .page-wrap {
-      display: grid;
-      grid-template-columns: 320px 1fr;
-      gap: 20px;
-      align-items: start;
-    }
-
-    .sidebar {
-      position: sticky;
-      top: 20px;
-    }
-
-    /* ========== SIDEBAR CARD IMPROVEMENTS ========== */
-    .card.admin-card {
-      background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,.95) 100%);
-      border: 1px solid rgba(148,163,184,.22);
-      box-shadow: 0 8px 24px rgba(2,8,23,.08);
-      border-radius: 16px;
-      padding: 18px;
-    }
-
-    .admin-card label {
-      font-size: 13px;
-      font-weight: 700;
-      letter-spacing: .4px;
-      text-transform: uppercase;
-      color: #334155;
-      display: block;
-      margin-bottom: 8px;
-    }
-
-    .search-box {
-      display: block;
-      width: 100%;
-      padding: 12px 14px;
-      border: 1.5px solid rgba(148,163,184,.30);
-      border-radius: 12px;
-      box-sizing: border-box;
-      background: rgba(255,255,255,.9);
-      font-size: 14px;
-      color: var(--text);
-      transition: all .2s ease;
-    }
-
-    .search-box:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 4px rgba(14,165,233,.15);
-      background: #fff;
-    }
-
-    .search-box::placeholder {
-      color: rgba(100,116,139,.65);
-    }
-
-    /* Filter chips */
-    .seg {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .seg .chipbtn {
-      border: 1.5px solid rgba(148,163,184,.28);
-      background: rgba(255,255,255,.7);
-      border-radius: 12px;
-      padding: 10px 12px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 700;
-      color: #334155;
-      transition: all .2s ease;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 8px;
-    }
-
-    .seg .chipbtn:hover:not(.active) {
-      background: rgba(255,255,255,.9);
-      border-color: rgba(148,163,184,.35);
-    }
-
-    .chipbtn.active {
-      background: linear-gradient(135deg, rgba(14,165,233,.15) 0%, rgba(14,165,233,.10) 100%);
-      border-color: rgba(14,165,233,.40);
-      color: #0369a1;
-      box-shadow: 0 4px 12px rgba(14,165,233,.12);
-    }
-
-    .muted-small {
-      font-size: 11px;
-      color: rgba(100,116,139,.75);
-      font-weight: 600;
-    }
-
-    /* Action buttons in sidebar */
-    .actions {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      justify-content: flex-start;
-      margin-top: 14px;
-    }
-
-    .btn {
-      font-weight: 700;
-      font-size: 13px;
-      letter-spacing: .2px;
-      transition: all .15s ease;
-    }
-
-    .btn:not(.danger) {
-      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-      color: #fff;
-      border: none;
-      box-shadow: 0 4px 12px rgba(37,99,235,.18);
-    }
-
-    .btn:not(.danger):hover:not([disabled]) {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 20px rgba(37,99,235,.25);
-    }
-
-    .btn.danger {
-      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-      color: #fff;
-      border: none;
-      box-shadow: 0 4px 12px rgba(239,68,68,.18);
-    }
-
-    .btn.danger:hover:not([disabled]) {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 20px rgba(239,68,68,.25);
-    }
-
-    /* User lists in sidebar */
-    .stack {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-      margin-top: 14px;
-    }
-
-    .list-wrap {
-      border: 1.5px solid rgba(148,163,184,.22);
-      border-radius: 14px;
-      background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,.95) 100%);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      max-height: 36vh;
-      box-shadow: 0 4px 12px rgba(2,8,23,.04);
-    }
-
-    .list-wrap .meta {
-      padding: 12px 14px;
-      font-size: 12px;
-      font-weight: 700;
-      color: #334155;
-      border-bottom: 1.5px solid rgba(148,163,184,.15);
-      background: linear-gradient(135deg, #f8fafc 0%, rgba(248,250,252,.95) 100%);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      letter-spacing: .3px;
-    }
-
-    .list-items {
-      overflow: auto;
-      flex: 1;
-    }
-
-    .list-items::-webkit-scrollbar {
-      width: 6px;
-    }
-
-    .list-items::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    .list-items::-webkit-scrollbar-thumb {
-      background: rgba(148,163,184,.25);
-      border-radius: 3px;
-    }
-
-    .list-items::-webkit-scrollbar-thumb:hover {
-      background: rgba(148,163,184,.40);
-    }
-
-    .user-btn {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      width: 100%;
-      padding: 11px 12px;
-      border: none;
-      background: transparent;
-      cursor: pointer;
-      text-align: left;
-      border-bottom: 1px solid rgba(148,163,184,.12);
-      font-weight: 600;
-      color: #334155;
-      transition: all .15s ease;
-      position: relative;
-    }
-
-    .user-btn:last-child {
-      border-bottom: none;
-    }
-
-    .user-btn:hover {
-      background: rgba(14,165,233,.05);
-    }
-
-    .user-btn.active {
-      background: linear-gradient(90deg, rgba(14,165,233,.12) 0%, rgba(14,165,233,.06) 100%);
-      color: #0369a1;
-      border-left: 3px solid var(--primary);
-      padding-left: 9px;
-    }
-
-    .user-btn:active {
-      transform: translateY(1px);
-    }
-
-    .user-sub {
-      font-size: 12px;
-      color: rgba(100,116,139,.75);
-      font-weight: 500;
-    }
-
-    /* ========== MAIN DETAIL CARD ========== */
-    .detail-card {
-      background: linear-gradient(135deg, #ffffff 0%, rgba(255,255,255,.97) 100%);
-      border: 1.5px solid rgba(148,163,184,.22);
-      border-radius: 16px;
-      box-shadow: 0 8px 28px rgba(2,8,23,.08);
-      padding: 24px;
-    }
-
-    .detail-card > div:first-child {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      margin-bottom: 24px;
-      border-bottom: 1.5px solid rgba(148,163,184,.15);
-      padding-bottom: 16px;
-    }
-
-    #userHdr {
-      font-size: 22px;
-      font-weight: 900;
-      letter-spacing: -.3px;
-      color: #0f172a;
-    }
+    .users-grid{
+      display:grid;
+      grid-template-columns:320px minmax(0, 1fr);
+      gap:18px;
+      align-items:start;
+    }
+
+    .users-rail{
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+      position:sticky;
+      top:18px;
+    }
+
+    .filter-card{
+      position:relative;
+      z-index:1;
+      display:grid;
+      gap:14px;
+    }
+
+    .seg{
+      display:grid;
+      gap:8px;
+    }
+
+    .chipbtn{
+      width:100%;
+      min-height:48px;
+      padding:12px 14px;
+      border-radius:16px;
+      border:1px solid rgba(148, 163, 184, 0.26);
+      background:rgba(255,255,255,.76);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      color:#334155;
+      font-weight:700;
+      cursor:pointer;
+      transition:transform .16s ease, border-color .16s ease, background .16s ease;
+    }
 
-    .detail-card .actions {
-      margin: 0;
+    .chipbtn:hover{
+      transform:translateY(-1px);
+      border-color:rgba(29, 155, 232, 0.34);
+      background:#fff;
+    }
+
+    .chipbtn.active{
+      border-color:rgba(29, 155, 232, 0.42);
+      background:linear-gradient(180deg, rgba(29,155,232,.12), rgba(29,155,232,.06));
+      color:#0369a1;
+      box-shadow:0 10px 18px rgba(29, 155, 232, 0.08);
+    }
+
+    .muted-small{
+      font-size:12px;
+      color:#64748b;
     }
+
+    .rail-actions{
+      display:grid;
+      gap:10px;
+    }
+
+    .list-wrap{
+      border-radius:22px;
+      border:1px solid rgba(199, 213, 228, 0.78);
+      background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(247,250,255,.92));
+      box-shadow:0 14px 24px rgba(15, 23, 42, 0.05);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      max-height:320px;
+    }
+
+    .list-wrap .meta{
+      padding:14px 16px;
+      border-bottom:1px solid rgba(226, 232, 240, 0.88);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      font-weight:800;
+      color:#0f172a;
+    }
 
-    /* Form improvements */
-    .grid2 {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
+    .list-count{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:34px;
+      min-height:28px;
+      padding:0 10px;
+      border-radius:999px;
+      background:rgba(29, 155, 232, 0.1);
+      color:#0369a1;
+      font-size:12px;
+      font-weight:800;
     }
 
-    .grid4 {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
+    .list-items{
+      overflow:auto;
+      flex:1;
     }
 
-    .detail-card label {
-      font-size: 12px;
-      color: #334155;
-      display: block;
-      margin-bottom: 8px;
-      font-weight: 700;
-      letter-spacing: .3px;
-      text-transform: uppercase;
+    .user-btn{
+      width:100%;
+      padding:14px 16px;
+      border:0;
+      border-bottom:1px solid rgba(226, 232, 240, 0.84);
+      background:transparent;
+      cursor:pointer;
+      text-align:left;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+      transition:background .16s ease;
     }
 
-    .detail-card input,
-    .detail-card select {
-      width: 100%;
-      padding: 12px 14px;
-      border: 1.5px solid rgba(148,163,184,.28);
-      border-radius: 12px;
-      box-sizing: border-box;
-      background: rgba(255,255,255,.9);
-      font-size: 14px;
-      color: var(--text);
-      transition: all .2s ease;
-      font-weight: 500;
+    .user-btn:last-child{
+      border-bottom:0;
     }
 
-    .detail-card input:focus,
-    .detail-card select:focus {
-      outline: none;
-      border-color: var(--primary);
-      box-shadow: 0 0 0 4px rgba(14,165,233,.15);
-      background: #fff;
+    .user-btn:hover{
+      background:rgba(29, 155, 232, 0.05);
     }
 
-    .detail-card input::placeholder {
-      color: rgba(100,116,139,.65);
+    .user-btn.active{
+      background:linear-gradient(90deg, rgba(29, 155, 232, 0.12), rgba(29, 155, 232, 0.04));
+      box-shadow:inset 3px 0 0 #1d9be8;
     }
 
-    /* Password section styling */
-    .detail-card section.card {
-      border: 1.5px solid rgba(148,163,184,.20);
-      background: linear-gradient(135deg, rgba(248,250,252,.8) 0%, rgba(248,250,252,.95) 100%);
-      margin-top: 16px;
+    .user-sub{
+      margin-top:4px;
+      font-size:12px;
+      color:#64748b;
+      line-height:1.45;
     }
 
-    .detail-card section h3 {
-      font-size: 14px;
-      font-weight: 800;
-      color: #334155;
-      letter-spacing: .3px;
-      text-transform: uppercase;
+    .user-state{
+      white-space:nowrap;
+      font-size:11px;
+      font-weight:800;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      color:#0f6fa6;
     }
 
-    .detail-card section .muted-small {
-      color: rgba(100,116,139,.80);
-      line-height: 1.5;
+    .users-detail{
+      padding:24px;
+      position:relative;
+      z-index:1;
     }
 
-    #f_newPw {
-      font-family: 'Courier New', monospace;
+    .users-detail-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:18px;
+      padding-bottom:16px;
+      border-bottom:1px solid rgba(226, 232, 240, 0.88);
     }
 
-    /* ========== TABLE IMPROVEMENTS ========== */
-    .table-card {
-      margin-top: 20px;
-      border: 1.5px solid rgba(148,163,184,.22);
-      border-radius: 14px;
-      overflow: hidden;
-      background: #fff;
-      box-shadow: 0 4px 16px rgba(2,8,23,.06);
+    .users-detail-title{
+      margin:0;
+      font-size:1.7rem;
+      line-height:1;
+      letter-spacing:-.04em;
+      font-weight:900;
+      color:#0f172a;
     }
 
-    .scroll-area {
-      max-height: calc(100vh - 380px);
-      overflow: auto;
+    .users-form-grid{
+      display:grid;
+      grid-template-columns:repeat(4, minmax(0, 1fr));
+      gap:14px;
     }
 
-    .scroll-area::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+    .grid2{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
     }
 
-    .scroll-area::-webkit-scrollbar-track {
-      background: transparent;
+    .users-card{
+      padding:18px;
+      border-radius:22px;
+      border:1px solid rgba(199, 213, 228, 0.76);
+      background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(247,250,255,.92));
+      box-shadow:0 14px 24px rgba(15, 23, 42, 0.05);
     }
 
-    .scroll-area::-webkit-scrollbar-thumb {
-      background: rgba(148,163,184,.22);
-      border-radius: 4px;
+    .users-card h3{
+      margin:0 0 12px;
+      font-size:1rem;
+      font-weight:900;
+      letter-spacing:-.02em;
+      color:#0f172a;
     }
 
-    .scroll-area::-webkit-scrollbar-thumb:hover {
-      background: rgba(148,163,184,.35);
+    .table-card{
+      margin-top:16px;
     }
 
-    .data-table {
-      width: 100%;
-      border-collapse: separate;
-      border-spacing: 0;
-      font-size: 14px;
+    .data-table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      font-size:14px;
     }
 
-    .data-table thead th {
-      position: sticky;
-      top: 0;
-      z-index: 10;
-      background: linear-gradient(135deg, #f8fafc 0%, rgba(248,250,252,.95) 100%);
-      text-align: left;
-      padding: 14px 16px;
-      border-bottom: 1.5px solid rgba(148,163,184,.20);
-      font-weight: 800;
-      letter-spacing: .3px;
-      color: #334155;
-      text-transform: uppercase;
-      font-size: 12px;
+    .data-table thead th{
+      position:sticky;
+      top:0;
+      z-index:1;
+      padding:16px;
+      text-align:left;
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:#334155;
+      background:linear-gradient(180deg, #f8fbff, #f0f6fc);
+      border-bottom:1px solid rgba(148, 163, 184, 0.18);
     }
 
-    .data-table tbody td {
-      padding: 14px 16px;
-      border-bottom: 1px solid rgba(226,232,240,.8);
-      color: #475569;
+    .data-table tbody td{
+      padding:16px;
+      border-bottom:1px solid rgba(226, 232, 240, 0.88);
+      color:#0f172a;
+      vertical-align:middle;
     }
 
-    .data-table tbody tr {
-      transition: all .15s ease;
+    .data-table tbody tr:hover{
+      background:rgba(29, 155, 232, 0.045);
     }
 
-    .data-table tbody tr:hover {
-      background: linear-gradient(90deg, rgba(14,165,233,.05) 0%, transparent 100%);
+    .data-table tbody tr:last-child td{
+      border-bottom:0;
     }
 
-    .data-table a.rowLink {
-      color: var(--primary);
-      text-decoration: none;
-      font-weight: 700;
-      transition: all .15s ease;
+    .row-chk{
+      width:46px;
+      text-align:center;
     }
 
-    .data-table a.rowLink:hover {
-      color: #0369a1;
-      text-decoration: underline;
+    .rowLink{
+      color:#0369a1;
+      text-decoration:none;
+      font-weight:800;
     }
 
-    /* Table columns */
-    .col-ticket {
-      width: 120px;
-      white-space: nowrap;
+    .rowLink:hover{
+      text-decoration:underline;
     }
 
-    .col-email {
-      min-width: 280px;
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      min-height:34px;
+      padding:6px 12px;
+      border-radius:999px;
+      border:1px solid transparent;
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.03em;
     }
 
-    .col-updated {
-      min-width: 200px;
-      white-space: nowrap;
-      color: var(--muted);
-    }
-
-    .col-status {
-      width: 140px;
-      white-space: nowrap;
-    }
-
-    .row-chk {
-      width: 44px;
-      text-align: center;
-    }
-
-    .data-table input[type="checkbox"] {
-      cursor: pointer;
-      width: 18px;
-      height: 18px;
-      accent-color: var(--primary);
-      transition: transform .1s ease;
-    }
-
-    .data-table input[type="checkbox"]:hover {
-      transform: scale(1.1);
-    }
+    .badge-done{ background:#ecfdf5; color:#065f46; border-color:#bbf7d0; }
+    .badge-other{ background:#eef2ff; color:#3730a3; border-color:#c7d2fe; }
 
-    /* Badge improvements */
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 12px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-      border: 1px solid transparent;
-      letter-spacing: .2px;
-      text-transform: uppercase;
+    .loading-overlay{
+      position:fixed;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background:rgba(2, 8, 23, 0.62);
+      backdrop-filter:blur(8px);
+      z-index:2000;
     }
 
-    .badge-done {
-      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
-      color: #065f46;
-      border-color: rgba(34,197,94,.25);
-      box-shadow: 0 4px 12px rgba(34,197,94,.12);
-    }
-
-    .badge-other {
-      background: linear-gradient(135deg, #eef2ff 0%, #dbeafe 100%);
-      color: #3730a3;
-      border-color: rgba(99,102,241,.25);
-      box-shadow: 0 4px 12px rgba(99,102,241,.12);
-    }
-
-    /* Loading overlay improvements */
-    #overlay {
-      position: fixed;
-      inset: 0;
-      display: none;
-      z-index: 2000;
-      align-items: center;
-      justify-content: center;
-    }
+    .loading-overlay.show{ display:flex; }
 
-    #overlay.show {
-      display: flex;
+    .loading-box{
+      min-width:280px;
+      padding:22px 24px;
+      border-radius:24px;
+      border:1px solid rgba(148, 163, 184, 0.24);
+      background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(247,250,255,.95));
+      box-shadow:0 24px 70px rgba(15, 23, 42, 0.16);
+      text-align:center;
     }
 
-    #overlay::backdrop,
-    .loading-overlay {
-      background: rgba(15,23,42,.55);
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
+    .spinner{
+      width:32px;
+      height:32px;
+      margin:0 auto 12px;
+      border-radius:50%;
+      border:3px solid #dbe7f3;
+      border-top-color:var(--primary);
+      animation:spin .78s linear infinite;
     }
 
-    .loading-box,
-    .loading-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(15,23,42,.60);
-      display: flex;
-      align-items: center;
-      justify-content: center;
+    .loading-text{
+      color:#334155;
+      font-size:14px;
+      font-weight:700;
     }
 
-    .loading-box {
-      position: relative;
-      margin: auto;
-      background: #fff;
-      border-radius: 16px;
-      min-width: 280px;
-      padding: 24px;
-      text-align: center;
-      box-shadow: 0 20px 60px rgba(2,8,23,.20);
-      border: 1px solid rgba(148,163,184,.20);
-    }
-
-    .spinner {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      border: 3px solid rgba(148,163,184,.20);
-      border-top-color: var(--primary);
-      margin: 0 auto 12px;
-      animation: spin 0.8s linear infinite;
-    }
+    @keyframes spin{ to{ transform:rotate(360deg); } }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    @media (max-width: 1120px){
+      .users-grid{
+        grid-template-columns:1fr;
+      }
 
-    .loading-text {
-      font-size: 14px;
-      font-weight: 600;
-      color: #334155;
-    }
+      .users-rail{
+        position:static;
+      }
 
-    /* ========== RESPONSIVE IMPROVEMENTS ========== */
-    @media (max-width: 1200px) {
-      .grid4 {
-        grid-template-columns: repeat(2, 1fr);
+      .users-form-grid{
+        grid-template-columns:repeat(2, minmax(0, 1fr));
       }
     }
 
-    @media (max-width: 980px) {
-      .page-wrap {
-        grid-template-columns: 1fr;
+    @media (max-width: 760px){
+      .users-detail{
+        padding:18px;
       }
 
-      .sidebar {
-        position: static;
-      }
-
+      .users-detail-head,
       .grid2,
-      .grid4 {
-        grid-template-columns: 1fr;
+      .users-form-grid{
+        grid-template-columns:1fr;
+        flex-direction:column;
       }
-
-      .list-wrap {
-        max-height: unset;
-      }
-
-      .actions {
-        flex-direction: row;
-      }
-
-      .detail-card {
-        padding: 18px;
-      }
-    }
-
-    @media (max-width: 640px) {
-      .page-wrap {
-        gap: 12px;
-      }
-
-      .sidebar {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-        grid-column: 1 / -1;
-      }
-
-      .admin-card,
-      .list-wrap {
-        grid-column: auto;
-      }
-
-      .detail-card {
-        grid-column: 1 / -1;
-        padding: 14px;
-      }
-
-      .detail-card > div:first-child {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-
-      #userHdr {
-        font-size: 18px;
-      }
-
-      .grid2,
-      .grid4 {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    /* Utility classes */
-    .form-error {
-      margin: 12px 0 0;
-      padding: 12px 14px;
-      border: 1.5px solid rgba(239,68,68,.25);
-      background: linear-gradient(135deg, #fef2f2 0%, rgba(254,242,242,.95) 100%);
-      color: #7f1d1d;
-      border-radius: 12px;
-      font-size: 13px;
-      font-weight: 600;
-    }
-
-    .input-invalid {
-      border-color: #ef4444 !important;
-      box-shadow: 0 0 0 4px rgba(239,68,68,.12) !important;
     }
   </style>
 </head>
-<body>
-  <!-- Header -->
+<body class="admin-body admin-subpage-body">
   <header class="site-header">
     <div class="container header-inner" style="grid-template-columns:auto 1fr auto;">
       <div class="brand">
-        <img src="/assets/img/logo.png" class="logo" alt="Sixty – 3 logo">
-        <span class="brand-text">Sixty – 3 Trucking Inc</span>
+        <img src="/assets/img/logo.png" class="logo" alt="Sixty - 3 logo">
+        <span class="brand-text">Sixty - 3 Trucking Inc</span>
       </div>
       <div class="title-wrap" style="justify-content:flex-start;">
         <h1 class="page-title">Manage Users</h1>
-        <p class="subtitle">Add admins/drivers, activate/deactivate, and bulk delete</p>
+        <p class="subtitle">Add staff, update permissions, manage passwords, and clean up accounts</p>
       </div>
       <div>
-        <a href="/admin" class="btn">← Back to Admin</a>
+        <a href="/admin" class="btn">Back to Admin</a>
       </div>
     </div>
   </header>
 
-  <main class="container" style="padding-bottom:28px;">
-    <div class="page-wrap">
-      <!-- Sidebar -->
-      <aside class="sidebar">
-        <div class="card admin-card">
-          <label for="userSearch">🔍 Search users</label>
-          <input id="userSearch" class="search-box" type="search" placeholder="Name, email, or role" autocomplete="off">
-
-          <div class="seg" role="tablist" aria-label="Filter users">
-            <button id="segAll" class="chipbtn active" role="tab" aria-selected="true">
-              <span>All Users</span>
-              <span class="muted-small" id="userCountAll">(0)</span>
-            </button>
-            <button id="segDrivers" class="chipbtn" role="tab" aria-selected="false">
-              <span>Drivers</span>
-              <span class="muted-small" id="segDriversCount">(0)</span>
-            </button>
-            <button id="segAdmins" class="chipbtn" role="tab" aria-selected="false">
-              <span>Admins</span>
-              <span class="muted-small" id="segAdminsCount">(0)</span>
-            </button>
-          </div>
-
-          <div class="actions">
-            <button id="addBtn" class="btn">➕ Add New User</button>
-            <button id="bulkDeleteBtn" class="btn danger">🗑 Delete Selected</button>
-          </div>
-        </div>
-
-        <div class="stack">
-          <!-- Drivers group -->
-          <div class="list-wrap" aria-label="Drivers list">
-            <div class="meta">
-              <span>👥 Drivers</span>
-              <span id="driverCount" style="background: rgba(14,165,233,.12); color: #0369a1; padding: 2px 8px; border-radius: 999px; font-size: 11px;">0</span>
-            </div>
-            <div id="driverList" class="list-items">
-              <div class="muted-small" style="padding:12px;">No drivers.</div>
-            </div>
-          </div>
-
-          <!-- Admins group -->
-          <div class="list-wrap" aria-label="Admins list">
-            <div class="meta">
-              <span>🔐 Admins</span>
-              <span id="adminCount" style="background: rgba(99,102,241,.12); color: #3730a3; padding: 2px 8px; border-radius: 999px; font-size: 11px;">0</span>
-            </div>
-            <div id="adminList" class="list-items">
-              <div class="muted-small" style="padding:12px;">No admins.</div>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <!-- Detail + table -->
-      <section class="card detail-card">
-        <div>
-          <h2 id="userHdr">User —</h2>
-          <div class="actions">
-            <button id="saveBtn" class="btn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #fff; border: none; box-shadow: 0 4px 12px rgba(16,185,129,.18);">✓ Save Changes</button>
-          </div>
-        </div>
-
-        <!-- User Details Form -->
-        <div class="grid4" style="margin-bottom: 20px;">
+  <main class="container">
+    <div class="subpage-shell">
+      <section class="subpage-hero">
+        <div class="subpage-hero-grid">
           <div>
-            <label>Email (sign-in)</label>
-            <input id="f_email" type="email" placeholder="name@company.com">
+            <div class="subpage-kicker">Access Control</div>
+            <h2 class="subpage-title">Manage users and roles in one workspace</h2>
+            <p class="subpage-copy">
+              Search drivers and admins, update account state, manage passwords, and perform bulk cleanup without hopping between separate tools.
+            </p>
           </div>
-          <div>
-            <label>Full name</label>
-            <input id="f_fullName" type="text" placeholder="Jane Doe">
-          </div>
-          <div>
-            <label>Role</label>
-            <select id="f_role">
-              <option value="driver">Driver</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-          <div>
-            <label>Status</label>
-            <select id="f_active">
-              <option value="true">✓ Active</option>
-              <option value="false">✗ Disabled</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="actions" style="justify-content:flex-start; margin-bottom: 16px;">
-          <button id="deleteBtn" class="btn danger">🗑 Delete User</button>
-        </div>
-
-        <!-- Password Management Section -->
-        <section class="card detail-card">
-          <h3 style="margin:0 0 8px;">🔑 Password Management</h3>
-          <p class="muted-small" style="margin:0 0 14px; line-height:1.5;">
-            Set a temporary or new password, or clear it so the user must create one on next sign-in.
-          </p>
-
-          <div class="grid2" style="margin-bottom: 14px; align-items:end;">
-            <div>
-              <label>New password</label>
-              <input id="f_newPw" type="text" placeholder="Min. 8 chars, include a number" style="font-size:13px;">
-            </div>
-            <div style="display:flex; gap:10px;">
-              <button id="btnSetPw" class="btn" style="flex:1; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #fff; border: none; box-shadow: 0 4px 12px rgba(37,99,235,.18); font-size: 13px;">
-                Set Password
-              </button>
-              <button id="btnClearPw" class="btn danger" type="button" style="flex:1; font-size: 13px;">
-                Clear Password
-              </button>
-            </div>
-          </div>
-
-          <p class="muted-small" style="margin:0; font-size:12px; line-height:1.5;">
-            ℹ Clearing sets password to null. On next login, user must create one via setup flow.
-          </p>
-        </section>
-
-        <!-- Users Data Table -->
-        <div class="table-card">
-          <div class="scroll-area">
-            <table class="data-table" aria-label="Users">
-              <thead>
-                <tr>
-                  <th class="row-chk"><input id="chkAll" type="checkbox" aria-label="Select all"></th>
-                  <th>Email</th>
-                  <th>Full Name</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="rows">
-                <tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--muted);">Loading…</td></tr>
-              </tbody>
-            </table>
+          <div class="subpage-actions">
+            <div class="subpage-chip">Drivers, admins, activation status, and password tools</div>
           </div>
         </div>
       </section>
+
+      <div class="users-grid">
+        <aside class="users-rail">
+          <section class="subpage-rail-card filter-card">
+            <div>
+              <div class="section-kicker">Search Users</div>
+              <h3 class="subpage-section-title" style="margin-bottom:12px;">Directory filters</h3>
+            </div>
+
+            <div class="field">
+              <label for="userSearch">Name, email, or role</label>
+              <input id="userSearch" class="search-box" type="search" placeholder="Search the user directory" autocomplete="off">
+            </div>
+
+            <div class="seg" role="tablist" aria-label="Filter users">
+              <button id="segAll" class="chipbtn active" role="tab" aria-selected="true">
+                <span>All Users</span>
+                <span class="muted-small" id="userCountAll">(0)</span>
+              </button>
+              <button id="segDrivers" class="chipbtn" role="tab" aria-selected="false">
+                <span>Drivers</span>
+                <span class="muted-small" id="segDriversCount">(0)</span>
+              </button>
+              <button id="segAdmins" class="chipbtn" role="tab" aria-selected="false">
+                <span>Admins</span>
+                <span class="muted-small" id="segAdminsCount">(0)</span>
+              </button>
+            </div>
+
+            <div class="rail-actions">
+              <button id="addBtn" class="btn">Add New User</button>
+              <button id="bulkDeleteBtn" class="btn danger">Delete Selected</button>
+            </div>
+          </section>
+
+          <div class="list-wrap" aria-label="Drivers list">
+            <div class="meta">
+              <span>Drivers</span>
+              <span id="driverCount" class="list-count">0</span>
+            </div>
+            <div id="driverList" class="list-items">
+              <div class="subpage-empty">No drivers.</div>
+            </div>
+          </div>
+
+          <div class="list-wrap" aria-label="Admins list">
+            <div class="meta">
+              <span>Admins</span>
+              <span id="adminCount" class="list-count">0</span>
+            </div>
+            <div id="adminList" class="list-items">
+              <div class="subpage-empty">No admins.</div>
+            </div>
+          </div>
+        </aside>
+
+        <section class="subpage-panel users-detail">
+          <div class="users-detail-head">
+            <div>
+              <div class="section-kicker">User Details</div>
+              <h2 id="userHdr" class="users-detail-title">User -</h2>
+            </div>
+            <button id="saveBtn" class="btn btn-primary">Save Changes</button>
+          </div>
+
+          <div class="users-form-grid">
+            <div class="field">
+              <label>Email (sign-in)</label>
+              <input id="f_email" type="email" placeholder="name@company.com">
+            </div>
+            <div class="field">
+              <label>Full name</label>
+              <input id="f_fullName" type="text" placeholder="Jane Doe">
+            </div>
+            <div class="field">
+              <label>Role</label>
+              <select id="f_role">
+                <option value="driver">Driver</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Status</label>
+              <select id="f_active">
+                <option value="true">Active</option>
+                <option value="false">Disabled</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+            <button id="deleteBtn" class="btn danger">Delete User</button>
+          </div>
+
+          <section class="users-card" style="margin-top:16px;">
+            <h3>Password management</h3>
+            <p class="muted-small" style="margin:0 0 14px; line-height:1.55;">
+              Set a new password immediately, or clear it so the user must create one on the next sign-in.
+            </p>
+
+            <div class="grid2" style="align-items:end;">
+              <div class="field">
+                <label>New password</label>
+                <input id="f_newPw" type="text" placeholder="Minimum 8 characters, include a number">
+              </div>
+              <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button id="btnSetPw" class="btn btn-primary" style="flex:1;">Set Password</button>
+                <button id="btnClearPw" class="btn danger" type="button" style="flex:1;">Clear Password</button>
+              </div>
+            </div>
+
+            <p class="muted-small" style="margin:12px 0 0; line-height:1.55;">
+              Clearing a password sets it to null. The next login will require the user to complete the setup flow again.
+            </p>
+          </section>
+
+          <div class="table-card">
+            <div class="scroll-area">
+              <table class="data-table" aria-label="Users">
+                <thead>
+                  <tr>
+                    <th class="row-chk"><input id="chkAll" type="checkbox" aria-label="Select all"></th>
+                    <th>Email</th>
+                    <th>Full Name</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="rows">
+                  <tr><td colspan="5" class="subpage-empty">Loading users...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   </main>
 
   <footer class="site-footer">
     <div class="container">
-      <small>© <span id="y"></span> Sixty – 3 Trucking Inc. All rights reserved.</small>
+      <small>&copy; <span id="y"></span> Sixty - 3 Trucking Inc</small>
     </div>
   </footer>
 
-  <!-- Loading overlay -->
   <div id="overlay" class="loading-overlay" aria-hidden="true">
     <div class="loading-box" role="dialog" aria-live="polite">
       <div class="spinner"></div>
-      <div id="overlayText" class="loading-text">Working…</div>
+      <div id="overlayText" class="loading-text">Working...</div>
     </div>
   </div>
 
   <script>
-    // Footer year
     document.getElementById('y').textContent = new Date().getFullYear();
 
-    // ---------- helpers ----------
     const $  = (s, root=document) => root.querySelector(s);
     const $$ = (s, root=document) => Array.from(root.querySelectorAll(s));
     const ltrim = v => String(v ?? '').trim().toLowerCase();
 
-    function showOverlay(msg='Working…'){ $('#overlayText').textContent = msg; $('#overlay').classList.add('show'); $('#overlay').setAttribute('aria-hidden','false'); }
-    function hideOverlay(){ $('#overlay').classList.remove('show'); $('#overlay').setAttribute('aria-hidden','true'); }
+    function showOverlay(msg='Working...'){
+      $('#overlayText').textContent = msg;
+      $('#overlay').classList.add('show');
+      $('#overlay').setAttribute('aria-hidden','false');
+    }
+    function hideOverlay(){
+      $('#overlay').classList.remove('show');
+      $('#overlay').setAttribute('aria-hidden','true');
+    }
 
     function toast(msg){ alert(msg); }
 
-    // ---------- state ----------
-    let ALL = [];           // [{email, full_name, role, active}]
-    let FILTER = 'all';     // 'all' | 'driver' | 'admin'
-    let CURRENT = null;     // {email,...}
-    let selectedEmails = new Set(); // table checkboxes
+    let ALL = [];
+    let FILTER = 'all';
+    let CURRENT = null;
+    let selectedEmails = new Set();
     let searchQ = '';
 
-    // ---------- load users ----------
     async function loadUsers(){
-      showOverlay('Loading users…');
+      showOverlay('Loading users...');
       try{
         const r = await fetch('/api/admin/users?q=' + encodeURIComponent(searchQ));
         if (r.status === 401 || r.status === 403) { location.href = '/'; return; }
@@ -857,7 +574,7 @@
         ALL = (j.users || []).map(u => ({
           email: String(u.email||'').toLowerCase(),
           full_name: u.full_name || '',
-          role: (u.role||'driver').toLowerCase()==='admin' ? 'admin' : 'driver',
+          role: (u.role||'driver').toLowerCase() === 'admin' ? 'admin' : 'driver',
           active: !!u.active
         }));
         renderEverything();
@@ -871,7 +588,6 @@
       }
     }
 
-    // ---------- renders ----------
     function renderEverything(){
       renderLists();
       renderTable();
@@ -887,38 +603,31 @@
       const drivers = ALL.filter(u => u.role === 'driver');
       const admins  = ALL.filter(u => u.role === 'admin');
 
-      // counts
       $('#driverCount').textContent = drivers.length;
       $('#adminCount').textContent  = admins.length;
       $('#userCountAll').textContent = `(${ALL.length})`;
       $('#segDriversCount').textContent = `(${drivers.length})`;
       $('#segAdminsCount').textContent = `(${admins.length})`;
 
-      // helpers
       const mkBtn = (u) => `
         <button class="user-btn" data-email="${u.email.replace(/"/g,'&quot;')}">
-          <div style="flex: 1; min-width: 0;">
-            <div style="font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${u.full_name || u.email}</div>
+          <div style="flex:1; min-width:0;">
+            <div style="font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${u.full_name || u.email}</div>
             <div class="user-sub">${u.email}</div>
           </div>
-          <div style="font-size: 11px; font-weight: 700; background: ${u.active ? 'rgba(34,197,94,.12)' : 'rgba(107,114,128,.12)'}; color: ${u.active ? '#065f46' : '#374151'}; padding: 2px 8px; border-radius: 999px; white-space: nowrap;">
-            ${u.active ? 'Active' : 'Disabled'}
-          </div>
+          <div class="user-state">${u.active ? 'active' : 'disabled'}</div>
         </button>`;
 
-      // drivers
       const dl = $('#driverList');
       dl.innerHTML = drivers.length
         ? drivers.map(mkBtn).join('')
-        : `<div class="muted-small" style="padding:12px;">No drivers.</div>`;
+        : `<div class="subpage-empty">No drivers.</div>`;
 
-      // admins
       const al = $('#adminList');
       al.innerHTML = admins.length
         ? admins.map(mkBtn).join('')
-        : `<div class="muted-small" style="padding:12px;">No admins.</div>`;
+        : `<div class="subpage-empty">No admins.</div>`;
 
-      // active state on side buttons
       $$('#driverList .user-btn, #adminList .user-btn').forEach(btn => {
         btn.classList.toggle('active', CURRENT && btn.dataset.email === CURRENT.email);
       });
@@ -931,7 +640,7 @@
       if (FILTER === 'admin')  view = view.filter(u => u.role === 'admin');
 
       if (!view.length){
-        rows.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--muted);">No users.</td></tr>`;
+        rows.innerHTML = `<tr><td colspan="5" class="subpage-empty">No users.</td></tr>`;
         return;
       }
 
@@ -939,14 +648,13 @@
         <tr data-email="${u.email}">
           <td class="row-chk"><input type="checkbox" class="rowChk" ${selectedEmails.has(u.email)?'checked':''}></td>
           <td><a href="#" class="rowLink">${u.email}</a></td>
-          <td>${u.full_name || '—'}</td>
-          <td style="text-transform: capitalize; font-weight: 700; color: #334155;">${u.role}</td>
-          <td>${u.active ? '<span class="badge badge-done">✓ Active</span>' : '<span class="badge badge-other">✗ Disabled</span>'}</td>
+          <td>${u.full_name || '-'}</td>
+          <td style="text-transform:capitalize; font-weight:700; color:#334155;">${u.role}</td>
+          <td>${u.active ? '<span class="badge badge-done">Active</span>' : '<span class="badge badge-other">Disabled</span>'}</td>
         </tr>
       `).join('');
     }
 
-    // ---------- form ----------
     function fillForm(u){
       CURRENT = u;
       $('#userHdr').textContent = u.full_name ? u.full_name : u.email;
@@ -955,14 +663,13 @@
       $('#f_role').value = u.role === 'admin' ? 'admin' : 'driver';
       $('#f_active').value = u.active ? 'true' : 'false';
 
-      // highlight in lists
       $$('#driverList .user-btn, #adminList .user-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.email === u.email);
       });
     }
     function clearForm(){
       CURRENT = null;
-      $('#userHdr').textContent = 'User —';
+      $('#userHdr').textContent = 'User -';
       $('#f_email').value = '';
       $('#f_fullName').value = '';
       $('#f_role').value = 'driver';
@@ -976,7 +683,7 @@
       if (!pw || pw.length < 8){ toast('Enter a password with at least 8 characters (include a number).'); return; }
 
       try{
-        showOverlay('Updating password…');
+        showOverlay('Updating password...');
         const r = await fetch('/api/admin/users/' + encodeURIComponent(CURRENT.email) + '/password', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
@@ -999,7 +706,7 @@
       if (!confirm(`Clear password for ${CURRENT.email}? They will be forced to create a new one next time.`)) return;
 
       try{
-        showOverlay('Clearing password…');
+        showOverlay('Clearing password...');
         const r = await fetch('/api/admin/users/' + encodeURIComponent(CURRENT.email) + '/password', {
           method: 'DELETE'
         });
@@ -1014,7 +721,6 @@
       }
     }
 
-    // ---------- actions ----------
     async function saveCurrent(){
       const email = ltrim($('#f_email').value);
       const fullName = $('#f_fullName').value.trim();
@@ -1026,14 +732,12 @@
 
       const payload = { email, fullName, role, active };
       try{
-        showOverlay(CURRENT ? 'Saving user…' : 'Adding user…');
+        showOverlay(CURRENT ? 'Saving user...' : 'Adding user...');
         if (!CURRENT){
-          // add
           const r = await fetch('/api/admin/users', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
           const j = await r.json();
           if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to add');
         } else {
-          // update — PUT /:email (key is the original email)
           const key = encodeURIComponent(CURRENT.email);
           const r = await fetch(`/api/admin/users/${key}`, { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ fullName, role, active }) });
           const j = await r.json();
@@ -1055,7 +759,7 @@
       if (!CURRENT) { toast('No user selected.'); return; }
       if (!confirm(`Delete user ${CURRENT.email}?`)) return;
       try{
-        showOverlay('Deleting user…');
+        showOverlay('Deleting user...');
         const r = await fetch('/api/admin/users', { method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emails:[CURRENT.email] }) });
         const j = await r.json();
         if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to delete');
@@ -1076,7 +780,7 @@
       if (!list.length){ toast('Select one or more rows first.'); return; }
       if (!confirm(`Delete ${list.length} user(s)?`)) return;
       try{
-        showOverlay('Deleting users…');
+        showOverlay('Deleting users...');
         const r = await fetch('/api/admin/users', { method:'DELETE', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ emails:list }) });
         const j = await r.json();
         if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to delete');
@@ -1092,13 +796,10 @@
       }
     }
 
-    // ---------- events ----------
-    // segmented filter
     $('#segAll').addEventListener('click', () => { FILTER='all'; $('#segAll').classList.add('active'); $('#segDrivers').classList.remove('active'); $('#segAdmins').classList.remove('active'); renderTable(); });
     $('#segDrivers').addEventListener('click', () => { FILTER='driver'; $('#segDrivers').classList.add('active'); $('#segAll').classList.remove('active'); $('#segAdmins').classList.remove('active'); renderTable(); });
     $('#segAdmins').addEventListener('click', () => { FILTER='admin'; $('#segAdmins').classList.add('active'); $('#segAll').classList.remove('active'); $('#segDrivers').classList.remove('active'); renderTable(); });
 
-    // sidebar list click -> open
     $('#driverList').addEventListener('click', (e) => {
       const btn = e.target.closest('.user-btn'); if (!btn) return;
       const u = ALL.find(x => x.email === btn.dataset.email); if (u) fillForm(u);
@@ -1108,7 +809,6 @@
       const u = ALL.find(x => x.email === btn.dataset.email); if (u) fillForm(u);
     });
 
-    // table: select row / open
     $('#rows').addEventListener('click', (e) => {
       const tr = e.target.closest('tr'); if (!tr) return;
       const email = tr.dataset.email;
@@ -1125,7 +825,6 @@
       }
     });
 
-    // select-all
     $('#chkAll').addEventListener('change', (e) => {
       const on = e.target.checked;
       const viewEmails = Array.from($('#rows').querySelectorAll('tr[data-email]')).map(tr => tr.dataset.email);
@@ -1133,23 +832,19 @@
       renderTable();
     });
 
-    // search
     $('#userSearch').addEventListener('input', async (e) => {
       searchQ = e.target.value;
-      await loadUsers(); // server-side filtering
+      await loadUsers();
     });
 
-    // add user (clear form to "new")
     $('#addBtn').addEventListener('click', () => { clearForm(); $('#f_email').focus(); });
 
-    // save / delete / bulk
     $('#saveBtn').addEventListener('click', saveCurrent);
     $('#deleteBtn').addEventListener('click', deleteCurrent);
     $('#bulkDeleteBtn').addEventListener('click', bulkDelete);
     $('#btnSetPw').addEventListener('click', setPasswordForCurrent);
     $('#btnClearPw').addEventListener('click', clearPasswordForCurrent);
 
-    // boot
     loadUsers();
   </script>
 </body>

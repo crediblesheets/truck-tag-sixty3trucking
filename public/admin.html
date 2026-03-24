@@ -792,16 +792,13 @@
       }
     });
 
-    $('#openTagLists').addEventListener('click', (e) => {
-      setBtnLoading(e.currentTarget, true);
+    $('#openTagLists').addEventListener('click', () => {
       location.href = '/tag-lists';
     });
-    $('#openUsers').addEventListener('click', (e) => {
-      setBtnLoading(e.currentTarget, true);
+    $('#openUsers').addEventListener('click', () => {
       location.href = '/admin/users';
     });
-    $('#openDraftTickets').addEventListener('click', (e) => {
-      setBtnLoading(e.currentTarget, true);
+    $('#openDraftTickets').addEventListener('click', () => {
       location.href = '/draft-tickets';
     });
 
@@ -931,6 +928,16 @@
 
     // Refresh button: no full overlay, just spinner on the button
     $('#refreshBtn').addEventListener('click', (e) => withBtnLoading(e.currentTarget, () => loadTable({ showOverlay: false })));
+
+    // Clear any stale button-loading state if the page is restored from cache.
+    window.addEventListener('pageshow', () => {
+      ['#refreshBtn', '#openTagLists', '#openUsers', '#openDraftTickets'].forEach((sel) => {
+        const btn = $(sel);
+        if (!btn) return;
+        btn.removeAttribute('data-loading');
+        btn.disabled = false;
+      });
+    });
 
     // go!
     loadTable({ showOverlay: true });

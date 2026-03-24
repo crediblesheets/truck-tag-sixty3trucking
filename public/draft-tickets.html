@@ -3,186 +3,439 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Draft Tickets — Admin</title>
+  <title>Draft Tickets - Admin</title>
 
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./admin.css">
 
   <style>
-    .admin-card{padding:18px}
-    .table-card{border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);margin-top:10px}
-    .table-card table{width:100%;border-collapse:collapse;background:#fff}
-    .table-card thead{background:#f8fafc}
-    .table-card th,.table-card td{padding:12px 14px;border-bottom:1px solid #eef2f7;font-size:14px}
-    .table-card tbody tr:hover{background:#fafcff}
-    .scroll-area{max-height:60vh;overflow:auto}
+    .draft-toolbar{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
 
-    .col-id{width:180px;white-space:nowrap}
-    .col-email{width:260px}
-    .col-updated{width:200px;white-space:nowrap}
+    .draft-filter-grid{
+      display:grid;
+      grid-template-columns:220px minmax(0, 1fr);
+      gap:14px;
+      align-items:end;
+      position:relative;
+      z-index:1;
+    }
 
-    .badge{display:inline-flex;align-items:center;font-size:12px;padding:4px 8px;border-radius:999px;border:1px solid transparent}
-    .b-draft{background:#eef2ff;color:#3730a3;border-color:#c7d2fe}
-    .b-sent{background:#fff7ed;color:#9a3412;border-color:#fed7aa}
-    .b-conv{background:#ecfdf5;color:#065f46;border-color:#bbf7d0}
+    .draft-meta-row{
+      position:relative;
+      z-index:1;
+      margin:16px 0 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
 
-    .toolbar{display:flex;gap:10px;justify-content:flex-end;align-items:center}
-    .pill-btn{border:1px solid var(--border);background:#fff;border-radius:999px;padding:6px 10px;cursor:pointer}
-    .muted-small{color:#6b7280;font-size:12px}
-    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    label{font-size:12px;color:#555;display:block;margin-bottom:6px}
-    input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;box-sizing:border-box}
+    .draft-table-shell{
+      position:relative;
+      z-index:1;
+      border-radius:24px;
+      border:1px solid rgba(199, 213, 228, 0.82);
+      background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(248,251,255,.92));
+      box-shadow:0 16px 32px rgba(15, 23, 42, 0.06);
+      overflow:hidden;
+    }
 
+    .draft-table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      font-size:14px;
+    }
 
-        /* Modal */
+    .draft-table thead th{
+      position:sticky;
+      top:0;
+      z-index:1;
+      padding:16px;
+      text-align:left;
+      font-size:12px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:#334155;
+      background:linear-gradient(180deg, #f8fbff, #f0f6fc);
+      border-bottom:1px solid rgba(148, 163, 184, 0.18);
+    }
+
+    .draft-table tbody td{
+      padding:18px 16px;
+      border-bottom:1px solid rgba(226, 232, 240, 0.9);
+      color:#0f172a;
+      vertical-align:middle;
+    }
+
+    .draft-table tbody tr:hover{
+      background:rgba(29, 155, 232, 0.045);
+    }
+
+    .draft-table tbody tr:last-child td{
+      border-bottom:0;
+    }
+
+    .draft-link{
+      display:inline-flex;
+      align-items:center;
+      min-height:46px;
+      padding:0 16px;
+      border-radius:15px;
+      border:1px solid rgba(148, 163, 184, 0.24);
+      background:linear-gradient(180deg, rgba(255,255,255,.97), rgba(242,247,253,.92));
+      color:#0f172a;
+      text-decoration:none;
+      font-weight:800;
+      box-shadow:0 10px 18px rgba(15, 23, 42, 0.05);
+      transition:transform .18s ease, border-color .18s ease, color .18s ease;
+    }
+
+    .draft-link:hover{
+      transform:translateY(-1px);
+      color:#0369a1;
+      border-color:rgba(29, 155, 232, 0.42);
+    }
+
+    .col-id{ width:170px; white-space:nowrap; }
+    .col-email{ width:260px; }
+    .col-updated{ width:210px; white-space:nowrap; color:#64748b; }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      min-height:34px;
+      padding:6px 12px;
+      border-radius:999px;
+      border:1px solid transparent;
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.03em;
+    }
+
+    .b-draft{ background:#eef2ff; color:#3730a3; border-color:#c7d2fe; }
+    .b-sent{ background:#fff7ed; color:#9a3412; border-color:#fed7aa; }
+    .b-conv{ background:#ecfdf5; color:#065f46; border-color:#bbf7d0; }
+
     .modal{
-    position:fixed;
-    inset:0;
-    display:none;
-    z-index:1000;
-
-    /* ✅ allow scrolling when content is taller than viewport */
-    overflow:auto;
-    -webkit-overflow-scrolling: touch;
-
-    /* optional: nice padding around the sheet */
-    padding: 4vh 12px;
+      position:fixed;
+      inset:0;
+      display:none;
+      z-index:1000;
+      overflow:auto;
+      padding:4vh 12px;
     }
 
     .modal.show{ display:block; }
 
-    /* make backdrop always cover full screen */
     .modal .backdrop{
-    position:fixed;
-    inset:0;
-    background:rgba(0,0,0,.45);
+      position:fixed;
+      inset:0;
+      background:rgba(2, 8, 23, 0.62);
+      backdrop-filter:blur(8px);
     }
 
-    /* ✅ limit the sheet height and make it scroll inside */
     .modal .sheet{
-    position:relative;
-    max-width:980px;
-    margin:0 auto;
-    background:#fff;
-    border-radius:14px;
-    box-shadow:0 10px 30px rgba(0,0,0,.2);
-    padding:20px 22px;
-
-    max-height: calc(100vh - 8vh);
-    overflow:auto;
-    -webkit-overflow-scrolling: touch;
+      position:relative;
+      max-width:1100px;
+      margin:0 auto;
+      padding:24px;
+      border-radius:28px;
+      border:1px solid rgba(148, 163, 184, 0.22);
+      background:linear-gradient(180deg, rgba(255,255,255,.98), rgba(247,250,255,.95));
+      box-shadow:0 24px 70px rgba(15, 23, 42, 0.16);
+      max-height:calc(100vh - 8vh);
+      overflow:auto;
     }
 
-    .modal .close{position:absolute;right:10px;top:10px;border:0;background:transparent;font-size:24px;cursor:pointer}
-    .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
-    .danger{background:#ef4444!important;color:#fff!important;border-color:#ef4444!important}
-    .warn{background:#f59e0b!important;color:#fff!important;border-color:#f59e0b!important}
+    .modal .close{
+      position:absolute;
+      right:16px;
+      top:14px;
+      width:42px;
+      height:42px;
+      border:0;
+      border-radius:50%;
+      background:rgba(241, 245, 249, 0.92);
+      color:#0f172a;
+      font-size:26px;
+      line-height:1;
+      cursor:pointer;
+    }
 
-    .mini{font-size:12px;color:#6b7280}
-    .kvs{display:grid;grid-template-columns:160px 1fr;gap:6px 12px;font-size:13px}
-    .kvs div{padding:2px 0}
-    .kvs b{color:#111827}
+    .draft-modal-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:18px;
+      padding-bottom:16px;
+      border-bottom:1px solid rgba(226, 232, 240, 0.9);
+    }
 
-    .items-table{width:100%;border-collapse:collapse}
-    .items-table th,.items-table td{border-bottom:1px solid #eef2f7;padding:8px 10px;font-size:13px}
-    .items-table thead{background:#f8fafc}
+    .draft-modal-title{
+      margin:0;
+      font-size:1.6rem;
+      font-weight:900;
+      letter-spacing:-.04em;
+      color:#0f172a;
+    }
+
+    .draft-modal-meta{
+      margin-top:8px;
+      color:#64748b;
+      line-height:1.6;
+    }
+
+    .draft-modal-grid{
+      display:grid;
+      gap:14px;
+    }
+
+    .draft-surface{
+      padding:18px;
+      border-radius:22px;
+      border:1px solid rgba(199, 213, 228, 0.76);
+      background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(247,250,255,.92));
+      box-shadow:0 14px 24px rgba(15, 23, 42, 0.05);
+    }
+
+    .draft-surface h4{
+      margin:0 0 12px;
+      font-size:1rem;
+      font-weight:900;
+      letter-spacing:-.02em;
+      color:#0f172a;
+    }
+
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+
+    .mini{
+      font-size:12px;
+      color:#64748b;
+      line-height:1.55;
+    }
+
+    .kvs{
+      display:grid;
+      grid-template-columns:180px 1fr;
+      gap:8px 14px;
+      font-size:14px;
+    }
+
+    .kvs div{
+      padding:2px 0;
+    }
+
+    .kvs b{
+      color:#0f172a;
+    }
+
+    .items-shell{
+      overflow:auto;
+      max-height:260px;
+      border-radius:16px;
+      border:1px solid rgba(199, 213, 228, 0.78);
+      background:#fff;
+    }
+
+    .items-table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:13px;
+    }
+
+    .items-table thead{
+      background:#f8fbff;
+    }
+
+    .items-table th,
+    .items-table td{
+      padding:10px 12px;
+      border-bottom:1px solid rgba(226, 232, 240, 0.82);
+      text-align:left;
+    }
+
+    .items-table th{
+      font-size:11px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:#334155;
+    }
+
+    .items-table tr:last-child td{
+      border-bottom:0;
+    }
+
+    .actions{
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+      margin-top:14px;
+      flex-wrap:wrap;
+    }
+
+    @media (max-width: 980px){
+      .draft-filter-grid{
+        grid-template-columns:1fr;
+      }
+
+      .draft-modal-head{
+        flex-direction:column;
+      }
+
+      .grid2{
+        grid-template-columns:1fr;
+      }
+    }
+
+    @media (max-width: 640px){
+      .col-email,
+      .col-updated{
+        width:auto;
+      }
+
+      .draft-table{
+        min-width:860px;
+      }
+
+      .modal .sheet{
+        padding:18px;
+      }
+
+      .kvs{
+        grid-template-columns:1fr;
+      }
+    }
   </style>
 </head>
 
-<body>
+<body class="admin-body admin-subpage-body">
   <header class="site-header">
     <div class="container header-inner" style="grid-template-columns:auto 1fr;">
       <div class="brand">
-        <img src="./assets/img/logo.png" class="logo" alt="Sixty – 3 logo">
-        <span class="brand-text">Sixty – 3 Trucking Inc</span>
+        <img src="./assets/img/logo.png" class="logo" alt="Sixty - 3 logo">
+        <span class="brand-text">Sixty - 3 Trucking Inc</span>
       </div>
-      <nav class="title-wrap" style="justify-content:flex-start;">
-        <h1 class="page-title" style="margin-right:8px;">Draft Tickets</h1>
-        <span class="subtitle">Driver-submitted drafts (Sent) for conversion</span>
-      </nav>
+      <div class="title-wrap" style="justify-content:flex-start;">
+        <h1 class="page-title">Draft Tickets</h1>
+        <p class="subtitle">Driver-submitted drafts ready for review and conversion</p>
+      </div>
     </div>
   </header>
 
-  <main class="container" style="padding-bottom:28px;">
-    <section class="card admin-card" style="margin-top:22px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-        <div>
-          <h2 id="adminName" style="margin:0 0 6px;">Welcome, …</h2>
-          <p class="muted" style="margin:0;">Open a draft to review details and convert it to a real Ticket No.</p>
+  <main class="container">
+    <div class="subpage-shell">
+      <section class="subpage-hero">
+        <div class="subpage-hero-grid">
+          <div>
+            <div class="subpage-kicker">Draft Workflow</div>
+            <h2 id="adminName" class="subpage-title">Welcome, ...</h2>
+            <p class="subpage-copy">
+              Review driver-submitted drafts, inspect the original payload, and convert approved submissions into real ticket numbers without losing context.
+            </p>
+          </div>
+
+          <div class="subpage-actions">
+            <div class="draft-toolbar">
+              <button id="backBtn" class="btn" type="button">Back to Admin</button>
+              <button id="refreshBtn" class="btn btn-primary" type="button">Refresh</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="subpage-panel">
+        <div class="subpage-section-head">
+          <div>
+            <div class="section-kicker">Queue Control</div>
+            <h3 class="subpage-section-title">Filter and review submitted drafts</h3>
+          </div>
+          <p class="subpage-section-copy">
+            Narrow by status, search by driver or draft identifier, and open any row to review its payload before conversion.
+          </p>
         </div>
 
-        <div class="toolbar">
-          <button id="backBtn" class="pill-btn" type="button">← Back to Admin</button>
-          <button id="refreshBtn" class="pill-btn" type="button">↻ Refresh</button>
-        </div>
-      </div>
-    </section>
+        <div class="draft-filter-grid">
+          <div class="field">
+            <label for="statusSel">Status</label>
+            <select id="statusSel">
+              <option value="Sent" selected>Sent</option>
+              <option value="Draft">Draft</option>
+              <option value="Converted">Converted</option>
+            </select>
+          </div>
 
-    <section class="card admin-card" style="margin-top:16px;">
-      <div style="display:grid;grid-template-columns:220px 1fr;gap:12px;align-items:end;">
-        <div>
-          <label for="statusSel">Status</label>
-          <select id="statusSel">
-            <option value="Sent" selected>Sent</option>
-            <option value="Draft">Draft</option>
-            <option value="Converted">Converted</option>
-          </select>
+          <div class="field">
+            <label for="searchBox">Search (driver, email, draft id, converted ticket)</label>
+            <input id="searchBox" type="search" placeholder="Search drafts...">
+          </div>
         </div>
-        <div>
-          <label for="searchBox">Search (driver, email, draft id, converted ticket)</label>
-          <input id="searchBox" type="search" placeholder="Search…">
-        </div>
-      </div>
 
-      <div id="resultMeta" class="muted" style="margin:10px 0 6px;font-size:13px;">Showing 0 results</div>
-
-      <div class="table-card">
-        <div class="scroll-area">
-          <table aria-label="Draft tickets table">
-            <thead>
-              <tr>
-                <th class="col-id">Draft ID</th>
-                <th>Driver</th>
-                <th class="col-email">Email</th>
-                <th>Status</th>
-                <th>Mode</th>
-                <th>Converted</th>
-                <th class="col-updated">Updated</th>
-              </tr>
-            </thead>
-            <tbody id="rows">
-              <tr><td colspan="7" class="muted-small" style="text-align:center;">Loading…</td></tr>
-            </tbody>
-          </table>
+        <div class="draft-meta-row">
+          <div id="resultMeta" class="subpage-chip">Showing 0 results</div>
+          <div class="mini">Open any draft ID to preview the payload and convert it into a live admin ticket.</div>
         </div>
-      </div>
-    </section>
+
+        <div class="draft-table-shell">
+          <div class="scroll-area">
+            <table class="draft-table" aria-label="Draft tickets table">
+              <thead>
+                <tr>
+                  <th class="col-id">Draft ID</th>
+                  <th>Driver</th>
+                  <th class="col-email">Email</th>
+                  <th>Status</th>
+                  <th>Mode</th>
+                  <th>Converted</th>
+                  <th class="col-updated">Updated</th>
+                </tr>
+              </thead>
+              <tbody id="rows">
+                <tr><td colspan="7" class="subpage-empty">Loading drafts...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
   </main>
 
   <footer class="site-footer">
     <div class="container">
-      <small>© <span id="y"></span> Sixty – 3 Trucking Inc</small>
+      <small>&copy; <span id="y"></span> Sixty - 3 Trucking Inc</small>
     </div>
   </footer>
 
-  <!-- View/Convert Modal -->
   <div id="viewModal" class="modal" aria-hidden="true">
     <div class="backdrop" data-close></div>
     <div class="sheet">
       <button class="close" data-close aria-label="Close">&times;</button>
 
-      <h3 style="margin:0 0 6px;">Draft <span id="viewId">—</span></h3>
-      <div class="mini" id="viewMeta">—</div>
-
-      <div style="margin-top:14px; display:grid; grid-template-columns:1fr; gap:14px;">
-        <div class="card" style="border:1px solid var(--border); box-shadow:none;">
-          <h4 style="margin:0 0 8px;">Driver payload</h4>
-          <div class="kvs" id="payloadKvs"></div>
+      <div class="draft-modal-head">
+        <div>
+          <h3 class="draft-modal-title">Draft <span id="viewId">-</span></h3>
+          <div class="draft-modal-meta" id="viewMeta">-</div>
         </div>
+      </div>
 
-        <div class="card" style="border:1px solid var(--border); box-shadow:none;">
-          <h4 style="margin:0 0 8px;">Scale / Equipment rows</h4>
-          <div style="overflow:auto; max-height:240px;">
+      <div class="draft-modal-grid">
+        <section class="draft-surface">
+          <h4>Driver payload</h4>
+          <div class="kvs" id="payloadKvs"></div>
+        </section>
+
+        <section class="draft-surface">
+          <h4>Scale / equipment rows</h4>
+          <div class="items-shell">
             <table class="items-table">
               <thead>
                 <tr>
@@ -196,74 +449,72 @@
                 </tr>
               </thead>
               <tbody id="itemsRows">
-                <tr><td colspan="7" class="muted-small" style="text-align:center;">No items</td></tr>
+                <tr><td colspan="7" class="subpage-empty">No items</td></tr>
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
 
-        <div class="card" style="border:1px solid var(--border); box-shadow:none;">
-          <h4 style="margin:0 0 8px;">Convert to Ticket</h4>
+        <section class="draft-surface">
+          <h4>Convert to ticket</h4>
 
           <form id="convertForm" autocomplete="off">
             <div class="grid2">
-              <div>
-                <label>Ticket No (required)</label>
+              <div class="field">
+                <label>Ticket No</label>
                 <input name="ticketNo" type="text" required placeholder="e.g., 49250">
               </div>
-              <div>
-                <label>Date (required)</label>
+              <div class="field">
+                <label>Date</label>
                 <input name="date" type="date" required>
               </div>
             </div>
 
-            <div style="margin-top:10px;">
-              <label>Driver Name (required)</label>
+            <div class="field" style="margin-top:14px;">
+              <label>Driver Name</label>
               <input name="driverName" type="text" required placeholder="Driver full name">
-              <div class="muted-small" style="margin-top:6px;">
-                Tip: prefilled from draft, edit if needed.
-              </div>
+              <div class="mini" style="margin-top:6px;">Prefilled from the draft. Adjust before conversion if needed.</div>
             </div>
 
-            <div class="grid2" style="margin-top:10px;">
-              <div>
+            <div class="grid2" style="margin-top:14px;">
+              <div class="field">
                 <label>Truck Start</label>
                 <input name="truckStart" type="text" placeholder="e.g., 7:00 AM">
               </div>
-              <div>
+              <div class="field">
                 <label>Truck No</label>
                 <input name="truckNo" type="text" placeholder="e.g., 21">
               </div>
             </div>
 
-            <div class="grid2" style="margin-top:10px;">
-              <div>
+            <div class="grid2" style="margin-top:14px;">
+              <div class="field">
                 <label>Trailer Type</label>
                 <input name="trailerType" type="text">
               </div>
-              <div>
+              <div class="field">
                 <label>PO No</label>
                 <input name="poNo" type="text">
               </div>
             </div>
 
-            <div class="grid2" style="margin-top:10px;">
-              <div>
+            <div class="grid2" style="margin-top:14px;">
+              <div class="field">
                 <label>Job Name</label>
                 <input name="jobName" type="text">
               </div>
-              <div>
+              <div class="field">
                 <label>Job No</label>
                 <input name="jobNo" type="text">
               </div>
             </div>
 
-            <div class="grid2" style="margin-top:10px;">
-              <div>
+            <div class="grid2" style="margin-top:14px;">
+              <div class="field">
                 <label>Origin</label>
                 <input name="origin" type="text">
               </div>
-              <div>
+              <div class="field">
                 <label>Destination</label>
                 <input name="destination" type="text">
               </div>
@@ -274,7 +525,7 @@
               <button type="submit" class="btn btn-primary">Convert / Submit</button>
             </div>
           </form>
-        </div>
+        </section>
       </div>
     </div>
   </div>
@@ -286,11 +537,10 @@
     const $$ = (s, root=document) => Array.from(root.querySelectorAll(s));
     const ltrim = (v) => String(v ?? '').trim().toLowerCase();
 
-
     function setOpen(modal, on=true){
-    modal.classList.toggle('show', on);
-    modal.setAttribute('aria-hidden', on ? 'false' : 'true');
-    document.body.style.overflow = on ? 'hidden' : '';
+      modal.classList.toggle('show', on);
+      modal.setAttribute('aria-hidden', on ? 'false' : 'true');
+      document.body.style.overflow = on ? 'hidden' : '';
     }
 
     function fmtDateTime(t){
@@ -299,10 +549,11 @@
       if (isNaN(d)) return String(t);
       return d.toLocaleString([], {year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit'});
     }
+
     function badge(status){
       const s = String(status || '');
       const k = ltrim(s);
-      const cls = k==='draft' ? 'b-draft' : k==='sent' ? 'b-sent' : k==='converted' ? 'b-conv' : 'b-sent';
+      const cls = k === 'draft' ? 'b-draft' : k === 'sent' ? 'b-sent' : k === 'converted' ? 'b-conv' : 'b-sent';
       return `<span class="badge ${cls}">${s || '-'}</span>`;
     }
 
@@ -313,7 +564,7 @@
 
     function applyFilters(){
       const q = ltrim($('#searchBox').value);
-      VIEW = DRAFTS.filter(r => {
+      VIEW = DRAFTS.filter((r) => {
         if (!q) return true;
         const hay = [
           r.id, r.driver_name, r.driver_email, r.status, r.tag_mode, r.converted_ticket_no
@@ -326,13 +577,14 @@
     function renderRows(){
       const tb = $('#rows');
       if (!VIEW.length){
-        tb.innerHTML = `<tr><td colspan="7" class="muted-small" style="text-align:center;">No results.</td></tr>`;
+        tb.innerHTML = `<tr><td colspan="7" class="subpage-empty">No results.</td></tr>`;
         $('#resultMeta').textContent = 'Showing 0 results';
         return;
       }
-      tb.innerHTML = VIEW.map(r => `
+
+      tb.innerHTML = VIEW.map((r) => `
         <tr data-id="${String(r.id).replace(/"/g,'&quot;')}">
-          <td class="col-id"><a href="#" class="open">${String(r.id).slice(0,8)}…</a></td>
+          <td class="col-id"><a href="#" class="draft-link open">${String(r.id).slice(0,8)}...</a></td>
           <td>${r.driver_name || '-'}</td>
           <td class="col-email">${r.driver_email || '-'}</td>
           <td>${badge(r.status)}</td>
@@ -341,14 +593,15 @@
           <td class="col-updated">${fmtDateTime(r.updated_at || '')}</td>
         </tr>
       `).join('');
-      $('#resultMeta').textContent = `Showing ${VIEW.length} result${VIEW.length>1?'s':''}`;
+
+      $('#resultMeta').textContent = `Showing ${VIEW.length} result${VIEW.length > 1 ? 's' : ''}`;
     }
 
     async function loadList(){
       const status = $('#statusSel').value;
       const r = await fetch(`/api/admin/drafts?status=${encodeURIComponent(status)}`, { credentials:'include' });
       if (r.status === 401 || r.status === 403) { location.href = '/'; return; }
-      const j = await r.json().catch(()=>({}));
+      const j = await r.json().catch(() => ({}));
       if (!j.ok) { alert(j.message || 'Failed to load drafts'); return; }
       DRAFTS = Array.isArray(j.drafts) ? j.drafts : [];
       applyFilters();
@@ -356,7 +609,7 @@
 
     async function loadMe(){
       const r = await fetch('/api/me', { credentials:'include' });
-      const j = await r.json().catch(()=>({}));
+      const j = await r.json().catch(() => ({}));
       const p = j.profile || {};
       $('#adminName').textContent = `Welcome, ${p.fullName || p.name || p.email || 'Admin'}`;
     }
@@ -376,9 +629,9 @@
       ];
 
       const el = $('#payloadKvs');
-      el.innerHTML = pairs.map(([k,v]) => `
+      el.innerHTML = pairs.map(([k, v]) => `
         <div><b>${k}</b></div>
-        <div>${(v===undefined || v===null || String(v).trim()==='') ? '<span class="muted-small">—</span>' : String(v)}</div>
+        <div>${(v === undefined || v === null || String(v).trim() === '') ? '<span class="muted-small">-</span>' : String(v)}</div>
       `).join('');
     }
 
@@ -386,10 +639,10 @@
       const items = Array.isArray(draft?.items) ? draft.items : [];
       const tb = $('#itemsRows');
       if (!items.length){
-        tb.innerHTML = `<tr><td colspan="7" class="muted-small" style="text-align:center;">No items</td></tr>`;
+        tb.innerHTML = `<tr><td colspan="7" class="subpage-empty">No items</td></tr>`;
         return;
       }
-      tb.innerHTML = items.slice(0, 50).map(it => `
+      tb.innerHTML = items.slice(0, 50).map((it) => `
         <tr>
           <td>${it.scaleTagNo || ''}</td>
           <td>${it.yardOrWeight || ''}</td>
@@ -406,14 +659,12 @@
       const f = $('#convertForm');
       const today = new Date();
       const yyyy = today.getFullYear();
-      const mm = String(today.getMonth()+1).padStart(2,'0');
-      const dd = String(today.getDate()).padStart(2,'0');
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
 
       f.ticketNo.value = '';
       f.date.value = `${yyyy}-${mm}-${dd}`;
       f.driverName.value = draft?.driver_name || '';
-
-      // optional: leave blank; admin fills if needed
       f.truckStart.value = '';
       f.truckNo.value = '';
       f.trailerType.value = '';
@@ -428,14 +679,14 @@
       CURRENT_ID = id;
       const r = await fetch(`/api/admin/drafts/${encodeURIComponent(id)}`, { credentials:'include' });
       if (r.status === 401 || r.status === 403) { location.href = '/'; return; }
-      const j = await r.json().catch(()=>({}));
+      const j = await r.json().catch(() => ({}));
       if (!j.ok) { alert(j.message || 'Draft not found'); return; }
 
       CURRENT_DRAFT = j.draft;
 
-      $('#viewId').textContent = String(id).slice(0,8) + '…';
+      $('#viewId').textContent = `${String(id).slice(0,8)}...`;
       $('#viewMeta').textContent =
-        `Driver: ${CURRENT_DRAFT.driver_name || '-'} • ${CURRENT_DRAFT.driver_email || '-'} • Status: ${CURRENT_DRAFT.status || '-'} • Updated: ${fmtDateTime(CURRENT_DRAFT.updated_at || '')}`;
+        `Driver: ${CURRENT_DRAFT.driver_name || '-'} | ${CURRENT_DRAFT.driver_email || '-'} | Status: ${CURRENT_DRAFT.status || '-'} | Updated: ${fmtDateTime(CURRENT_DRAFT.updated_at || '')}`;
 
       renderPayloadKvs(CURRENT_DRAFT);
       renderItems(CURRENT_DRAFT);
@@ -472,7 +723,7 @@
         body: JSON.stringify(body),
       });
 
-      const j = await r.json().catch(()=>({}));
+      const j = await r.json().catch(() => ({}));
       if (!r.ok || j.ok === false){
         alert(j.message || 'Failed to convert draft.');
         return;
@@ -483,14 +734,13 @@
       await loadList();
     });
 
-    $$('#viewModal [data-close]').forEach(el => el.addEventListener('click', () => setOpen($('#viewModal'), false)));
+    $$('#viewModal [data-close]').forEach((el) => el.addEventListener('click', () => setOpen($('#viewModal'), false)));
 
     $('#statusSel').addEventListener('change', loadList);
     $('#searchBox').addEventListener('input', applyFilters);
     $('#refreshBtn').addEventListener('click', loadList);
-    $('#backBtn').addEventListener('click', () => location.href = '/admin');
+    $('#backBtn').addEventListener('click', () => { location.href = '/admin'; });
 
-    // go
     (async () => {
       await loadMe();
       await loadList();
