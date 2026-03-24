@@ -1007,7 +1007,7 @@
 .subpage-topbar{
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  grid-template-areas: "actions copy brand";
+  grid-template-areas: "brand copy actions";
   align-items: center;
   gap: 20px;
   min-height: 94px;
@@ -1018,7 +1018,7 @@
   grid-area: brand;
   display: flex;
   align-items: center;
-  justify-self: end;
+  justify-self: start;
   gap: 14px;
   min-width: 0;
 }
@@ -1050,8 +1050,8 @@
   grid-area: actions;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  justify-self: start;
+  justify-content: flex-end;
+  justify-self: end;
   gap: 10px;
   flex-wrap: wrap;
 }
@@ -1391,9 +1391,9 @@
   .subpage-topbar{
     grid-template-columns: 1fr;
     grid-template-areas:
-      "actions"
+      "brand"
       "copy"
-      "brand";
+      "actions";
     align-items: flex-start;
     gap: 14px;
     min-height: auto;
