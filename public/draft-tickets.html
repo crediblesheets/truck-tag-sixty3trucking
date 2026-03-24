@@ -320,16 +320,21 @@
 
 <body class="admin-body admin-subpage-body">
   <header class="site-header">
-    <div class="container header-inner" style="grid-template-columns:auto 1fr auto;">
-      <div class="brand">
+    <div class="container subpage-topbar">
+      <div class="subpage-topbar-brand">
         <img src="./assets/img/logo.png" class="logo" alt="Sixty - 3 logo">
         <span class="brand-text">Sixty - 3 Trucking Inc</span>
       </div>
-      <div class="title-wrap" style="justify-content:flex-start;">
-        <h1 class="page-title">Draft Tickets</h1>
-        <p class="subtitle">Driver-submitted drafts ready for review and conversion</p>
+      <div class="subpage-topbar-copy">
+        <div class="subpage-topbar-kicker">Admin Workspace</div>
+        <div class="subpage-topbar-row">
+          <h1 class="subpage-topbar-page">Draft Tickets</h1>
+          <span class="subpage-topbar-badge">Review and conversion queue</span>
+        </div>
+        <p class="subpage-topbar-summary">Inspect driver draft payloads, review submission status, and convert approved drafts into live tickets.</p>
       </div>
-      <div>
+      <div class="subpage-topbar-actions">
+        <a href="/admin" class="btn">Back to Admin</a>
         <button id="logoutBtn" class="btn" type="button">Log Out</button>
       </div>
     </div>

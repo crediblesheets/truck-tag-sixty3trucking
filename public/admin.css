@@ -1004,6 +1004,94 @@
   -webkit-backdrop-filter: blur(18px);
 }
 
+.subpage-topbar{
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  min-height: 94px;
+  padding: 12px 0;
+}
+
+.subpage-topbar-brand{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.subpage-topbar-copy{
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.subpage-topbar-kicker{
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 28px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(29, 155, 232, 0.18);
+  background: rgba(29, 155, 232, 0.08);
+  color: #0f6fa6;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.subpage-topbar-row{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.subpage-topbar-page{
+  margin: 0;
+  font-size: clamp(1.55rem, 1.3rem + 0.55vw, 2.15rem);
+  line-height: 1;
+  letter-spacing: -0.045em;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.subpage-topbar-summary{
+  margin: 0;
+  max-width: 48rem;
+  color: #64748b;
+  line-height: 1.55;
+}
+
+.subpage-topbar-badge{
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(247,250,255,.9));
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
+  color: #334155;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.subpage-topbar-actions{
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.subpage-topbar-actions .btn{
+  min-width: 122px;
+}
+
 .admin-subpage-body main.container{
   width: min(100%, 1320px);
   min-height: calc(100vh - 150px);
@@ -1332,6 +1420,18 @@
     grid-template-columns: 1fr;
   }
 
+  .subpage-topbar{
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+    gap: 14px;
+    min-height: auto;
+    padding: 16px 0;
+  }
+
+  .subpage-topbar-actions{
+    justify-content: flex-start;
+  }
+
   .admin-subpage-body main.container::before{
     inset: 8px 14px 0;
     border-radius: 28px;
@@ -1431,6 +1531,15 @@
 
   .subpage-title{
     font-size: 2rem;
+  }
+
+  .subpage-topbar-page{
+    font-size: 1.65rem;
+  }
+
+  .subpage-topbar-badge{
+    width: 100%;
+    justify-content: center;
   }
 
   .subpage-stat-row{
