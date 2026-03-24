@@ -236,7 +236,15 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.static(path.resolve('public')));
+app.use(express.static(path.resolve('public'), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  },
+}));
 
 // health
 app.get('/api/health', (_req, res) => {
