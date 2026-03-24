@@ -151,14 +151,32 @@ function drawText(doc, s, xpx, ypx, opts = {}) {
   if (s === undefined || s === null || String(s).trim() === '') return;
   doc.text(String(s), X(xpx), Y(ypx), { lineBreak: false, ...opts });
 }
+function parseExactDateParts(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+
+  let m = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|[T\s])/);
+  if (m) return { y: m[1], m: m[2], d: m[3] };
+
+  m = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (m) {
+    const yyyy = m[3].length === 2 ? `20${m[3]}` : m[3];
+    return {
+      y: yyyy,
+      m: String(m[1]).padStart(2, '0'),
+      d: String(m[2]).padStart(2, '0'),
+    };
+  }
+
+  return null;
+}
 function toMDY(value) {
-  if (!value) return { m: '', d: '', y: '' };
-  const d = new Date(value);
-  if (isNaN(d)) return { m: '', d: '', y: '' };
+  const parts = parseExactDateParts(value);
+  if (!parts) return { m: '', d: '', y: '' };
   return {
-    m: String(d.getMonth() + 1).padStart(2, '0'),
-    d: String(d.getDate()).padStart(2, '0'),
-    y: String(d.getFullYear()).slice(-2),
+    m: parts.m,
+    d: parts.d,
+    y: parts.y.slice(-2),
   };
 }
 function hhmm(s) {

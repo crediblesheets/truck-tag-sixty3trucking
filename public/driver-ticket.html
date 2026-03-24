@@ -713,11 +713,25 @@
       box.style.display = msg ? 'block' : 'none';
     }
 
+    function getDateParts(s){
+      const raw = String(s || '').trim();
+      if (!raw) return null;
+
+      let m = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|[T\s])/);
+      if (m) return { yyyy: m[1], mm: m[2], dd: m[3] };
+
+      m = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+      if (!m) return null;
+      return {
+        yyyy: m[3].length === 2 ? `20${m[3]}` : m[3],
+        mm: String(m[1]).padStart(2,'0'),
+        dd: String(m[2]).padStart(2,'0')
+      };
+    }
+
     function toISODate(s){
-      if (!s) return '';
-      const d = new Date(s);
-      if (!isNaN(d)) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-      return '';
+      const parts = getDateParts(s);
+      return parts ? `${parts.yyyy}-${parts.mm}-${parts.dd}` : '';
     }
 
     // -------------------- server draft state + helpers
@@ -733,7 +747,10 @@
 
     function markSaved(){
       DIRTY = false;
-      if (draftStatusEl) draftStatusEl.textContent = `Draft saved: ${new Date().toLocaleString()}`;
+      if (draftStatusEl) {
+        const stamp = new Date().toISOString().slice(0,16).replace('T',' ');
+        draftStatusEl.textContent = `Draft saved: ${stamp} UTC`;
+      }
     }
 
     // -------------------- mode (Scale vs Equipment)
