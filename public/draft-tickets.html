@@ -320,7 +320,7 @@
 
 <body class="admin-body admin-subpage-body">
   <header class="site-header">
-    <div class="container header-inner" style="grid-template-columns:auto 1fr;">
+    <div class="container header-inner" style="grid-template-columns:auto 1fr auto;">
       <div class="brand">
         <img src="./assets/img/logo.png" class="logo" alt="Sixty - 3 logo">
         <span class="brand-text">Sixty - 3 Trucking Inc</span>
@@ -328,6 +328,9 @@
       <div class="title-wrap" style="justify-content:flex-start;">
         <h1 class="page-title">Draft Tickets</h1>
         <p class="subtitle">Driver-submitted drafts ready for review and conversion</p>
+      </div>
+      <div>
+        <button id="logoutBtn" class="btn" type="button">Log Out</button>
       </div>
     </div>
   </header>
@@ -740,6 +743,26 @@
     $('#searchBox').addEventListener('input', applyFilters);
     $('#refreshBtn').addEventListener('click', loadList);
     $('#backBtn').addEventListener('click', () => { location.href = '/admin'; });
+    $('#logoutBtn').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      const prev = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Logging out...';
+      try {
+        const r = await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include'
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || j.ok === false) throw new Error(j.message || 'Could not log out.');
+        location.href = '/';
+      } catch (err) {
+        console.error(err);
+        alert(err.message || 'Could not log out.');
+        btn.disabled = false;
+        btn.textContent = prev;
+      }
+    });
 
     (async () => {
       await loadMe();

@@ -365,8 +365,9 @@
         <h1 class="page-title">Manage Users</h1>
         <p class="subtitle">Add staff, update permissions, manage passwords, and clean up accounts</p>
       </div>
-      <div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;">
         <a href="/admin" class="btn">Back to Admin</a>
+        <button id="logoutBtn" class="btn" type="button">Log Out</button>
       </div>
     </div>
   </header>
@@ -844,6 +845,26 @@
     $('#bulkDeleteBtn').addEventListener('click', bulkDelete);
     $('#btnSetPw').addEventListener('click', setPasswordForCurrent);
     $('#btnClearPw').addEventListener('click', clearPasswordForCurrent);
+    $('#logoutBtn').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      const prev = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Logging out...';
+      try {
+        const r = await fetch('/api/auth/logout', {
+          method: 'POST',
+          credentials: 'include'
+        });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok || j.ok === false) throw new Error(j.message || 'Could not log out.');
+        location.href = '/';
+      } catch (err) {
+        console.error(err);
+        toast(err.message || 'Could not log out.');
+        btn.disabled = false;
+        btn.textContent = prev;
+      }
+    });
 
     loadUsers();
   </script>

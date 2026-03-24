@@ -95,6 +95,17 @@
           <div class="who-sub">You’re in Admin mode</div>
         </div>
 
+        <div class="sidebar-foot-actions">
+          <button id="logoutBtn" class="btn btn-sidebar" type="button">
+            <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+              <path d="M10 17l5-5-5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M15 12H4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M20 4v16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Log Out
+          </button>
+        </div>
+
         <div class="sidebar-foot-row">
           <div class="muted-small">© <span id="y"></span> Sixty – 3 Trucking Inc</div>
         </div>
@@ -112,43 +123,43 @@
           </svg>
         </button>
 
-        <div class="topbar-title">
-          <div class="topbar-overline">Sixty-3 Trucking Admin</div>
-          <div class="topbar-kicker">Driver Tag Operations</div>
-          <div class="topbar-sub">Review active work, manage ticket details, and keep dispatch moving.</div>
+        <div class="topbar-title topbar-title-with-overview">
+          <div>
+            <div class="topbar-overline">Sixty-3 Trucking Admin</div>
+            <div class="topbar-kicker">Driver Tag Operations</div>
+            <div class="topbar-sub">Review active work, manage ticket details, and keep dispatch moving.</div>
+          </div>
+
+          <div class="topbar-overview">
+            <div class="hero-overview hero-overview-wide">
+              <div class="hero-overview-head">
+                <span class="hero-overview-kicker">Live overview</span>
+                <h2 class="hero-overview-title">Driver tag overview</h2>
+                <p class="hero-overview-copy">Stay on top of what still needs attention and what has already been closed out.</p>
+              </div>
+
+              <div class="hero-stats">
+                <div class="hero-stat">
+                  <div class="stat-label">Pending</div>
+                  <div class="stat-value" id="statPending">-</div>
+                </div>
+                <div class="hero-stat">
+                  <div class="stat-label">Done</div>
+                  <div class="stat-value" id="statDone">-</div>
+                </div>
+                <div class="hero-stat">
+                  <div class="stat-label">Total</div>
+                  <div class="stat-value" id="statTotal">-</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="topbar-right">
           <span class="chip" id="resultMeta">Showing 0 results</span>
         </div>
       </header>
-
-      <section class="card admin-hero">
-        <div class="hero-right hero-right-full">
-          <div class="hero-overview hero-overview-wide">
-            <div class="hero-overview-head">
-              <span class="hero-overview-kicker">Live overview</span>
-              <h2 class="hero-overview-title">Driver tag overview</h2>
-              <p class="hero-overview-copy">Stay on top of what still needs attention and what has already been closed out.</p>
-            </div>
-
-            <div class="hero-stats">
-              <div class="hero-stat">
-                <div class="stat-label">Pending</div>
-                <div class="stat-value" id="statPending">-</div>
-              </div>
-              <div class="hero-stat">
-                <div class="stat-label">Done</div>
-                <div class="stat-value" id="statDone">-</div>
-              </div>
-              <div class="hero-stat">
-                <div class="stat-label">Total</div>
-                <div class="stat-value" id="statTotal">-</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
 
       <section class="card admin-filters">
         <div class="section-head section-head-compact">
@@ -902,10 +913,22 @@
 
     // Refresh button: no full overlay, just spinner on the button
     $('#refreshBtn').addEventListener('click', (e) => withBtnLoading(e.currentTarget, () => loadTable({ showOverlay: false })));
+    $('#logoutBtn').addEventListener('click', (e) => withBtnLoading(e.currentTarget, async () => {
+      const r = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) throw new Error(j.message || 'Could not log out.');
+      location.href = '/';
+    }).catch((err) => {
+      console.error(err);
+      alert(err.message || 'Could not log out.');
+    }));
 
     // Clear any stale button-loading state if the page is restored from cache.
     window.addEventListener('pageshow', () => {
-      ['#refreshBtn', '#openTagLists', '#openUsers', '#openDraftTickets'].forEach((sel) => {
+      ['#refreshBtn', '#openTagLists', '#openUsers', '#openDraftTickets', '#logoutBtn'].forEach((sel) => {
         const btn = $(sel);
         if (!btn) return;
         btn.removeAttribute('data-loading');
