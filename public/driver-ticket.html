@@ -286,27 +286,34 @@
   }
 
   .driver-ticket-header{
-    grid-template-columns:auto 1fr auto;
+    display:flex;
     align-items:center;
-    gap:14px;
+    justify-content:space-between;
+    flex-wrap:nowrap;
+    gap:12px;
     min-height:auto;
     padding:14px 0 12px;
   }
 
   .driver-ticket-header .brand{
+    display:flex;
+    align-items:center;
     gap:12px;
+    flex:1 1 auto;
     min-width:0;
   }
 
   .driver-ticket-header > :last-child{
-    justify-self:end;
+    flex:0 0 auto;
     min-width:0;
   }
 
   .driver-ticket-header .brand-text{
-    display:inline;
+    display:block;
     min-width:0;
-    overflow-wrap:anywhere;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
   }
 
   .driver-ticket-header .logo{
@@ -316,6 +323,15 @@
 
   .driver-ticket-header a.btn{
     text-decoration:none;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    white-space:nowrap;
+    min-height:34px;
+    padding:6px 10px;
+    font-size:13px;
+    line-height:1;
+    border-radius:12px;
   }
 
   .ticket-tip{
@@ -364,44 +380,28 @@
     }
 
     .driver-ticket-header{
-      grid-template-columns:minmax(0, 1fr);
-      justify-items:stretch;
-      gap:10px;
+      gap:8px;
       padding:12px 0 10px;
     }
 
     .driver-ticket-header .logo{
-      width:48px;
-      height:48px;
+      width:40px;
+      height:40px;
     }
 
     .driver-ticket-header .brand{
-      gap:10px;
-      width:100%;
+      gap:8px;
     }
 
     .driver-ticket-header .brand-text{
-      font-size:1rem;
-      line-height:1.15;
-      white-space:normal;
-    }
-
-    .driver-ticket-header > :last-child{
-      justify-self:stretch;
-      width:100%;
-    }
-
-    .driver-ticket-header > :last-child .btn,
-    .driver-ticket-header > :last-child a.btn{
-      width:100%;
-      justify-content:center;
-      text-align:center;
+      font-size:.94rem;
+      line-height:1.1;
     }
 
     .driver-ticket-header .btn{
-      min-height:40px;
-      padding:8px 12px;
-      font-size:14px;
+      min-height:32px;
+      padding:6px 9px;
+      font-size:12px;
     }
 
     .ticket-tip{
