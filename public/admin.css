@@ -266,7 +266,6 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
-  padding-right: 176px;
 }
 
 .topbar-title{
@@ -280,6 +279,10 @@
 .topbar-title-with-overview{
   display: grid;
   gap: 18px;
+}
+
+.topbar-title-with-overview > :first-child{
+  padding-right: 176px;
 }
 
 .topbar-overline{
@@ -1309,7 +1312,6 @@
   }
 
   .admin-topbar{
-    padding-right: 16px;
     padding: 16px;
   }
 
@@ -1390,6 +1392,10 @@
 
   .topbar-title-with-overview{
     gap: 14px;
+  }
+
+  .topbar-title-with-overview > :first-child{
+    padding-right: 0;
   }
 
   .chip{
