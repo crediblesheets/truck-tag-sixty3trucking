@@ -1147,16 +1147,20 @@ body.admin-nav-open{
 }
 
 .admin-nav-head{
+  position: relative;
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
+  justify-content: flex-start;
+  gap: 0;
+  min-height: 42px;
+  padding-right: 64px;
   padding-bottom: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .admin-nav-head-copy{
   min-width: 0;
+  width: 100%;
 }
 
 .admin-nav-overline{
@@ -1184,6 +1188,9 @@ body.admin-nav-open{
 }
 
 .admin-nav-close{
+  position: absolute;
+  top: 0;
+  right: 0;
   flex: 0 0 auto;
   color: #f8fbff;
   background: rgba(255, 255, 255, 0.08);
@@ -1636,6 +1643,8 @@ body.admin-nav-open{
     position: static;
     left: auto;
     z-index: 3;
+    margin-top: 4px;
+    margin-right: 4px;
     width: 42px;
     height: 42px;
     border-radius: 14px;
