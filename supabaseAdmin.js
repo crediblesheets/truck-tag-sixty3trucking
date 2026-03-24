@@ -108,14 +108,16 @@ export async function upsertAdminTicket(p) {
     .maybeSingle();
   if (selErr) throw selErr;
 
-  if (!stub) {
-    const { error: insErr } = await sb
-      .from('driver_tags')
-      .insert({ ticket_no: row.ticket_no, status: 'Pending' });
-    if (insErr) throw insErr;
-    return { added: true, updated: false };
-  }
-  return { added: false, updated: true };
+  const { error: stubErr } = await sb
+    .from('driver_tags')
+    .upsert({
+      ticket_no: row.ticket_no,
+      driver_name: row.driver_name || null,
+      status: 'Pending',
+    }, { onConflict: 'ticket_no' });
+  if (stubErr) throw stubErr;
+
+  return { added: !stub, updated: !!stub };
 }
 
 /** Update fields of an existing admin ticket */
@@ -172,11 +174,15 @@ export async function bulkUpsertAdminTickets(items = []) {
     .select('ticket_no'); // returns the affected keys
   if (error) throw error;
 
-  // Ensure stubs for any new tickets (insert ignore via upsert on conflict)
-  const stubs = rows.map((r) => ({ ticket_no: r.ticket_no, status: 'Pending' }));
+  // Ensure stubs for any new tickets
+  const stubs = rows.map((r) => ({
+    ticket_no: r.ticket_no,
+    driver_name: r.driver_name || null,
+    status: 'Pending'
+  }));
   const { error: stubErr } = await sb
     .from('driver_tags')
-    .upsert(stubs, { onConflict: 'ticket_no', ignoreDuplicates: true });
+    .upsert(stubs, { onConflict: 'ticket_no' });
   if (stubErr) throw stubErr;
 
   // We can’t precisely know added vs updated without a pre-check;

@@ -1560,7 +1560,7 @@ app.post('/api/admin/drafts/:id/submit', verifySession, ensureActiveUser, requir
     // ensure driver_tags row exists
     const { error: stubErr } = await sb
       .from('driver_tags')
-      .upsert({ ticket_no: ticketNo, status: 'Done' }, { onConflict: 'ticket_no' });
+      .upsert({ ticket_no: ticketNo, driver_name: driverName, status: 'Done' }, { onConflict: 'ticket_no' });
     if (stubErr) throw stubErr;
 
     // apply driver payload onto driver_tags (snake_case columns)
@@ -1568,6 +1568,7 @@ app.post('/api/admin/drafts/:id/submit', verifySession, ensureActiveUser, requir
     const tagMode = String(draft.tag_mode || 'scale').toLowerCase();
 
     const driverPatch = {
+      driver_name: driverName,
       email: String(draft.driver_email || '').toLowerCase(),
       status: 'Done',
       tag_mode: tagMode,
@@ -1904,12 +1905,27 @@ app.put('/api/admin/tickets/:id', verifySession, ensureActiveUser, requireAdmin,
       .select('ticket_no');
     if (updErr) throw updErr;
 
+    if (patch.driver_name !== undefined) {
+      const { error: tagErr } = await sb
+        .from('driver_tags')
+        .update({
+          driver_name: patch.driver_name || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('ticket_no', ticketNo);
+      if (tagErr) throw tagErr;
+    }
+
     if (!upd || upd.length === 0) {
       const row = { ticket_no: ticketNo, ...patch };
       const { error: upErr } = await sb.from('admin_tickets').upsert(row, { onConflict: 'ticket_no' });
       if (upErr) throw upErr;
 
-      await sb.from('driver_tags').upsert({ ticket_no: ticketNo, status: 'Pending' }, { onConflict: 'ticket_no' });
+      await sb.from('driver_tags').upsert({
+        ticket_no: ticketNo,
+        driver_name: patch.driver_name || null,
+        status: 'Pending'
+      }, { onConflict: 'ticket_no' });
     }
 
     return res.json({ ok: true });
