@@ -27,6 +27,9 @@
         <h1 class="page-title">Driver Dashboard</h1>
         <p class="subtitle">Pending tags assigned to you</p>
       </div>
+      <div>
+        <button id="logoutBtn" class="btn" type="button">Log Out</button>
+      </div>
     </div>
   </header>
 
@@ -144,6 +147,31 @@
     const newDraftBtn = document.getElementById('newDraftBtn');
     if (newDraftBtn){
       newDraftBtn.addEventListener('click', createDraftAndOpen);
+    }
+
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn){
+      logoutBtn.addEventListener('click', async () => {
+        const prev = logoutBtn.textContent;
+        logoutBtn.disabled = true;
+        logoutBtn.setAttribute('data-loading', 'true');
+        logoutBtn.textContent = 'Logging out...';
+
+        try {
+          const r = await fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include'
+          });
+          const j = await r.json().catch(() => ({}));
+          if (!r.ok || j.ok === false) throw new Error(j.message || 'Could not log out.');
+          location.href = '/';
+        } catch (err) {
+          alert(err.message || 'Could not log out.');
+          logoutBtn.disabled = false;
+          logoutBtn.removeAttribute('data-loading');
+          logoutBtn.textContent = prev;
+        }
+      });
     }
 
     (async () => {
