@@ -250,8 +250,8 @@
 }
 
 .admin-topbar{
-  position: sticky;
-  top: 0;
+  position: relative;
+  top: auto;
   z-index: 20;
   padding: 18px 22px;
   display: flex;
@@ -681,6 +681,11 @@
 .scroll-area{
   max-height: calc(100vh - 260px);
   overflow: auto;
+}
+
+.admin-results-scroll{
+  max-height: none;
+  overflow: visible;
 }
 
 .data-table{
