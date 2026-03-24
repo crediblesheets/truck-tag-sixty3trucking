@@ -950,6 +950,24 @@
   }
 }
 
+.admin-subpage-body{
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f7fbff 44%, #eef5ff 100%);
+  background-attachment: fixed;
+}
+
+.admin-subpage-body::before{
+  background:
+    radial-gradient(760px 360px at 0% 0%, rgba(29, 155, 232, 0.1) 0%, rgba(29, 155, 232, 0) 68%),
+    radial-gradient(680px 340px at 100% 6%, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0) 66%),
+    linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,.1));
+  background-size: auto;
+  mask-image: none;
+  -webkit-mask-image: none;
+  opacity: .96;
+}
+
 .admin-subpage-body .site-header{
   background: rgba(255,255,255,.84);
   border-bottom: 1px solid rgba(199, 213, 228, 0.8);
@@ -959,11 +977,27 @@
 
 .admin-subpage-body main.container{
   width: min(100%, 1320px);
+  min-height: calc(100vh - 150px);
   padding-top: 28px;
   padding-bottom: 34px;
+  position: relative;
+}
+
+.admin-subpage-body main.container::before{
+  content: "";
+  position: absolute;
+  inset: 10px 24px 0;
+  border-radius: 36px;
+  border: 1px solid rgba(199, 213, 228, 0.5);
+  background: linear-gradient(180deg, rgba(255,255,255,.84), rgba(244,248,255,.68));
+  box-shadow: 0 24px 48px rgba(15, 23, 42, 0.05);
+  z-index: 0;
 }
 
 .subpage-shell{
+  position: relative;
+  z-index: 1;
+  min-height: 100%;
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -1269,6 +1303,11 @@
     grid-template-columns: 1fr;
   }
 
+  .admin-subpage-body main.container::before{
+    inset: 8px 14px 0;
+    border-radius: 28px;
+  }
+
   .subpage-actions{
     justify-content: flex-start;
   }
@@ -1343,6 +1382,11 @@
   .subpage-rail-card,
   .subpage-panel{
     padding: 18px;
+  }
+
+  .admin-subpage-body main.container::before{
+    inset: 6px 12px 0;
+    border-radius: 22px;
   }
 
   .subpage-title{
