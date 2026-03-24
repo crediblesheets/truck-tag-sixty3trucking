@@ -1605,19 +1605,19 @@ body.admin-nav-open{
   .admin-topbar{
     position: relative;
     top: auto;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas:
-      "copy menu"
-      "meta meta";
-    align-items: start;
-    gap: 14px;
+    display: block;
     padding: 16px;
   }
 
   .topbar-title{
-    grid-area: copy;
-    padding-right: 0;
+    width: 100%;
+    padding-right: 72px;
+  }
+
+  .topbar-title-with-overview,
+  .topbar-overview,
+  .topbar-overview .hero-overview{
+    width: 100%;
   }
 
   .topbar-title-with-overview > :first-child{
@@ -1625,11 +1625,11 @@ body.admin-nav-open{
   }
 
   .topbar-right{
-    grid-area: meta;
     position: relative;
     top: auto;
     right: auto;
     width: 100%;
+    margin-top: 14px;
   }
 
   .chip{
@@ -1637,14 +1637,11 @@ body.admin-nav-open{
   }
 
   .sidebar-toggle{
-    grid-area: menu;
-    justify-self: end;
-    align-self: start;
-    position: static;
-    left: auto;
+    position: absolute;
+    top: 10%;
+    right: 16px;
     z-index: 3;
-    margin-top: 4px;
-    margin-right: 4px;
+    margin: 0;
     width: 42px;
     height: 42px;
     border-radius: 14px;
@@ -1759,7 +1756,7 @@ body.admin-nav-open{
   }
 
   .topbar-title{
-    padding-right: 0;
+    padding-right: 72px;
   }
 
   .topbar-kicker{
