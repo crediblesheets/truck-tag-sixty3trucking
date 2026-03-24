@@ -16,8 +16,22 @@
       min-height:auto;
       padding:14px 0 12px;
     }
-    .driver-header .brand{grid-area:brand;}
-    .driver-header-actions{grid-area:actions;justify-self:end;}
+    .driver-header .brand{
+      grid-area:brand;
+      transform:translateX(10%);
+    }
+    .driver-header .brand-text{
+      font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+      font-size:1.08rem;
+      font-weight:800;
+      letter-spacing:-.02em;
+      white-space:nowrap;
+    }
+    .driver-header-actions{
+      grid-area:actions;
+      justify-self:end;
+      transform:translateX(-10%);
+    }
     .driver-header-title{
       grid-area:title;
       display:flex;
@@ -39,11 +53,18 @@
         gap:12px;
         padding:12px 0 10px;
       }
+      .driver-header .brand{
+        transform:translateX(4%);
+      }
       .driver-header .brand-text{
         font-size:1rem;
+        white-space:normal;
       }
       .driver-header-title .page-title{
         font-size:1.45rem;
+      }
+      .driver-header-actions{
+        transform:translateX(-4%);
       }
       .driver-header-actions .btn{
         min-height:40px;
