@@ -113,8 +113,9 @@
         </button>
 
         <div class="topbar-title">
-          <div class="topbar-kicker">Driver Tags</div>
-          <div class="topbar-sub">Review, edit, and manage ticket details</div>
+          <div class="topbar-overline">Sixty-3 Trucking Admin</div>
+          <div class="topbar-kicker">Driver Tag Operations</div>
+          <div class="topbar-sub">Review active work, manage ticket details, and keep dispatch moving.</div>
         </div>
 
         <div class="topbar-right">
@@ -124,29 +125,61 @@
 
       <section class="card admin-hero">
         <div class="hero-left">
+          <span class="hero-pill">Secure access</span>
           <h2 id="adminName" class="hero-title">Welcome, …</h2>
           <p class="muted hero-sub">
-            Use filters to review Driver Tags. Click a Ticket # to preview/edit Admin Ticket data.
+            Review Driver Tags, jump into ticket edits quickly, and keep the pending queue organized from one focused workspace.
           </p>
+          <div class="hero-benefits" aria-label="Admin dashboard highlights">
+            <div class="hero-benefit">Pending-first workflow for daily review</div>
+            <div class="hero-benefit">Fast search across ticket, driver, email, and material</div>
+            <div class="hero-benefit">Clean handoff from queue to ticket edit modal</div>
+          </div>
         </div>
 
         <div class="hero-right">
-          <div class="hero-stat">
-            <div class="stat-label">Pending</div>
-            <div class="stat-value" id="statPending">—</div>
-          </div>
-          <div class="hero-stat">
-            <div class="stat-label">Done</div>
-            <div class="stat-value" id="statDone">—</div>
-          </div>
-          <div class="hero-stat">
-            <div class="stat-label">Total</div>
-            <div class="stat-value" id="statTotal">—</div>
+          <div class="hero-overview">
+            <div class="hero-overview-head">
+              <span class="hero-overview-kicker">Live overview</span>
+              <p class="hero-overview-copy">Stay on top of what still needs attention and what has already been closed out.</p>
+            </div>
+
+            <div class="hero-stats">
+              <div class="hero-stat">
+                <div class="stat-label">Pending</div>
+                <div class="stat-value" id="statPending">-</div>
+              </div>
+              <div class="hero-stat">
+                <div class="stat-label">Done</div>
+                <div class="stat-value" id="statDone">-</div>
+              </div>
+              <div class="hero-stat">
+                <div class="stat-label">Total</div>
+                <div class="stat-value" id="statTotal">-</div>
+              </div>
+            </div>
+
+            <div class="hero-aside">
+              <div class="hero-aside-label">Workflow note</div>
+              <p class="hero-aside-copy">
+                Use the filters below to narrow the queue, then open any ticket number to review or edit the full admin record.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
       <section class="card admin-filters">
+        <div class="section-head">
+          <div>
+            <div class="section-kicker">Refine Queue</div>
+            <h3 class="section-title">Search and filter driver tags</h3>
+          </div>
+          <p class="section-copy">
+            Focus on pending work, inspect updated tickets, or locate a driver record in a few keystrokes.
+          </p>
+        </div>
+
         <div class="filters-grid">
           <div class="field">
             <label for="statusSel">Status</label>
@@ -180,6 +213,16 @@
       </section>
 
       <section class="card admin-table">
+        <div class="section-head section-head-tight">
+          <div>
+            <div class="section-kicker">Ticket Activity</div>
+            <h3 class="section-title">Driver tag results</h3>
+          </div>
+          <p class="section-copy">
+            Open a ticket number to inspect the full record, then edit, delete, or update status from the detail modal.
+          </p>
+        </div>
+
         <div class="table-card">
           <div class="scroll-area">
             <table class="data-table" aria-label="Driver tags table">
