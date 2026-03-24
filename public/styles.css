@@ -29,12 +29,28 @@ html,body{height:100%;}
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;scroll-behavior:smooth;}
 body{
   margin:0;
+  position:relative;
   font-family:var(--font-sans);
   color:var(--text);
+  background:#f7faff;
+}
+
+body::before{
+  content:"";
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:0;
   background:
     radial-gradient(1200px 520px at 0% -10%, rgba(29,155,232,.11), transparent 60%),
     radial-gradient(900px 420px at 100% 0%, rgba(29,155,232,.08), transparent 55%),
     linear-gradient(180deg,#f9fcff 0%,var(--bg) 38%,#f7faff 100%);
+  background-repeat:no-repeat;
+}
+
+body > *{
+  position:relative;
+  z-index:1;
 }
 
 a{color:var(--primary-700);}
