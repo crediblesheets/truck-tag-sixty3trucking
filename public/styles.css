@@ -261,7 +261,38 @@ body.auth-body::before{
 }
 body.auth-body > *{position:relative;z-index:1;}
 body.auth-body .header-inner{
-  grid-template-columns:auto 1fr auto;
+  grid-template-columns:1fr;
+  justify-items:center;
+  min-height:92px;
+  padding:10px 0;
+}
+body.auth-body .site-header{
+  background:rgba(255,255,255,.72);
+  border-bottom:1px solid rgba(199,213,228,.6);
+  box-shadow:0 10px 26px rgba(15,23,42,.04);
+}
+body.auth-body .auth-brand{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:16px;
+  width:100%;
+  max-width:560px;
+  padding:10px 16px;
+  border-radius:20px;
+  background:linear-gradient(180deg, rgba(255,255,255,.82), rgba(247,251,255,.58));
+  border:1px solid rgba(199,213,228,.72);
+  box-shadow:0 14px 30px rgba(15,23,42,.05);
+}
+body.auth-body .auth-brand .logo{
+  width:54px;
+  height:54px;
+  border-radius:16px;
+}
+body.auth-body .auth-brand .brand-text{
+  font-size:1.2rem;
+  font-weight:900;
+  letter-spacing:-.03em;
 }
 .auth-hero,.auth-hero.two-col{
   display:grid;
@@ -490,6 +521,14 @@ tbody tr:hover{background:#f8fbff;}
 @media (max-width:980px){
   .header-inner{grid-template-columns:1fr;justify-items:start;min-height:auto;padding:18px 0;}
   .title-wrap{justify-content:flex-start;}
+  body.auth-body .header-inner{
+    justify-items:center;
+    padding:14px 0;
+  }
+  body.auth-body .auth-brand{
+    justify-content:flex-start;
+    max-width:none;
+  }
   .auth-hero,.auth-hero.two-col{grid-template-columns:1fr;min-height:auto;gap:20px;padding:8px 0 16px;}
   .login-card.card{justify-self:stretch;width:100%;}
   .auth-copy{padding-top:8px;}
@@ -507,6 +546,22 @@ tbody tr:hover{background:#f8fbff;}
   .brand-text{font-size:1rem;white-space:normal;}
   .title-wrap{gap:6px;}
   .subtitle{font-size:.9rem;}
+  body.auth-body .header-inner{
+    padding:12px 0 10px;
+  }
+  body.auth-body .auth-brand{
+    gap:12px;
+    padding:10px 12px;
+    border-radius:18px;
+  }
+  body.auth-body .auth-brand .logo{
+    width:48px;
+    height:48px;
+  }
+  body.auth-body .auth-brand .brand-text{
+    font-size:1.05rem;
+    line-height:1.15;
+  }
   .benefits li{padding:12px 14px;}
   .login-card.card{padding:22px 18px 18px;}
   .card-head h3{font-size:1.6rem;}
