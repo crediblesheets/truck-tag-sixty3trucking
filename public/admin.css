@@ -25,6 +25,7 @@
     radial-gradient(980px 520px at 108% 2%, rgba(14, 165, 233, 0.12) 0%, rgba(14, 165, 233, 0) 56%),
     linear-gradient(180deg, #f9fcff 0%, #eef4fa 46%, #f5f8fc 100%);
   position: relative;
+  overflow-x: clip;
 }
 
 .admin-body::before{
@@ -1595,7 +1596,48 @@ body.admin-nav-open{
   }
 
   .admin-topbar{
-    padding: 16px;
+    padding: 18px 16px 16px;
+    display: block;
+  }
+
+  .topbar-title{
+    padding-right: 76px;
+  }
+
+  .topbar-title-with-overview > :first-child{
+    padding-right: 0;
+  }
+
+  .topbar-right{
+    position: relative;
+    top: auto;
+    right: auto;
+    width: 100%;
+    margin-top: 14px;
+  }
+
+  .chip{
+    width: 100%;
+  }
+
+  .sidebar-toggle{
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    left: auto;
+    z-index: 3;
+    width: 48px;
+    height: 48px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+    border-color: rgba(125, 211, 252, 0.24);
+    color: #f8fbff;
+    box-shadow: 0 18px 34px rgba(15, 23, 42, 0.18);
+  }
+
+  .sidebar-toggle:hover{
+    background: linear-gradient(135deg, #162338 0%, #23456e 100%);
+    border-color: rgba(125, 211, 252, 0.36);
   }
 
   .admin-hero,
@@ -1658,10 +1700,6 @@ body.admin-nav-open{
     align-items: flex-start;
   }
 
-  .hero-stats{
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
   .filters-grid,
   .grid2,
   .grid3{
@@ -1685,6 +1723,135 @@ body.admin-nav-open{
   }
 }
 
+@media (max-width: 720px){
+  .admin-main{
+    padding: 10px;
+  }
+
+  .admin-topbar,
+  .admin-hero,
+  .admin-filters,
+  .admin-table{
+    border-radius: 20px;
+  }
+
+  .admin-topbar{
+    padding: 72px 14px 14px;
+  }
+
+  .topbar-title{
+    padding-right: 0;
+  }
+
+  .topbar-kicker{
+    font-size: clamp(1.8rem, 1.35rem + 2vw, 2.2rem);
+  }
+
+  .topbar-sub{
+    font-size: 0.95rem;
+  }
+
+  .topbar-overview .hero-overview{
+    padding: 16px;
+  }
+
+  .hero-overview-copy{
+    font-size: 0.95rem;
+  }
+
+  .hero-stats{
+    grid-template-columns: 1fr;
+  }
+
+  .hero-stat{
+    min-height: auto;
+  }
+
+  .data-table{
+    min-width: 0;
+    display: block;
+  }
+
+  .data-table thead{
+    display: none;
+  }
+
+  .data-table tbody{
+    display: grid;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .data-table tbody tr{
+    display: block;
+    border: 1px solid rgba(199, 213, 228, 0.82);
+    border-radius: 18px;
+    background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(247,250,255,.92));
+    box-shadow: 0 12px 22px rgba(15, 23, 42, 0.05);
+    overflow: hidden;
+  }
+
+  .data-table tbody td{
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    width: 100%;
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.82);
+    white-space: normal;
+  }
+
+  .data-table tbody td::before{
+    content: attr(data-label);
+    flex: 0 0 92px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #64748b;
+  }
+
+  .data-table tbody td:last-child{
+    border-bottom: 0;
+  }
+
+  .data-table tbody td.col-ticket{
+    align-items: center;
+  }
+
+  .data-table tbody td.col-ticket::before,
+  .data-table tbody td.status-cell::before{
+    margin-top: 2px;
+  }
+
+  .data-table tbody td.col-status{
+    align-items: center;
+  }
+
+  .data-table tbody tr td[colspan]{
+    display: block;
+    text-align: center;
+  }
+
+  .data-table tbody tr td[colspan]::before{
+    content: none;
+  }
+
+  .data-table a.ticket-link{
+    min-height: 42px;
+    padding: 0 14px;
+  }
+
+  .col-ticket,
+  .col-email,
+  .col-status,
+  .col-updated{
+    width: auto;
+    min-width: 0;
+  }
+}
+
 @media (max-width: 640px){
   .admin-main{
     padding: 12px;
@@ -1695,23 +1862,8 @@ body.admin-nav-open{
     align-items: flex-start;
   }
 
-  .topbar-right{
-    position: relative;
-    top: auto;
-    right: auto;
-    width: 100%;
-  }
-
   .topbar-title-with-overview{
     gap: 14px;
-  }
-
-  .topbar-title-with-overview > :first-child{
-    padding-right: 0;
-  }
-
-  .chip{
-    width: 100%;
   }
 
   .hero-title{
@@ -1725,11 +1877,6 @@ body.admin-nav-open{
   .hero-benefit{
     padding: 14px 16px;
   }
-
-  .hero-stats{
-    grid-template-columns: 1fr;
-  }
-
   .subpage-hero,
   .subpage-rail-card,
   .subpage-panel{
@@ -1769,15 +1916,6 @@ body.admin-nav-open{
   .subpage-stat-row{
     grid-template-columns: 1fr;
   }
-
-  .hero-stat{
-    min-height: auto;
-  }
-
-  .data-table{
-    min-width: 760px;
-  }
-
   .table-card{
     border-radius: 18px;
   }

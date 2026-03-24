@@ -653,15 +653,15 @@
       }
       tb.innerHTML = VIEW.map(r => `
         <tr>
-          <td class="col-ticket">
+          <td class="col-ticket" data-label="Ticket">
             <a href="#" class="ticket-link" data-id="${(r.ticketNo||r.id||'').toString().replace(/"/g,'&quot;')}">
               ${r.ticketNo || r.id || '-'}
             </a>
           </td>
-          <td>${r.driverName || '-'}</td>
-          <td class="col-email">${r.email || '-'}</td>
-          <td class="col-status status-cell">${statusBadge(r.status || '-')}</td>
-          <td class="col-updated">${fmtDateTime(r.updatedAt || r.UpdatedAt || '')}</td>
+          <td data-label="Driver">${r.driverName || '-'}</td>
+          <td class="col-email" data-label="Email">${r.email || '-'}</td>
+          <td class="col-status status-cell" data-label="Status">${statusBadge(r.status || '-')}</td>
+          <td class="col-updated" data-label="Updated">${fmtDateTime(r.updatedAt || r.UpdatedAt || '')}</td>
         </tr>
       `).join('');
       $('#resultMeta').textContent = `Showing ${VIEW.length} result${VIEW.length>1?'s':''}`;
