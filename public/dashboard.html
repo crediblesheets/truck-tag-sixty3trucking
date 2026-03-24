@@ -6,6 +6,25 @@
   <title>Truck Tag — Driver Dashboard</title>
   <link rel="stylesheet" href="./styles.css"/>
   <style>
+    .driver-header{
+      grid-template-columns:auto 1fr auto;
+      grid-template-areas:
+        "brand spacer actions"
+        "title title title";
+      align-items:center;
+      gap:14px 18px;
+      min-height:auto;
+      padding:14px 0 12px;
+    }
+    .driver-header .brand{grid-area:brand;}
+    .driver-header-actions{grid-area:actions;justify-self:end;}
+    .driver-header-title{
+      grid-area:title;
+      display:flex;
+      justify-content:center;
+      text-align:center;
+    }
+    .driver-header-title .page-title{margin:0;}
     .tickets{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
     .ticket-link{
       display:block;padding:14px 16px;border:1px solid var(--border);border-radius:12px;background:#fff;
@@ -13,22 +32,37 @@
     }
     .ticket-link:hover{box-shadow:0 6px 20px rgba(2, 8, 23, 0.08)}
     .muted-small{color:#6b7280;font-size:12px;margin-top:4px;text-align:center}
+    @media (max-width:640px){
+      .driver-header{
+        gap:12px;
+        padding:12px 0 10px;
+      }
+      .driver-header .brand-text{
+        font-size:1rem;
+      }
+      .driver-header-title .page-title{
+        font-size:1.45rem;
+      }
+      .driver-header-actions .btn{
+        min-height:40px;
+        padding:8px 14px;
+      }
+    }
   </style>
 </head>
 
 <body>
   <header class="site-header">
-    <div class="container header-inner">
+    <div class="container header-inner driver-header">
       <div class="brand">
         <img src="./assets/img/logo.png" alt="Logo" class="logo">
         <span class="brand-text">Sixty – 3 Trucking Inc</span>
       </div>
-      <div class="title-wrap">
-        <h1 class="page-title">Driver Dashboard</h1>
-        <p class="subtitle">Pending tags assigned to you</p>
-      </div>
-      <div>
+      <div class="driver-header-actions">
         <button id="logoutBtn" class="btn" type="button">Log Out</button>
+      </div>
+      <div class="driver-header-title">
+        <h1 class="page-title">Driver Dashboard</h1>
       </div>
     </div>
   </header>
@@ -188,7 +222,6 @@
 
         const tags = guessTags(data);
         const visible = onlyPendingForMe(tags, currentEmail);
-        updateSubtitle(visible.length);
         render(visible);
       } catch {
         alert('Connection issue. Please check internet and reload.');
