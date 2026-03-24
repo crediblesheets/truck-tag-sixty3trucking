@@ -1611,7 +1611,7 @@ body.admin-nav-open{
 
   .topbar-title{
     width: 100%;
-    padding-right: 72px;
+    padding-right: 0;
   }
 
   .topbar-title-with-overview,
@@ -1621,7 +1621,7 @@ body.admin-nav-open{
   }
 
   .topbar-title-with-overview > :first-child{
-    padding-right: 0;
+    padding-right: 72px;
   }
 
   .topbar-right{
@@ -1649,6 +1649,33 @@ body.admin-nav-open{
     border-color: rgba(199, 213, 228, 0.88);
     color: #0f172a;
     box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+  }
+
+  .sidebar-head{
+    position: relative;
+    align-items: flex-start;
+    min-height: 48px;
+    padding-right: 56px;
+  }
+
+  .sidebar-close{
+    position: absolute;
+    top: 10%;
+    right: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    color: #f8fbff;
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .admin-nav-close{
+    top: 10%;
+    right: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
   }
 
   .sidebar-toggle:hover{
@@ -1756,6 +1783,10 @@ body.admin-nav-open{
   }
 
   .topbar-title{
+    padding-right: 0;
+  }
+
+  .topbar-title-with-overview > :first-child{
     padding-right: 72px;
   }
 
@@ -1874,8 +1905,7 @@ body.admin-nav-open{
   }
 
   .admin-topbar{
-    flex-wrap: wrap;
-    align-items: flex-start;
+    display: block;
   }
 
   .topbar-title-with-overview{
