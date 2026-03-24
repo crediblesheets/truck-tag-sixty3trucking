@@ -615,9 +615,10 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: 170px minmax(0, 1fr) 180px 180px 124px;
+  grid-template-columns: 170px minmax(260px, 420px) 190px 190px 124px;
   gap: 12px;
   align-items: end;
+  justify-content: start;
 }
 
 .field label{

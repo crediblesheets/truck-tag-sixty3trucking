@@ -26,11 +26,6 @@
           </div>
         </div>
 
-        <button class="icon-btn sidebar-close" id="sidebarClose" type="button" aria-label="Close sidebar">
-          <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
-            <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-        </button>
       </div>
 
       <div class="sidebar-section">
@@ -179,7 +174,7 @@
             </select>
           </div>
 
-          <div class="field field-span-2">
+          <div class="field">
             <label for="searchBox">Search (ticket, driver, email, material)</label>
             <input id="searchBox" type="search" placeholder="Search…">
           </div>
@@ -573,7 +568,8 @@
       if (body.classList.contains('sidebar-open')) closeSidebar();
       else openSidebar();
     });
-    $('#sidebarClose').addEventListener('click', closeSidebar);
+    const sidebarCloseButton = $('#sidebarClose');
+    if (sidebarCloseButton) sidebarCloseButton.addEventListener('click', closeSidebar);
     $('#sidebarBackdrop').addEventListener('click', closeSidebar);
     window.addEventListener('keydown', (event) => {
       if (event.key === 'Escape') closeSidebar();
