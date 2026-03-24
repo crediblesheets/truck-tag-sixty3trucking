@@ -1022,30 +1022,12 @@
 
 .subpage-topbar-copy{
   min-width: 0;
-  display: grid;
-  gap: 8px;
-}
-
-.subpage-topbar-kicker{
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  min-height: 28px;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(29, 155, 232, 0.18);
-  background: rgba(29, 155, 232, 0.08);
-  color: #0f6fa6;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
 }
 
 .subpage-topbar-row{
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 0;
   flex-wrap: wrap;
   min-width: 0;
 }
@@ -1057,27 +1039,6 @@
   letter-spacing: -0.045em;
   font-weight: 900;
   color: #0f172a;
-}
-
-.subpage-topbar-summary{
-  margin: 0;
-  max-width: 48rem;
-  color: #64748b;
-  line-height: 1.55;
-}
-
-.subpage-topbar-badge{
-  display: inline-flex;
-  align-items: center;
-  min-height: 34px;
-  padding: 8px 14px;
-  border-radius: 999px;
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  background: linear-gradient(180deg, rgba(255,255,255,.96), rgba(247,250,255,.9));
-  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
-  color: #334155;
-  font-size: 13px;
-  font-weight: 700;
 }
 
 .subpage-topbar-actions{
@@ -1535,11 +1496,6 @@
 
   .subpage-topbar-page{
     font-size: 1.65rem;
-  }
-
-  .subpage-topbar-badge{
-    width: 100%;
-    justify-content: center;
   }
 
   .subpage-stat-row{
