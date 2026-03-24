@@ -367,11 +367,83 @@
         </div>
       </div>
       <div class="subpage-topbar-actions">
-        <a href="/admin" class="btn">Back to Admin</a>
-        <button id="logoutBtn" class="btn" type="button">Log Out</button>
+        <div class="subpage-nav-links">
+          <a href="/admin" class="btn">Back to Admin</a>
+          <button class="btn" type="button" data-admin-logout>Log Out</button>
+        </div>
+
+        <button
+          class="icon-btn subpage-nav-toggle"
+          type="button"
+          data-admin-nav-toggle
+          aria-label="Open admin navigation"
+          aria-expanded="false"
+        >
+          <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
       </div>
     </div>
   </header>
+
+  <div class="admin-nav-modal" data-admin-nav aria-hidden="true">
+    <button class="admin-nav-backdrop" type="button" data-admin-nav-close aria-label="Close admin navigation"></button>
+    <div class="admin-nav-panel" role="dialog" aria-modal="true" aria-labelledby="adminNavTitle">
+      <div class="admin-nav-head">
+        <div class="admin-nav-head-copy">
+          <div class="admin-nav-overline">Admin Navigation</div>
+          <h2 class="admin-nav-title" id="adminNavTitle">Choose a workspace</h2>
+          <p class="admin-nav-copy">Move through the admin pages from a single responsive menu that matches the console theme.</p>
+        </div>
+
+        <button class="icon-btn admin-nav-close" type="button" data-admin-nav-close aria-label="Close admin navigation">
+          <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="admin-nav-list">
+        <a class="admin-nav-link" href="/admin" data-admin-nav-link>
+          <span class="admin-nav-link-copy">
+            <span class="admin-nav-link-title">Admin Dashboard</span>
+            <span class="admin-nav-link-meta">Overview, filters, and ticket operations</span>
+          </span>
+          <span class="admin-nav-link-arrow" aria-hidden="true">→</span>
+        </a>
+
+        <a class="admin-nav-link" href="/tag-lists" data-admin-nav-link>
+          <span class="admin-nav-link-copy">
+            <span class="admin-nav-link-title">Tag Lists</span>
+            <span class="admin-nav-link-meta">Review ticket details and uploaded tag data</span>
+          </span>
+          <span class="admin-nav-link-arrow" aria-hidden="true">→</span>
+        </a>
+
+        <a class="admin-nav-link" href="/draft-tickets" data-admin-nav-link>
+          <span class="admin-nav-link-copy">
+            <span class="admin-nav-link-title">Draft Tickets</span>
+            <span class="admin-nav-link-meta">Review and convert driver draft submissions</span>
+          </span>
+          <span class="admin-nav-link-arrow" aria-hidden="true">→</span>
+        </a>
+
+        <a class="admin-nav-link is-current" href="/admin/users" data-admin-nav-link>
+          <span class="admin-nav-link-copy">
+            <span class="admin-nav-link-title">Manage Users</span>
+            <span class="admin-nav-link-meta">Accounts, roles, status, and password tools</span>
+          </span>
+          <span class="admin-nav-link-arrow" aria-hidden="true">→</span>
+        </a>
+      </div>
+
+      <div class="admin-nav-foot">
+        <p class="admin-nav-note">The same mobile menu also gives you a quick way to log out.</p>
+        <button class="btn" type="button" data-admin-logout data-admin-nav-close>Log Out</button>
+      </div>
+    </div>
+  </div>
 
   <main class="container">
     <div class="subpage-shell">
@@ -541,6 +613,7 @@
     </div>
   </div>
 
+  <script src="/admin-nav.js"></script>
   <script>
     document.getElementById('y').textContent = new Date().getFullYear();
 
@@ -846,7 +919,7 @@
     $('#bulkDeleteBtn').addEventListener('click', bulkDelete);
     $('#btnSetPw').addEventListener('click', setPasswordForCurrent);
     $('#btnClearPw').addEventListener('click', clearPasswordForCurrent);
-    $('#logoutBtn').addEventListener('click', async (e) => {
+    async function handleLogoutClick(e){
       const btn = e.currentTarget;
       const prev = btn.textContent;
       btn.disabled = true;
@@ -865,6 +938,10 @@
         btn.disabled = false;
         btn.textContent = prev;
       }
+    }
+
+    $$('[data-admin-logout]').forEach((btn) => {
+      btn.addEventListener('click', handleLogoutClick);
     });
 
     loadUsers();

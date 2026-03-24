@@ -117,7 +117,7 @@
     <!-- Main -->
     <main class="admin-main">
       <header class="admin-topbar">
-        <button class="icon-btn sidebar-toggle" id="sidebarToggle" type="button" aria-label="Open sidebar">
+        <button class="icon-btn sidebar-toggle" id="sidebarToggle" type="button" aria-label="Open admin navigation" aria-expanded="false">
           <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
             <path d="M4 6h16M4 12h16M4 18h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
@@ -556,14 +556,31 @@
 
     // Sidebar (mobile)
     const body = document.body;
-    function openSidebar(){ body.classList.add('sidebar-open'); $('#sidebarBackdrop').setAttribute('aria-hidden','false'); }
-    function closeSidebar(){ body.classList.remove('sidebar-open'); $('#sidebarBackdrop').setAttribute('aria-hidden','true'); }
+    function openSidebar(){
+      body.classList.add('sidebar-open');
+      $('#sidebarBackdrop').setAttribute('aria-hidden','false');
+      $('#sidebarToggle').setAttribute('aria-expanded', 'true');
+    }
+    function closeSidebar(){
+      body.classList.remove('sidebar-open');
+      $('#sidebarBackdrop').setAttribute('aria-hidden','true');
+      $('#sidebarToggle').setAttribute('aria-expanded', 'false');
+    }
     function closeSidebarOnMobile(){
       if (window.matchMedia('(max-width: 980px)').matches) closeSidebar();
     }
-    $('#sidebarToggle').addEventListener('click', openSidebar);
+    $('#sidebarToggle').addEventListener('click', () => {
+      if (body.classList.contains('sidebar-open')) closeSidebar();
+      else openSidebar();
+    });
     $('#sidebarClose').addEventListener('click', closeSidebar);
     $('#sidebarBackdrop').addEventListener('click', closeSidebar);
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeSidebar();
+    });
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 980) closeSidebar();
+    });
 
     // ---------- state ----------
     let TAGS = [];
