@@ -53,12 +53,6 @@
       transition:transform .16s ease, border-color .16s ease, background .16s ease;
     }
 
-    .chipbtn:hover{
-      transform:translateY(-1px);
-      border-color:rgba(29, 155, 232, 0.34);
-      background:#fff;
-    }
-
     .chipbtn.active{
       border-color:rgba(29, 155, 232, 0.42);
       background:linear-gradient(180deg, rgba(29,155,232,.12), rgba(29,155,232,.06));
@@ -134,10 +128,6 @@
 
     .user-btn:last-child{
       border-bottom:0;
-    }
-
-    .user-btn:hover{
-      background:rgba(29, 155, 232, 0.05);
     }
 
     .user-btn.active{
@@ -255,10 +245,6 @@
       vertical-align:middle;
     }
 
-    .data-table tbody tr:hover{
-      background:rgba(29, 155, 232, 0.045);
-    }
-
     .data-table tbody tr:last-child td{
       border-bottom:0;
     }
@@ -272,10 +258,6 @@
       color:#0369a1;
       text-decoration:none;
       font-weight:800;
-    }
-
-    .rowLink:hover{
-      text-decoration:underline;
     }
 
     .badge{
@@ -410,6 +392,26 @@
       .users-form-grid{
         grid-template-columns:1fr;
         flex-direction:column;
+      }
+    }
+
+    @media (hover:hover) and (pointer:fine){
+      .chipbtn:hover{
+        transform:translateY(-1px);
+        border-color:rgba(29, 155, 232, 0.34);
+        background:#fff;
+      }
+
+      .user-btn:hover{
+        background:rgba(29, 155, 232, 0.05);
+      }
+
+      .data-table tbody tr:hover{
+        background:rgba(29, 155, 232, 0.045);
+      }
+
+      .rowLink:hover{
+        text-decoration:underline;
       }
     }
   </style>

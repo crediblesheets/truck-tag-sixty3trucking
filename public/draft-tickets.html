@@ -75,10 +75,6 @@
       vertical-align:middle;
     }
 
-    .draft-table tbody tr:hover{
-      background:rgba(29, 155, 232, 0.045);
-    }
-
     .draft-table tbody tr:last-child td{
       border-bottom:0;
     }
@@ -96,12 +92,6 @@
       font-weight:800;
       box-shadow:0 10px 18px rgba(15, 23, 42, 0.05);
       transition:transform .18s ease, border-color .18s ease, color .18s ease;
-    }
-
-    .draft-link:hover{
-      transform:translateY(-1px);
-      color:#0369a1;
-      border-color:rgba(29, 155, 232, 0.42);
     }
 
     .col-id{ width:170px; white-space:nowrap; }
@@ -313,6 +303,18 @@
 
       .kvs{
         grid-template-columns:1fr;
+      }
+    }
+
+    @media (hover:hover) and (pointer:fine){
+      .draft-table tbody tr:hover{
+        background:rgba(29, 155, 232, 0.045);
+      }
+
+      .draft-link:hover{
+        transform:translateY(-1px);
+        color:#0369a1;
+        border-color:rgba(29, 155, 232, 0.42);
       }
     }
   </style>

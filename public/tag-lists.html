@@ -85,10 +85,6 @@
       border-bottom:0;
     }
 
-    .ticket-btn:hover{
-      background:rgba(29, 155, 232, 0.05);
-    }
-
     .ticket-btn.active{
       background:linear-gradient(90deg, rgba(29, 155, 232, 0.12), rgba(29, 155, 232, 0.04));
       box-shadow:inset 3px 0 0 #1d9be8;
@@ -256,6 +252,12 @@
       .detail-shell{ padding:18px; }
       .detail-head{ flex-direction:column; }
       .ticket-rail-list{ max-height:320px; }
+    }
+
+    @media (hover:hover) and (pointer:fine){
+      .ticket-btn:hover{
+        background:rgba(29, 155, 232, 0.05);
+      }
     }
   </style>
 </head>
