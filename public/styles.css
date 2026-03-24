@@ -10,6 +10,8 @@
   --muted:#64748b;
   --line:#dbe5f0;
   --line-strong:#c7d5e4;
+  --hover-fill:#e8f0fa;
+  --hover-fill-strong:#d9e7f6;
   --primary:#1d9be8;
   --primary-600:#168ad1;
   --primary-700:#1171ad;
@@ -162,7 +164,7 @@ textarea{
 .btn{
   background:linear-gradient(180deg,#ffffff,#f8fbff);
   color:var(--text);
-  box-shadow:0 8px 22px rgba(15,23,42,.05);
+  box-shadow:0 6px 18px rgba(15,23,42,.04);
 }
 .header-action-btn{
   min-height:40px;
@@ -176,7 +178,7 @@ textarea{
   background:linear-gradient(180deg,var(--primary),var(--primary-600));
   color:#fff;
   border-color:transparent;
-  box-shadow:0 14px 30px rgba(29,155,232,.28);
+  box-shadow:0 8px 22px rgba(29,155,232,.18);
 }
 .btn-ghost{
   background:rgba(255,255,255,.85);
@@ -533,15 +535,14 @@ th,td{padding:13px 14px;border-bottom:1px solid #edf2f7;text-align:left;font-siz
   a:hover{color:var(--primary-600);}
 
   .btn:hover:not([disabled]){
-    background:#fff;
+    background:var(--hover-fill);
     border-color:var(--line-strong);
-    transform:translateY(-1px);
-    box-shadow:0 12px 24px rgba(15,23,42,.08);
+    box-shadow:0 6px 18px rgba(15,23,42,.04);
   }
 
   .btn-primary:hover:not([disabled]){
-    transform:translateY(-1px);
-    box-shadow:0 18px 34px rgba(29,155,232,.33);
+    background:linear-gradient(180deg,var(--primary-700),#0f6398);
+    box-shadow:0 8px 22px rgba(17,113,173,.2);
   }
 
   .dropdown-menu a:hover,
@@ -550,22 +551,23 @@ th,td{padding:13px 14px;border-bottom:1px solid #edf2f7;text-align:left;font-siz
   .kebab-menu button:hover,
   .popover a:hover,
   .popover button:hover{
-    background:#f8fbff;
+    background:var(--hover-fill);
   }
 
   .icon-btn:hover{
-    background:#eff6ff;
+    background:var(--hover-fill);
     color:#334155;
   }
 
   .help-text a:hover{text-decoration:underline;}
 
   .ticket-link:hover{
-    transform:translateY(-2px);
-    box-shadow:var(--shadow);
+    background:linear-gradient(180deg,var(--hover-fill),var(--hover-fill-strong));
+    border-color:var(--line-strong);
+    box-shadow:var(--shadow-sm);
   }
 
-  tbody tr:hover{background:#f8fbff;}
+  tbody tr:hover{background:var(--hover-fill);}
 }
 
 @keyframes spin{to{transform:rotate(360deg);}}
