@@ -353,12 +353,29 @@
         padding:18px;
       }
 
-      .users-detail .data-table tbody td.row-chk{
-        display:flex;
-        justify-content:center;
+      .users-detail .data-table tbody tr{
+        display:grid;
+        grid-template-columns:28px minmax(0, 1fr);
+        grid-template-areas:
+          "check email"
+          "name name"
+          "role role"
+          "status status";
         align-items:center;
-        min-height:auto;
-        padding:10px 14px 6px;
+        gap:0 10px;
+      }
+
+      .users-detail .data-table tbody td{
+        display:block;
+        width:100%;
+        padding:12px 14px;
+      }
+
+      .users-detail .data-table tbody td.row-chk{
+        grid-area:check;
+        width:auto;
+        padding:12px 0 8px 14px;
+        border-bottom:0;
       }
 
       .users-detail .data-table tbody td.row-chk::before{
@@ -371,8 +388,21 @@
         margin:0;
       }
 
-      .users-detail .data-table tbody td.row-chk + td{
-        padding-top:8px;
+      .users-detail .data-table tbody td.user-email-cell{
+        grid-area:email;
+        padding:10px 14px 8px 0;
+      }
+
+      .users-detail .data-table tbody td.user-name-cell{
+        grid-area:name;
+      }
+
+      .users-detail .data-table tbody td.user-role-cell{
+        grid-area:role;
+      }
+
+      .users-detail .data-table tbody td.user-status-cell{
+        grid-area:status;
       }
 
       .users-detail-head,
@@ -752,10 +782,10 @@
       rows.innerHTML = view.map(u => `
         <tr data-email="${u.email}">
           <td class="row-chk"><input type="checkbox" class="rowChk" ${selectedEmails.has(u.email)?'checked':''}></td>
-          <td><a href="#" class="rowLink">${u.email}</a></td>
-          <td>${u.full_name || '-'}</td>
-          <td style="text-transform:capitalize; font-weight:700; color:#334155;">${u.role}</td>
-          <td>${u.active ? '<span class="badge badge-done">Active</span>' : '<span class="badge badge-other">Disabled</span>'}</td>
+          <td class="user-email-cell"><a href="#" class="rowLink">${u.email}</a></td>
+          <td class="user-name-cell">${u.full_name || '-'}</td>
+          <td class="user-role-cell" style="text-transform:capitalize; font-weight:700; color:#334155;">${u.role}</td>
+          <td class="user-status-cell">${u.active ? '<span class="badge badge-done">Active</span>' : '<span class="badge badge-other">Disabled</span>'}</td>
         </tr>
       `).join('');
     }
