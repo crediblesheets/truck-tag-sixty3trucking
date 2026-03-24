@@ -295,14 +295,18 @@
 
   .driver-ticket-header .brand{
     gap:12px;
+    min-width:0;
   }
 
   .driver-ticket-header > :last-child{
     justify-self:end;
+    min-width:0;
   }
 
   .driver-ticket-header .brand-text{
     display:inline;
+    min-width:0;
+    overflow-wrap:anywhere;
   }
 
   .driver-ticket-header .logo{
@@ -360,7 +364,9 @@
     }
 
     .driver-ticket-header{
-      gap:12px;
+      grid-template-columns:minmax(0, 1fr);
+      justify-items:stretch;
+      gap:10px;
       padding:12px 0 10px;
     }
 
@@ -371,12 +377,25 @@
 
     .driver-ticket-header .brand{
       gap:10px;
+      width:100%;
     }
 
     .driver-ticket-header .brand-text{
       font-size:1rem;
       line-height:1.15;
       white-space:normal;
+    }
+
+    .driver-ticket-header > :last-child{
+      justify-self:stretch;
+      width:100%;
+    }
+
+    .driver-ticket-header > :last-child .btn,
+    .driver-ticket-header > :last-child a.btn{
+      width:100%;
+      justify-content:center;
+      text-align:center;
     }
 
     .driver-ticket-header .btn{
