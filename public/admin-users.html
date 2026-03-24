@@ -145,6 +145,14 @@
       box-shadow:inset 3px 0 0 #1d9be8;
     }
 
+    .user-btn-name{
+      font-weight:700;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      color:#0f172a;
+    }
+
     .user-sub{
       margin-top:4px;
       font-size:12px;
@@ -687,7 +695,7 @@
       const mkBtn = (u) => `
         <button class="user-btn" data-email="${u.email.replace(/"/g,'&quot;')}">
           <div style="flex:1; min-width:0;">
-            <div style="font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${u.full_name || u.email}</div>
+            <div class="user-btn-name">${u.full_name || u.email}</div>
             <div class="user-sub">${u.email}</div>
           </div>
           <div class="user-state">${u.active ? 'active' : 'disabled'}</div>
