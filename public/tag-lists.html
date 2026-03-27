@@ -189,35 +189,55 @@
       resize:vertical;
     }
 
-    .proof-card{
-      border-radius:22px;
-      border:1px solid rgba(199, 213, 228, 0.76);
-      background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(247,250,255,.92));
-      box-shadow:0 14px 24px rgba(15, 23, 42, 0.05);
+    .media-grid{
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:14px;
     }
 
-    .proof-body{
-      padding:18px;
+    .media-card{
+      display:none;
+    }
+
+    .media-title{
+      margin:0 0 12px;
+      font-size:.95rem;
+      font-weight:900;
+      color:#0f172a;
+    }
+
+    .media-thumb-wrap{
+      min-height:180px;
       display:flex;
-      gap:16px;
-      align-items:flex-start;
+      align-items:center;
+      justify-content:center;
+      padding:12px;
+      border:1px dashed rgba(148, 163, 184, 0.45);
+      border-radius:18px;
+      background:linear-gradient(180deg, rgba(248,250,252,.96), rgba(241,245,249,.9));
     }
 
-    .proof-thumb{
-      width:240px;
-      max-height:170px;
+    .media-thumb{
+      width:100%;
+      max-height:180px;
       object-fit:contain;
-      border:1px solid rgba(199, 213, 228, 0.82);
-      border-radius:16px;
+      border-radius:12px;
       background:#fff;
       cursor:pointer;
     }
 
-    .proof-actions{
+    .media-meta{
+      margin-top:10px;
+      color:#64748b;
+      font-size:13px;
+      line-height:1.5;
+    }
+
+    .media-actions{
       display:flex;
       gap:8px;
       flex-wrap:wrap;
-      margin-top:10px;
+      margin-top:12px;
     }
 
     .table-card{ margin-top:0; }
@@ -244,8 +264,8 @@
 
     @media (max-width: 980px){
       .grid2, .grid3{ grid-template-columns:1fr; }
-      .proof-body{ flex-direction:column; }
-      .proof-thumb{ width:100%; max-height:260px; }
+      .media-grid{ grid-template-columns:1fr; }
+      .media-thumb{ max-height:260px; }
     }
 
     @media (max-width: 640px){
@@ -467,34 +487,63 @@
                 <div class="grid3" style="margin-top:14px;">
                   <div><label>Downtime & Lunch</label><input id="ds_downtimeLunch" name="downtimeLunch" type="text" disabled></div>
                   <div><label>Sign Out Time</label><input id="ds_signOutTime" name="signOutTime" type="time" disabled></div>
-                  <div><label>Received by</label><input id="ds_receivedBy" name="receivedBy" type="text" disabled></div>
+                  <div>
+                    <label>Tag Type</label>
+                    <select id="ds_tagMode" name="tagMode" disabled>
+                      <option value="scale">Scale Tags</option>
+                      <option value="equipment">Equipment Move</option>
+                    </select>
+                  </div>
                 </div>
 
                 <div class="grid2" style="margin-top:14px;">
-                  <div style="grid-column:1/-1;">
-                    <label>Notes</label>
-                    <textarea id="ds_notes" name="notes" disabled></textarea>
-                  </div>
-                  <div style="grid-column:1/-1;">
-                    <label>Driver Signature</label>
-                    <input id="ds_driverSignature" name="driverSignature" type="text" disabled>
-                  </div>
+                  <div><label>Received by</label><input id="ds_receivedBy" name="receivedBy" type="text" disabled></div>
+                  <div><label>Driver Signature</label><input id="ds_driverSignature" name="driverSignature" type="text" disabled></div>
+                </div>
+
+                <div style="margin-top:14px;">
+                  <label>Notes</label>
+                  <textarea id="ds_notes" name="notes" disabled></textarea>
                 </div>
               </section>
 
-              <div id="proofCard" class="proof-card" style="display:none;">
-                <div class="proof-body">
-                  <img id="proofThumb" class="proof-thumb" alt="Proof image preview">
-                  <div>
-                    <h3 class="detail-surface-title" style="margin-bottom:8px;">Proof of ticket</h3>
-                    <div class="muted" id="proofMeta">No file attached.</div>
-                    <div class="proof-actions">
-                      <a id="proofOpen" class="btn" href="#" target="_blank" rel="noopener" style="display:none">Open full size</a>
-                      <a id="proofDownload" class="btn btn-primary" href="#" download style="display:none">Download</a>
-                    </div>
+              <section class="media-grid" aria-label="Ticket media attachments">
+                <div id="driverSignatureCard" class="detail-surface media-card">
+                  <div class="media-title">Driver Signature Image</div>
+                  <div class="media-thumb-wrap">
+                    <img id="driverSignatureThumb" class="media-thumb" alt="Driver signature preview">
+                  </div>
+                  <div id="driverSignatureMeta" class="media-meta">No image attached.</div>
+                  <div class="media-actions">
+                    <a id="driverSignatureOpen" class="btn" href="#" target="_blank" rel="noopener" style="display:none">Open</a>
+                    <a id="driverSignatureDownload" class="btn btn-primary" href="#" download style="display:none">Download</a>
                   </div>
                 </div>
-              </div>
+
+                <div id="receivedSignatureCard" class="detail-surface media-card">
+                  <div class="media-title">Received By Signature</div>
+                  <div class="media-thumb-wrap">
+                    <img id="receivedSignatureThumb" class="media-thumb" alt="Received by signature preview">
+                  </div>
+                  <div id="receivedSignatureMeta" class="media-meta">No image attached.</div>
+                  <div class="media-actions">
+                    <a id="receivedSignatureOpen" class="btn" href="#" target="_blank" rel="noopener" style="display:none">Open</a>
+                    <a id="receivedSignatureDownload" class="btn btn-primary" href="#" download style="display:none">Download</a>
+                  </div>
+                </div>
+
+                <div id="proofCard" class="detail-surface media-card">
+                  <div class="media-title">Proof Of Ticket</div>
+                  <div class="media-thumb-wrap">
+                    <img id="proofThumb" class="media-thumb" alt="Proof image preview">
+                  </div>
+                  <div id="proofMeta" class="media-meta">No file attached.</div>
+                  <div class="media-actions">
+                    <a id="proofOpen" class="btn" href="#" target="_blank" rel="noopener" style="display:none">Open</a>
+                    <a id="proofDownload" class="btn btn-primary" href="#" download style="display:none">Download</a>
+                  </div>
+                </div>
+              </section>
 
               <section class="detail-surface">
                 <h3 class="detail-surface-title">Scale tags</h3>
@@ -604,6 +653,11 @@
     th.textContent = isMaterialsEquip ? 'Materials/Equipment' : 'Scale Tag No';
   }
 
+  function normalizeTagMode(modeRaw){
+    const mode = String(modeRaw || '').trim().toLowerCase();
+    return (mode.includes('equip') || mode.includes('material')) ? 'equipment' : 'scale';
+  }
+
   function lockForm(lock){
     const f = $('#form');
 
@@ -641,6 +695,7 @@
       'ds_leaveYardTime',
       'ds_truckStopTime',
       'ds_signOutTime',
+      'ds_tagMode',
       'ds_receivedBy',
       'ds_notes',
       'ds_driverSignature'
@@ -807,6 +862,7 @@
     $('#ds_howMany').value = '';
     $('#ds_downtimeLunch').value = '';
     $('#ds_signOutTime').value = '';
+    $('#ds_tagMode').value = 'scale';
     $('#ds_receivedBy').value = '';
     $('#ds_leaveYardTime').value = '';
     $('#ds_truckStopTime').value = '';
@@ -814,15 +870,61 @@
     $('#ds_driverSignature').value = '';
     $('#ds_items').innerHTML = `<tr><td colspan="7" class="subpage-empty">No scale tags.</td></tr>`;
     $('#scaleTable').style.display = 'none';
+    resetMediaCard('driverSignature', 'No image attached.');
+    resetMediaCard('receivedSignature', 'No image attached.');
   }
 
   function clearProofUI(){
-    const card = $('#proofCard');
-    $('#proofThumb').src = '';
-    $('#proofOpen').style.display = 'none';
-    $('#proofDownload').style.display = 'none';
-    $('#proofMeta').textContent = 'No file attached.';
+    resetMediaCard('proof', 'No file attached.');
+  }
+
+  function resetMediaCard(prefix, emptyText){
+    const card = $(`#${prefix}Card`);
+    const thumb = $(`#${prefix}Thumb`);
+    const meta = $(`#${prefix}Meta`);
+    const open = $(`#${prefix}Open`);
+    const download = $(`#${prefix}Download`);
+    if (!card || !thumb || !meta || !open || !download) return;
     card.style.display = 'none';
+    thumb.removeAttribute('src');
+    thumb.onclick = null;
+    open.style.display = 'none';
+    open.removeAttribute('href');
+    download.style.display = 'none';
+    download.removeAttribute('href');
+    download.onclick = null;
+    meta.textContent = emptyText;
+  }
+
+  function wireDownloadButton(btn, url, filename){
+    btn.style.display = 'inline-flex';
+    btn.setAttribute('download', filename);
+    btn.onclick = (ev) => {
+      ev.preventDefault();
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.rel = 'noopener';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    };
+  }
+
+  function setMediaCard(prefix, viewUrl, downloadUrl, metaText, filename){
+    const card = $(`#${prefix}Card`);
+    const thumb = $(`#${prefix}Thumb`);
+    const meta = $(`#${prefix}Meta`);
+    const open = $(`#${prefix}Open`);
+    const download = $(`#${prefix}Download`);
+    if (!card || !thumb || !meta || !open || !download || !viewUrl) return;
+    card.style.display = 'block';
+    thumb.src = viewUrl;
+    thumb.onclick = () => openLightbox(viewUrl);
+    open.href = viewUrl;
+    open.style.display = 'inline-flex';
+    meta.textContent = metaText;
+    wireDownloadButton(download, downloadUrl || viewUrl, filename);
   }
 
   async function openTicket(id){
@@ -859,9 +961,13 @@
       lockForm(true);
 
       fillDriverFieldsFromObject(CURRENT);
-      await loadDriverByTicketId(id);
-      await loadScaleItems(id);
-      await loadProof(id);
+      await Promise.all([
+        loadDriverByTicketId(id),
+        loadScaleItems(id),
+        loadProof(id),
+        loadSignature(id, 'driver'),
+        loadSignature(id, 'received'),
+      ]);
 
     } catch (e){
       console.error(e);
@@ -924,6 +1030,7 @@
     const driverSignature  = obj.driverSignature ?? obj['Driver Signature'] ?? '';
     const leaveYardTimeRaw = obj.leaveYardTime ?? obj.leave_yard_time ?? obj['Leave Yard Time'] ?? '';
     const truckStopRaw     = obj.truckStop ?? obj.truck_stop ?? obj['Truck Stop Time'] ?? obj['Truck Stop'] ?? '';
+    const tagMode          = normalizeTagMode(obj.tagMode ?? obj.tag_mode ?? CURRENT?.tagMode ?? CURRENT?.tag_mode);
 
     $('#ds_bridgefare').value      = bridgefare;
     $('#ds_signedOutLoaded').value = signedOutLoaded;
@@ -933,8 +1040,10 @@
     $('#ds_leaveYardTime').value   = toHHMM(leaveYardTimeRaw);
     $('#ds_truckStopTime').value   = toHHMM(truckStopRaw);
     $('#ds_signOutTime').value     = toHHMM(signOutTimeRaw);
+    $('#ds_tagMode').value         = tagMode;
     $('#ds_receivedBy').value      = receivedBy;
     $('#ds_driverSignature').value = driverSignature;
+    applyScaleHeaderByMode(tagMode);
   }
 
   async function loadDriverByTicketId(id){
@@ -949,7 +1058,6 @@
       else obj = j;
 
       fillDriverFieldsFromObject(obj);
-      applyScaleHeaderByMode(obj.tagMode || obj.tag_mode || CURRENT?.tagMode || CURRENT?.tag_mode);
     }catch(e){
       console.warn('driver fetch failed', e);
     }
@@ -957,48 +1065,50 @@
 
   async function loadProof(id){
     clearProofUI();
-    const card = $('#proofCard');
     try{
       const rView = await fetch(`/api/tags/${encodeURIComponent(id)}/proof-url`);
       const jView = await rView.json().catch(() => ({}));
       const viewUrl = jView?.url || null;
 
       if (!viewUrl){
-        card.style.display = 'none';
         return;
       }
 
       const rDl = await fetch(`/api/tags/${encodeURIComponent(id)}/proof-url?download=1`);
       const jDl = await rDl.json().catch(() => ({}));
-      const downloadUrl = jDl?.url || viewUrl;
-
-      $('#proofThumb').src = viewUrl;
-      $('#proofOpen').href = viewUrl;
-      $('#proofOpen').style.display = 'inline-flex';
-
-      const niceName = `ticket-${id}-proof`;
-      const dlBtn = $('#proofDownload');
-      dlBtn.style.display = 'inline-flex';
-      dlBtn.removeAttribute('target');
-      dlBtn.setAttribute('rel', 'noopener');
-      dlBtn.setAttribute('download', niceName);
-
-      dlBtn.onclick = (ev) => {
-        ev.preventDefault();
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = niceName;
-        a.rel = 'noopener';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      };
-
-      $('#proofMeta').textContent = 'Click the preview to inspect the full image, or open and download the file directly.';
-      card.style.display = 'block';
+      setMediaCard(
+        'proof',
+        viewUrl,
+        jDl?.url || viewUrl,
+        'Proof image attached to this ticket.',
+        `ticket-${id}-proof`
+      );
     }catch(e){
       console.warn('proof fetch failed', e);
       clearProofUI();
+    }
+  }
+
+  async function loadSignature(id, who){
+    const prefix = who === 'received' ? 'receivedSignature' : 'driverSignature';
+    resetMediaCard(prefix, 'No image attached.');
+    try{
+      const rView = await fetch(`/api/tags/${encodeURIComponent(id)}/signature-url/${who}`);
+      const jView = await rView.json().catch(() => ({}));
+      const viewUrl = jView?.url || null;
+      if (!viewUrl) return;
+
+      const rDl = await fetch(`/api/tags/${encodeURIComponent(id)}/signature-url/${who}?download=1`);
+      const jDl = await rDl.json().catch(() => ({}));
+      setMediaCard(
+        prefix,
+        viewUrl,
+        jDl?.url || viewUrl,
+        who === 'received' ? 'Signed by the receiving party.' : 'Signed by the driver.',
+        `ticket-${id}-signature-${who}`
+      );
+    }catch(e){
+      console.warn(`signature fetch failed for ${who}`, e);
     }
   }
 
@@ -1014,10 +1124,6 @@
     lb.setAttribute('aria-hidden','true');
     lbImg.src = '';
   }
-  $('#proofThumb').addEventListener('click', () => {
-    const src = $('#proofThumb').src;
-    if (src) openLightbox(src);
-  });
   $('#lightbox .close').addEventListener('click', closeLightbox);
   $('#lightbox').addEventListener('click', (e) => {
     if (e.target === lb) closeLightbox();
@@ -1101,6 +1207,7 @@
       signOutTime: body.signOutTime || '',
       receivedBy: body.receivedBy || '',
       driverSignature: body.driverSignature || '',
+      tagMode: body.tagMode || 'scale',
     };
 
     showOverlay(true);
