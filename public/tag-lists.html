@@ -85,10 +85,6 @@
       border-bottom:0;
     }
 
-    .ticket-btn:hover{
-      background:rgba(29, 155, 232, 0.05);
-    }
-
     .ticket-btn.active{
       background:linear-gradient(90deg, rgba(29, 155, 232, 0.12), rgba(29, 155, 232, 0.04));
       box-shadow:inset 3px 0 0 #1d9be8;
@@ -257,6 +253,12 @@
       .detail-head{ flex-direction:column; }
       .ticket-rail-list{ max-height:320px; }
     }
+
+    @media (hover:hover) and (pointer:fine){
+      .ticket-btn:hover{
+        background:#dce8f7;
+      }
+    }
   </style>
 </head>
 <body class="admin-body admin-subpage-body">
@@ -274,7 +276,7 @@
       <div class="subpage-topbar-actions">
         <div class="subpage-nav-links">
           <a href="/admin" class="btn">Back to Admin</a>
-          <button class="btn" type="button" data-admin-logout>Log Out</button>
+          <button class="btn header-action-btn" type="button" data-admin-logout>Log Out</button>
         </div>
 
         <button
@@ -564,12 +566,16 @@
   }
 
   function toISODate(s){
-    if (!s) return '';
-    const d = new Date(s);
-    if (!isNaN(d)) return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    const m = String(s).match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
-    if (m) { const [_, mm, dd, yyyy] = m; return `${yyyy.padStart(4,'20')}-${mm.padStart(2,'0')}-${dd.padStart(2,'0')}`; }
-    return '';
+    const raw = String(s || '').trim();
+    if (!raw) return '';
+
+    let m = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|[T\s])/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+
+    m = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+    if (!m) return '';
+    const yyyy = m[3].length === 2 ? `20${m[3]}` : m[3];
+    return `${yyyy}-${String(m[1]).padStart(2,'0')}-${String(m[2]).padStart(2,'0')}`;
   }
   function v(obj, ...keys){
     for (const k of keys){

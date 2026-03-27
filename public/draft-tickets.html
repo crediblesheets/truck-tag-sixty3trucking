@@ -75,10 +75,6 @@
       vertical-align:middle;
     }
 
-    .draft-table tbody tr:hover{
-      background:rgba(29, 155, 232, 0.045);
-    }
-
     .draft-table tbody tr:last-child td{
       border-bottom:0;
     }
@@ -96,12 +92,6 @@
       font-weight:800;
       box-shadow:0 10px 18px rgba(15, 23, 42, 0.05);
       transition:transform .18s ease, border-color .18s ease, color .18s ease;
-    }
-
-    .draft-link:hover{
-      transform:translateY(-1px);
-      color:#0369a1;
-      border-color:rgba(29, 155, 232, 0.42);
     }
 
     .col-id{ width:170px; white-space:nowrap; }
@@ -315,6 +305,18 @@
         grid-template-columns:1fr;
       }
     }
+
+    @media (hover:hover) and (pointer:fine){
+      .draft-table tbody tr:hover{
+        background:#dce8f7;
+      }
+
+      .draft-link:hover{
+        color:#0f172a;
+        background:linear-gradient(180deg, #dce8f7, #d3e1f2);
+        border-color:rgba(148, 163, 184, 0.34);
+      }
+    }
   </style>
 </head>
 
@@ -333,7 +335,7 @@
       <div class="subpage-topbar-actions">
         <div class="subpage-nav-links">
           <a href="/admin" class="btn">Back to Admin</a>
-          <button class="btn" type="button" data-admin-logout>Log Out</button>
+          <button class="btn header-action-btn" type="button" data-admin-logout>Log Out</button>
         </div>
 
         <button
@@ -621,11 +623,30 @@
       document.body.style.overflow = on ? 'hidden' : '';
     }
 
+    function getDateParts(rawValue){
+      const raw = String(rawValue || '').trim();
+      if (!raw) return null;
+
+      let m = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|[T\s])/);
+      if (m) return { yyyy: m[1], mm: m[2], dd: m[3] };
+
+      m = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+      if (!m) return null;
+      return {
+        yyyy: m[3].length === 2 ? `20${m[3]}` : m[3],
+        mm: String(m[1]).padStart(2,'0'),
+        dd: String(m[2]).padStart(2,'0')
+      };
+    }
+
     function fmtDateTime(t){
       if (!t) return '';
-      const d = new Date(t);
-      if (isNaN(d)) return String(t);
-      return d.toLocaleString([], {year:'numeric', month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit'});
+      const parts = getDateParts(t);
+      if (!parts) return String(t);
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const time = String(t).match(/[T\s](\d{2}):(\d{2})/);
+      const base = `${months[Number(parts.mm) - 1]} ${parts.dd}, ${parts.yyyy}`;
+      return time ? `${base} ${time[1]}:${time[2]}` : base;
     }
 
     function badge(status){

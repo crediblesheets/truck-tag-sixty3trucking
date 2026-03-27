@@ -16,8 +16,22 @@
       min-height:auto;
       padding:14px 0 12px;
     }
-    .driver-header .brand{grid-area:brand;}
-    .driver-header-actions{grid-area:actions;justify-self:end;}
+    .driver-header .brand{
+      grid-area:brand;
+      transform:translateX(10%);
+    }
+    .driver-header .brand-text{
+      font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+      font-size:1.08rem;
+      font-weight:800;
+      letter-spacing:-.02em;
+      white-space:nowrap;
+    }
+    .driver-header-actions{
+      grid-area:actions;
+      justify-self:end;
+      transform:translateX(-10%);
+    }
     .driver-header-title{
       grid-area:title;
       display:flex;
@@ -28,22 +42,46 @@
     }
     .driver-header-title .page-title{margin:0;}
     .tickets{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+    #newDraftBtn{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+    }
+    #newDraftBtn .btn-glyph{
+      color:inherit;
+      font-size:1.2em;
+      font-weight:700;
+      line-height:1;
+    }
     .ticket-link{
       display:block;padding:14px 16px;border:1px solid var(--border);border-radius:12px;background:#fff;
       text-decoration:none;font-weight:600;text-align:center;box-shadow:var(--shadow)
     }
-    .ticket-link:hover{box-shadow:0 6px 20px rgba(2, 8, 23, 0.08)}
     .muted-small{color:#6b7280;font-size:12px;margin-top:4px;text-align:center}
+    @media (hover:hover) and (pointer:fine){
+      .ticket-link:hover{
+        background:#dce8f7;
+        border-color:#c7d5e4;
+        box-shadow:var(--shadow-sm);
+      }
+    }
     @media (max-width:640px){
       .driver-header{
         gap:12px;
         padding:12px 0 10px;
       }
+      .driver-header .brand{
+        transform:translateX(4%);
+      }
       .driver-header .brand-text{
         font-size:1rem;
+        white-space:normal;
       }
       .driver-header-title .page-title{
         font-size:1.45rem;
+      }
+      .driver-header-actions{
+        transform:translateX(-4%);
       }
       .driver-header-actions .btn{
         min-height:40px;
@@ -61,7 +99,7 @@
         <span class="brand-text">Sixty – 3 Trucking Inc</span>
       </div>
       <div class="driver-header-actions">
-        <button id="logoutBtn" class="btn" type="button">Log Out</button>
+        <button id="logoutBtn" class="btn header-action-btn" type="button">Log Out</button>
       </div>
       <div class="driver-header-title">
         <h1 class="page-title">Driver Dashboard</h1>
@@ -75,7 +113,7 @@
       <p class="muted">Click a ticket below to open and fill it.</p>
 
       <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-        <button id="newDraftBtn" class="btn btn-primary" type="button">➕ Draft a Ticket</button>
+        <button id="newDraftBtn" class="btn btn-primary" type="button"><span class="btn-glyph" aria-hidden="true">+</span><span>Draft a Ticket</span></button>
         <span class="muted-small">No Ticket No needed — Admin will finalize & submit.</span>
       </div>
     </section>
@@ -123,14 +161,25 @@
                                     (em ? (hasEmail ? getEmail(t)===em : true) : true));
     }
 
+    function getDateParts(s){
+      const raw = String(s || '').trim();
+      if (!raw) return null;
+
+      let m = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|[T\s])/);
+      if (m) return { yyyy: m[1], mm: m[2], dd: m[3] };
+
+      m = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+      if (!m) return null;
+      return {
+        yyyy: m[3].length === 2 ? `20${m[3]}` : m[3],
+        mm: String(m[1]).padStart(2,'0'),
+        dd: String(m[2]).padStart(2,'0')
+      };
+    }
+
     function fmtMMDDYYYY(s){
-      if (!s) return '';
-      const d = new Date(s);
-      if (isNaN(d)) return '';
-      const mm = String(d.getMonth()+1).padStart(2,'0');
-      const dd = String(d.getDate()).padStart(2,'0');
-      const yyyy = d.getFullYear();
-      return `${mm}-${dd}-${yyyy}`;
+      const parts = getDateParts(s);
+      return parts ? `${parts.mm}-${parts.dd}-${parts.yyyy}` : '';
     }
 
     function render(list){

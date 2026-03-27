@@ -151,14 +151,32 @@ function drawText(doc, s, xpx, ypx, opts = {}) {
   if (s === undefined || s === null || String(s).trim() === '') return;
   doc.text(String(s), X(xpx), Y(ypx), { lineBreak: false, ...opts });
 }
+function parseExactDateParts(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+
+  let m = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|[T\s])/);
+  if (m) return { y: m[1], m: m[2], d: m[3] };
+
+  m = raw.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if (m) {
+    const yyyy = m[3].length === 2 ? `20${m[3]}` : m[3];
+    return {
+      y: yyyy,
+      m: String(m[1]).padStart(2, '0'),
+      d: String(m[2]).padStart(2, '0'),
+    };
+  }
+
+  return null;
+}
 function toMDY(value) {
-  if (!value) return { m: '', d: '', y: '' };
-  const d = new Date(value);
-  if (isNaN(d)) return { m: '', d: '', y: '' };
+  const parts = parseExactDateParts(value);
+  if (!parts) return { m: '', d: '', y: '' };
   return {
-    m: String(d.getMonth() + 1).padStart(2, '0'),
-    d: String(d.getDate()).padStart(2, '0'),
-    y: String(d.getFullYear()).slice(-2),
+    m: parts.m,
+    d: parts.d,
+    y: parts.y.slice(-2),
   };
 }
 function hhmm(s) {
@@ -218,7 +236,15 @@ app.use(cors({
   credentials: true,
 }));
 
-app.use(express.static(path.resolve('public')));
+app.use(express.static(path.resolve('public'), {
+  setHeaders(res, filePath) {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    }
+  },
+}));
 
 // health
 app.get('/api/health', (_req, res) => {
@@ -675,6 +701,220 @@ app.post('/api/drafts/:id/send', verifySession, ensureActiveUser, requireDriver,
   } catch (e) {
     console.error('POST /api/drafts/:id/send', e);
     return res.status(500).json({ ok: false, message: 'Failed to send draft.' });
+  }
+});
+
+function draftPayloadObject(draft) {
+  return draft?.payload && typeof draft.payload === 'object' ? draft.payload : {};
+}
+
+function draftSignaturePayloadKeys(who) {
+  return who === 'driver'
+    ? {
+        key: 'signatureDriverKey',
+        mime: 'signatureDriverMime',
+        size: 'signatureDriverSize',
+      }
+    : {
+        key: 'signatureReceivedKey',
+        mime: 'signatureReceivedMime',
+        size: 'signatureReceivedSize',
+      };
+}
+
+async function getOwnedDraftForUpload(draftId, email) {
+  const { data: draft, error } = await sb
+    .from('ticket_drafts')
+    .select('id, driver_email, status, payload')
+    .eq('id', draftId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!draft) return { code: 404, message: 'Draft not found.' };
+  if (String(draft.driver_email || '').toLowerCase() !== String(email || '').toLowerCase()) {
+    return { code: 403, message: 'Not your draft.' };
+  }
+  if (String(draft.status || '') !== 'Draft') {
+    return { code: 409, message: 'Draft already sent/converted and cannot be edited.' };
+  }
+  return { draft };
+}
+
+// Draft proof upload
+app.post(
+  '/api/drafts/:id/proof',
+  verifySession,
+  ensureActiveUser,
+  requireDriver,
+  upload.single('file'),
+  async (req, res) => {
+    try {
+      const draftId = String(req.params.id || '').trim();
+      const owned = await getOwnedDraftForUpload(draftId, req.user?.email);
+      if (!owned.draft) {
+        return res.status(owned.code || 400).json({ ok: false, message: owned.message || 'Draft not available.' });
+      }
+      if (!req.file) return res.status(400).json({ ok: false, message: 'No file uploaded' });
+
+      const ext = path.extname(req.file.originalname || '').toLowerCase() || '.bin';
+      const key = `drafts/${draftId}/proof-${Date.now()}${ext}`;
+
+      const { error: upErr } = await sb.storage.from('ticket-proofs').upload(key, req.file.buffer, {
+        contentType: req.file.mimetype || 'application/octet-stream',
+        upsert: true,
+      });
+      if (upErr) throw upErr;
+
+      const payload = {
+        ...draftPayloadObject(owned.draft),
+        proofKey: key,
+        proofMime: req.file.mimetype || null,
+        proofSize: req.file.size || null,
+      };
+
+      const { error: dbErr } = await sb
+        .from('ticket_drafts')
+        .update({
+          payload,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', draftId);
+      if (dbErr) throw dbErr;
+
+      return res.json({ ok: true, key });
+    } catch (e) {
+      console.error('POST /api/drafts/:id/proof', e);
+      return res.status(500).json({ ok: false, message: 'Upload failed' });
+    }
+  }
+);
+
+// Draft signature upload
+app.post(
+  '/api/drafts/:id/signature/:who',
+  verifySession,
+  ensureActiveUser,
+  requireDriver,
+  upload.single('file'),
+  async (req, res) => {
+    try {
+      const draftId = String(req.params.id || '').trim();
+      const who = String(req.params.who || '').toLowerCase();
+      if (!['driver', 'received'].includes(who)) {
+        return res.status(400).json({ ok: false, message: 'Invalid signature type' });
+      }
+
+      const owned = await getOwnedDraftForUpload(draftId, req.user?.email);
+      if (!owned.draft) {
+        return res.status(owned.code || 400).json({ ok: false, message: owned.message || 'Draft not available.' });
+      }
+      if (!req.file) return res.status(400).json({ ok: false, message: 'No file uploaded' });
+
+      const key = `drafts/${draftId}/sig-${who}-${Date.now()}.png`;
+
+      const { error: upErr } = await sb.storage.from(SIGN_BUCKET).upload(key, req.file.buffer, {
+        contentType: 'image/png',
+        upsert: true,
+      });
+      if (upErr) throw upErr;
+
+      const payloadKeys = draftSignaturePayloadKeys(who);
+      const payload = {
+        ...draftPayloadObject(owned.draft),
+        [payloadKeys.key]: key,
+        [payloadKeys.mime]: 'image/png',
+        [payloadKeys.size]: req.file.size || null,
+      };
+
+      const { error: dbErr } = await sb
+        .from('ticket_drafts')
+        .update({
+          payload,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', draftId);
+      if (dbErr) throw dbErr;
+
+      return res.json({ ok: true, key });
+    } catch (e) {
+      console.error('POST /api/drafts/:id/signature/:who', e);
+      return res.status(500).json({ ok: false, message: 'Signature upload failed' });
+    }
+  }
+);
+
+// Signed URL for draft proof
+app.get('/api/drafts/:id/proof-url', verifySession, ensureActiveUser, requireDriver, async (req, res) => {
+  try {
+    const draftId = String(req.params.id || '').trim();
+    const { data: draft, error } = await sb
+      .from('ticket_drafts')
+      .select('id, driver_email, payload')
+      .eq('id', draftId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!draft) return res.status(404).json({ ok: false, message: 'Draft not found.' });
+    if (String(draft.driver_email || '').toLowerCase() !== String(req.user?.email || '').toLowerCase()) {
+      return res.status(403).json({ ok: false, message: 'Not your draft.' });
+    }
+
+    const payload = draftPayloadObject(draft);
+    const key = payload.proofKey || null;
+    if (!key) return res.json({ ok: true, url: null });
+
+    const filename = key.split('/').pop() || `draft-${draftId}-proof`;
+    const wantDownload =
+      req.query.download === '1' || req.query.download === 'true' || req.query.download === 'yes';
+
+    const { data: sign, error: sErr } = await sb.storage
+      .from('ticket-proofs')
+      .createSignedUrl(key, 60 * 60 * 24 * 7, wantDownload ? { download: filename } : undefined);
+    if (sErr) throw sErr;
+
+    return res.json({ ok: true, url: sign.signedUrl });
+  } catch (e) {
+    console.error('GET /api/drafts/:id/proof-url', e);
+    return res.status(500).json({ ok: false, message: 'Failed to create signed URL' });
+  }
+});
+
+// Signed URL for draft signature
+app.get('/api/drafts/:id/signature-url/:who', verifySession, ensureActiveUser, requireDriver, async (req, res) => {
+  try {
+    const draftId = String(req.params.id || '').trim();
+    const who = String(req.params.who || '').toLowerCase();
+    if (!['driver', 'received'].includes(who)) {
+      return res.status(400).json({ ok: false, message: 'Invalid signature type' });
+    }
+
+    const { data: draft, error } = await sb
+      .from('ticket_drafts')
+      .select('id, driver_email, payload')
+      .eq('id', draftId)
+      .maybeSingle();
+    if (error) throw error;
+    if (!draft) return res.status(404).json({ ok: false, message: 'Draft not found.' });
+    if (String(draft.driver_email || '').toLowerCase() !== String(req.user?.email || '').toLowerCase()) {
+      return res.status(403).json({ ok: false, message: 'Not your draft.' });
+    }
+
+    const payloadKeys = draftSignaturePayloadKeys(who);
+    const payload = draftPayloadObject(draft);
+    const key = payload[payloadKeys.key] || null;
+    if (!key) return res.json({ ok: true, url: null });
+
+    const filename = key.split('/').pop() || `draft-${draftId}-sig-${who}.png`;
+    const wantDownload =
+      req.query.download === '1' || req.query.download === 'true' || req.query.download === 'yes';
+
+    const { data: sign, error: sErr } = await sb.storage
+      .from(SIGN_BUCKET)
+      .createSignedUrl(key, 60 * 60 * 24 * 7, wantDownload ? { download: filename } : undefined);
+    if (sErr) throw sErr;
+
+    return res.json({ ok: true, url: sign.signedUrl });
+  } catch (e) {
+    console.error('GET /api/drafts/:id/signature-url/:who', e);
+    return res.status(500).json({ ok: false, message: 'Failed to create signed URL' });
   }
 });
 
@@ -1328,7 +1568,7 @@ app.post('/api/admin/drafts/:id/submit', verifySession, ensureActiveUser, requir
     // ensure driver_tags row exists
     const { error: stubErr } = await sb
       .from('driver_tags')
-      .upsert({ ticket_no: ticketNo, status: 'Done' }, { onConflict: 'ticket_no' });
+      .upsert({ ticket_no: ticketNo, driver_name: driverName, status: 'Done' }, { onConflict: 'ticket_no' });
     if (stubErr) throw stubErr;
 
     // apply driver payload onto driver_tags (snake_case columns)
@@ -1336,6 +1576,7 @@ app.post('/api/admin/drafts/:id/submit', verifySession, ensureActiveUser, requir
     const tagMode = String(draft.tag_mode || 'scale').toLowerCase();
 
     const driverPatch = {
+      driver_name: driverName,
       email: String(draft.driver_email || '').toLowerCase(),
       status: 'Done',
       tag_mode: tagMode,
@@ -1350,6 +1591,15 @@ app.post('/api/admin/drafts/:id/submit', verifySession, ensureActiveUser, requir
       sign_out_time: p.signOutTime ?? '',
       received_by: p.receivedBy ?? '',
       driver_signature: p.driverSignature ?? '',
+      proof_key: p.proofKey ?? null,
+      proof_mime: p.proofMime ?? null,
+      proof_size: p.proofSize ?? null,
+      signature_driver_key: p.signatureDriverKey ?? null,
+      signature_driver_mime: p.signatureDriverMime ?? null,
+      signature_driver_size: p.signatureDriverSize ?? null,
+      signature_received_key: p.signatureReceivedKey ?? null,
+      signature_received_mime: p.signatureReceivedMime ?? null,
+      signature_received_size: p.signatureReceivedSize ?? null,
 
       updated_at: new Date().toISOString(),
     };
@@ -1663,12 +1913,27 @@ app.put('/api/admin/tickets/:id', verifySession, ensureActiveUser, requireAdmin,
       .select('ticket_no');
     if (updErr) throw updErr;
 
+    if (patch.driver_name !== undefined) {
+      const { error: tagErr } = await sb
+        .from('driver_tags')
+        .update({
+          driver_name: patch.driver_name || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('ticket_no', ticketNo);
+      if (tagErr) throw tagErr;
+    }
+
     if (!upd || upd.length === 0) {
       const row = { ticket_no: ticketNo, ...patch };
       const { error: upErr } = await sb.from('admin_tickets').upsert(row, { onConflict: 'ticket_no' });
       if (upErr) throw upErr;
 
-      await sb.from('driver_tags').upsert({ ticket_no: ticketNo, status: 'Pending' }, { onConflict: 'ticket_no' });
+      await sb.from('driver_tags').upsert({
+        ticket_no: ticketNo,
+        driver_name: patch.driver_name || null,
+        status: 'Pending'
+      }, { onConflict: 'ticket_no' });
     }
 
     return res.json({ ok: true });

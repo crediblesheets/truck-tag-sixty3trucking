@@ -11,6 +11,8 @@
   --admin-radius-xs: 14px;
   --admin-line: rgba(148, 163, 184, 0.24);
   --admin-line-strong: rgba(148, 163, 184, 0.38);
+  --admin-hover: rgba(214, 228, 244, 0.94);
+  --admin-hover-strong: rgba(201, 220, 240, 0.96);
   --admin-surface: rgba(255, 255, 255, 0.84);
   --admin-surface-strong: rgba(255, 255, 255, 0.94);
   --admin-shadow-soft: 0 18px 42px rgba(15, 23, 42, 0.08);
@@ -177,22 +179,11 @@
   transition: transform .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease;
 }
 
-.btn.btn-sidebar:hover:not([disabled]){
-  transform: translateY(-1px);
-  background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
-  border-color: rgba(255,255,255,.18);
-  box-shadow: 0 14px 28px rgba(2, 8, 23, 0.18), inset 0 1px 0 rgba(255,255,255,.06);
-}
-
 .btn.btn-sidebar-primary{
   background: linear-gradient(135deg, #2aaef2 0%, #177dd7 100%);
   border-color: rgba(186, 230, 253, 0.42);
   color: #fff;
   box-shadow: 0 18px 32px rgba(29, 155, 232, 0.24);
-}
-
-.btn.btn-sidebar-primary:hover:not([disabled]){
-  background: linear-gradient(135deg, #3ab7f8 0%, #1a73ca 100%);
 }
 
 .sidebar-foot{
@@ -259,8 +250,8 @@
 }
 
 .admin-topbar{
-  position: sticky;
-  top: 0;
+  position: relative;
+  top: auto;
   z-index: 20;
   padding: 18px 22px;
   display: flex;
@@ -692,6 +683,11 @@
   overflow: auto;
 }
 
+.admin-results-scroll{
+  max-height: none;
+  overflow: visible;
+}
+
 .data-table{
   width: 100%;
   border-collapse: separate;
@@ -725,10 +721,6 @@
   transition: background .18s ease;
 }
 
-.data-table tbody tr:hover{
-  background: rgba(29, 155, 232, 0.045);
-}
-
 .data-table tbody tr:last-child td{
   border-bottom: 0;
 }
@@ -746,13 +738,6 @@
   text-decoration: none;
   font-weight: 800;
   transition: transform .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease;
-}
-
-.data-table a.ticket-link:hover{
-  transform: translateY(-1px);
-  color: #0369a1;
-  border-color: rgba(29, 155, 232, 0.4);
-  box-shadow: 0 14px 24px rgba(15, 23, 42, 0.08);
 }
 
 .col-ticket{
@@ -957,12 +942,6 @@
   color: #0f172a;
   cursor: pointer;
   transition: transform .16s ease, background .16s ease, border-color .16s ease;
-}
-
-.icon-btn:hover{
-  transform: translateY(-1px);
-  background: rgba(255, 255, 255, 0.96);
-  border-color: rgba(29, 155, 232, 0.34);
 }
 
 .icon-btn .icon{
@@ -1218,14 +1197,6 @@ body.admin-nav-open{
   text-decoration: none;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
   transition: transform .18s ease, border-color .18s ease, background .18s ease, box-shadow .18s ease;
-}
-
-.admin-nav-link:hover{
-  transform: translateY(-1px);
-  color: #fff;
-  border-color: rgba(186, 230, 253, 0.28);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.08));
-  box-shadow: 0 16px 28px rgba(2, 8, 23, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .admin-nav-link.is-current{
@@ -1679,11 +1650,6 @@ body.admin-nav-open{
     border-radius: 14px;
   }
 
-  .sidebar-toggle:hover{
-    background: #ffffff;
-    border-color: rgba(148, 163, 184, 0.34);
-  }
-
   .admin-hero,
   .admin-filters,
   .admin-table{
@@ -1897,6 +1863,50 @@ body.admin-nav-open{
   .col-updated{
     width: auto;
     min-width: 0;
+  }
+}
+
+/* Keep hover-only visuals off touch devices so pressed elements do not stay highlighted. */
+@media (hover:hover) and (pointer:fine){
+  .btn.btn-sidebar:hover:not([disabled]){
+    background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.1));
+    border-color: rgba(255,255,255,.22);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+  }
+
+  .btn.btn-sidebar-primary:hover:not([disabled]){
+    background: linear-gradient(135deg, #176eb8 0%, #115a98 100%);
+    box-shadow: 0 10px 22px rgba(17, 90, 152, 0.22);
+  }
+
+  .data-table tbody tr:hover{
+    background: var(--admin-hover);
+  }
+
+  .data-table a.ticket-link:hover{
+    color: #0f172a;
+    background: linear-gradient(180deg, var(--admin-hover), var(--admin-hover-strong));
+    border-color: rgba(148, 163, 184, 0.34);
+    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.05);
+  }
+
+  .icon-btn:hover{
+    background: var(--admin-hover);
+    border-color: rgba(29, 155, 232, 0.34);
+  }
+
+  .admin-nav-link:hover{
+    color: #fff;
+    border-color: rgba(186, 230, 253, 0.32);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0.1));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+}
+
+@media (hover:hover) and (pointer:fine) and (max-width: 980px){
+  .sidebar-toggle:hover{
+    background: var(--admin-hover);
+    border-color: rgba(148, 163, 184, 0.34);
   }
 }
 
