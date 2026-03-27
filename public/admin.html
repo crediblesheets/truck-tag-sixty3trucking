@@ -424,6 +424,120 @@
           </div>
         </div>
 
+        <section class="modal-section" aria-labelledby="driverDetailHeading">
+          <h4 id="driverDetailHeading" class="modal-section-title">Driver Ticket Details</h4>
+          <p class="detail-note">These values come from the driver-side ticket, including signatures, proof image, and scale tag rows.</p>
+
+          <div class="grid3">
+            <div>
+              <label>Bridgefare</label>
+              <input id="viewBridgefare" type="text" disabled>
+            </div>
+            <div>
+              <label>Signed Out Loaded</label>
+              <input id="viewSignedOutLoaded" type="text" disabled>
+            </div>
+            <div>
+              <label>How Many Tons/Loads</label>
+              <input id="viewHowMany" type="text" disabled>
+            </div>
+          </div>
+
+          <div class="grid3" style="margin-top:10px;">
+            <div>
+              <label>Downtime &amp; Lunch</label>
+              <input id="viewDowntimeLunch" type="text" disabled>
+            </div>
+            <div>
+              <label>Leave Yard Time</label>
+              <input id="viewLeaveYardTime" type="text" disabled>
+            </div>
+            <div>
+              <label>Truck Stop Time</label>
+              <input id="viewTruckStopTime" type="text" disabled>
+            </div>
+          </div>
+
+          <div class="grid3" style="margin-top:10px;">
+            <div>
+              <label>Sign Out Time</label>
+              <input id="viewSignOutTime" type="text" disabled>
+            </div>
+            <div>
+              <label>Received By</label>
+              <input id="viewReceivedBy" type="text" disabled>
+            </div>
+            <div>
+              <label>Driver Signature (typed)</label>
+              <input id="viewDriverSignature" type="text" disabled>
+            </div>
+          </div>
+
+          <div style="margin-top:10px;">
+            <label>Notes</label>
+            <textarea id="viewNotes" class="detail-textarea" disabled></textarea>
+          </div>
+
+          <div class="media-grid">
+            <div id="driverSignatureCard" class="media-card">
+              <div class="media-title">Driver Signature Image</div>
+              <div class="media-thumb-wrap">
+                <img id="driverSignatureThumb" class="media-thumb" alt="Driver signature preview">
+              </div>
+              <div id="driverSignatureMeta" class="media-meta">No image attached.</div>
+              <div class="media-actions">
+                <a id="driverSignatureOpen" class="btn" href="#" target="_blank" rel="noopener" style="display:none">Open</a>
+                <a id="driverSignatureDownload" class="btn btn-primary" href="#" download style="display:none">Download</a>
+              </div>
+            </div>
+
+            <div id="receivedSignatureCard" class="media-card">
+              <div class="media-title">Received By Signature</div>
+              <div class="media-thumb-wrap">
+                <img id="receivedSignatureThumb" class="media-thumb" alt="Received by signature preview">
+              </div>
+              <div id="receivedSignatureMeta" class="media-meta">No image attached.</div>
+              <div class="media-actions">
+                <a id="receivedSignatureOpen" class="btn" href="#" target="_blank" rel="noopener" style="display:none">Open</a>
+                <a id="receivedSignatureDownload" class="btn btn-primary" href="#" download style="display:none">Download</a>
+              </div>
+            </div>
+
+            <div id="proofCard" class="media-card">
+              <div class="media-title">Proof Of Ticket</div>
+              <div class="media-thumb-wrap">
+                <img id="proofThumb" class="media-thumb" alt="Proof of ticket preview">
+              </div>
+              <div id="proofMeta" class="media-meta">No file attached.</div>
+              <div class="media-actions">
+                <a id="proofOpen" class="btn" href="#" target="_blank" rel="noopener" style="display:none">Open</a>
+                <a id="proofDownload" class="btn btn-primary" href="#" download style="display:none">Download</a>
+              </div>
+            </div>
+          </div>
+
+          <div id="viewScaleTable" class="table-card detail-table" style="display:none;">
+            <div class="scroll-area">
+              <table class="data-table" aria-label="Scale tag items">
+                <thead>
+                  <tr>
+                    <th id="viewScaleItemHeader">Scale Tag No</th>
+                    <th>Yard/Weight</th>
+                    <th>Material</th>
+                    <th>Time Arr</th>
+                    <th>Time Leave</th>
+                    <th>Time Arr</th>
+                    <th>Time Leave</th>
+                  </tr>
+                </thead>
+                <tbody id="viewScaleItems">
+                  <tr><td colspan="7" class="muted-small" style="text-align:center;">No scale tags.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
         <div class="actions">
           <button type="button" id="deleteBtn" class="btn danger">Delete</button>
           <span style="flex:1"></span>
@@ -446,6 +560,11 @@
 
   <!-- Hidden file input for CSV -->
   <input id="csvInput" type="file" accept=".csv,text/csv" style="display:none" />
+
+  <div id="lightbox" class="lightbox" aria-hidden="true">
+    <button class="close" aria-label="Close preview">&times;</button>
+    <img id="lightboxImg" alt="Full-size ticket detail preview">
+  </div>
 
   <script>
     // ---------- tiny helpers ----------
@@ -532,6 +651,186 @@
         sel.appendChild(opt);
       }
       sel.value = val;
+    }
+    function toHHMM(s){
+      if (!s) return '';
+      const str = String(s).trim();
+      const twentyFour = str.match(/^(\d{2}):(\d{2})(?::\d{2})?/);
+      if (twentyFour) return `${twentyFour[1]}:${twentyFour[2]}`;
+      const twelveHour = str.match(/^(\d{1,2}):(\d{2})(?:\s*(AM|PM))?$/i);
+      if (!twelveHour) return str;
+      let hh = parseInt(twelveHour[1], 10);
+      const mm = twelveHour[2];
+      const ap = (twelveHour[3] || '').toUpperCase();
+      if (ap === 'AM' && hh === 12) hh = 0;
+      if (ap === 'PM' && hh < 12) hh += 12;
+      return `${String(hh).padStart(2,'0')}:${mm}`;
+    }
+    function applyScaleHeaderByMode(modeRaw){
+      const mode = String(modeRaw || '').trim().toLowerCase();
+      $('#viewScaleItemHeader').textContent =
+        mode.includes('equip') || mode.includes('material')
+          ? 'Materials/Equipment'
+          : 'Scale Tag No';
+    }
+    function resetMediaCard(prefix, emptyText){
+      const card = $(`#${prefix}Card`);
+      const thumb = $(`#${prefix}Thumb`);
+      const meta = $(`#${prefix}Meta`);
+      const open = $(`#${prefix}Open`);
+      const download = $(`#${prefix}Download`);
+      if (!card || !thumb || !meta || !open || !download) return;
+      card.style.display = 'none';
+      thumb.removeAttribute('src');
+      thumb.onclick = null;
+      open.style.display = 'none';
+      open.removeAttribute('href');
+      download.style.display = 'none';
+      download.onclick = null;
+      download.removeAttribute('href');
+      meta.textContent = emptyText;
+    }
+    function wireDownloadButton(btn, url, filename){
+      btn.style.display = 'inline-flex';
+      btn.setAttribute('download', filename);
+      btn.onclick = (ev) => {
+        ev.preventDefault();
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      };
+    }
+    function setMediaCard(prefix, viewUrl, downloadUrl, metaText, filename){
+      const card = $(`#${prefix}Card`);
+      const thumb = $(`#${prefix}Thumb`);
+      const meta = $(`#${prefix}Meta`);
+      const open = $(`#${prefix}Open`);
+      const download = $(`#${prefix}Download`);
+      if (!card || !thumb || !meta || !open || !download || !viewUrl) return;
+      card.style.display = 'block';
+      thumb.src = viewUrl;
+      thumb.onclick = () => openLightbox(viewUrl);
+      open.href = viewUrl;
+      open.style.display = 'inline-flex';
+      meta.textContent = metaText;
+      wireDownloadButton(download, downloadUrl || viewUrl, filename);
+    }
+    function clearDriverDetailUI(){
+      $('#viewBridgefare').value = '';
+      $('#viewSignedOutLoaded').value = '';
+      $('#viewHowMany').value = '';
+      $('#viewDowntimeLunch').value = '';
+      $('#viewLeaveYardTime').value = '';
+      $('#viewTruckStopTime').value = '';
+      $('#viewSignOutTime').value = '';
+      $('#viewReceivedBy').value = '';
+      $('#viewDriverSignature').value = '';
+      $('#viewNotes').value = '';
+      applyScaleHeaderByMode('');
+      $('#viewScaleItems').innerHTML = `<tr><td colspan="7" class="muted-small" style="text-align:center;">No scale tags.</td></tr>`;
+      $('#viewScaleTable').style.display = 'none';
+      resetMediaCard('driverSignature', 'No image attached.');
+      resetMediaCard('receivedSignature', 'No image attached.');
+      resetMediaCard('proof', 'No file attached.');
+    }
+    function fillDriverDetails(obj = {}){
+      $('#viewBridgefare').value = obj.bridgefare ?? obj.Bridgefare ?? '';
+      $('#viewSignedOutLoaded').value = obj.signedOutLoaded ?? obj['Signed Out Loaded'] ?? '';
+      $('#viewHowMany').value = obj.howMany ?? obj.howManyTonsLoads ?? obj['How Many Tons/Loads'] ?? '';
+      $('#viewDowntimeLunch').value = obj.downtimeLunch ?? obj['Downtime & Lunch'] ?? '';
+      $('#viewLeaveYardTime').value = toHHMM(obj.leaveYardTime ?? obj.leave_yard_time ?? obj['Leave Yard Time'] ?? '');
+      $('#viewTruckStopTime').value = toHHMM(obj.truckStop ?? obj.truck_stop ?? obj['Truck Stop Time'] ?? obj['Truck Stop'] ?? '');
+      $('#viewSignOutTime').value = toHHMM(obj.signOutTime ?? obj['Sign Out Time'] ?? '');
+      $('#viewReceivedBy').value = obj.receivedBy ?? obj['Received by'] ?? '';
+      $('#viewDriverSignature').value = obj.driverSignature ?? obj['Driver Signature'] ?? '';
+      $('#viewNotes').value = obj.notes ?? obj.Notes ?? '';
+      applyScaleHeaderByMode(obj.tagMode || obj.tag_mode || '');
+    }
+    async function loadDriverDetails(ticketId){
+      try {
+        const r = await fetch(`/api/tags/${encodeURIComponent(ticketId)}/driver`);
+        const j = await r.json().catch(() => ({}));
+        let obj = {};
+        if (Array.isArray(j)) obj = j[0] || {};
+        else if (j.driver) obj = j.driver;
+        else if (j.data) obj = j.data;
+        else obj = j;
+        fillDriverDetails(obj);
+      } catch (e) {
+        console.warn('driver detail fetch failed', e);
+      }
+    }
+    async function loadScaleItems(ticketId){
+      try {
+        const r = await fetch(`/api/tags/${encodeURIComponent(ticketId)}/scale-items`);
+        const j = await r.json().catch(() => ({}));
+        const items = Array.isArray(j.items) ? j.items : [];
+        const tbody = $('#viewScaleItems');
+        if (!items.length){
+          tbody.innerHTML = `<tr><td colspan="7" class="muted-small" style="text-align:center;">No scale tags.</td></tr>`;
+          $('#viewScaleTable').style.display = 'block';
+          return;
+        }
+        tbody.innerHTML = items.map((it) => `
+          <tr>
+            <td>${it.scaleTagNo || '-'}</td>
+            <td>${it.yardOrWeight || '-'}</td>
+            <td>${it.material || '-'}</td>
+            <td>${it.yardArrival || '-'}</td>
+            <td>${it.yardLeave || '-'}</td>
+            <td>${it.siteArrival || '-'}</td>
+            <td>${it.siteLeave || '-'}</td>
+          </tr>
+        `).join('');
+        $('#viewScaleTable').style.display = 'block';
+      } catch (e) {
+        console.warn('scale item fetch failed', e);
+      }
+    }
+    async function loadProof(ticketId){
+      resetMediaCard('proof', 'No file attached.');
+      try {
+        const rView = await fetch(`/api/tags/${encodeURIComponent(ticketId)}/proof-url`);
+        const jView = await rView.json().catch(() => ({}));
+        const viewUrl = jView?.url || null;
+        if (!viewUrl) return;
+        const rDownload = await fetch(`/api/tags/${encodeURIComponent(ticketId)}/proof-url?download=1`);
+        const jDownload = await rDownload.json().catch(() => ({}));
+        setMediaCard(
+          'proof',
+          viewUrl,
+          jDownload?.url || viewUrl,
+          'Proof image attached to this ticket.',
+          `ticket-${ticketId}-proof`
+        );
+      } catch (e) {
+        console.warn('proof fetch failed', e);
+      }
+    }
+    async function loadSignature(ticketId, who){
+      const prefix = who === 'received' ? 'receivedSignature' : 'driverSignature';
+      resetMediaCard(prefix, 'No image attached.');
+      try {
+        const rView = await fetch(`/api/tags/${encodeURIComponent(ticketId)}/signature-url/${who}`);
+        const jView = await rView.json().catch(() => ({}));
+        const viewUrl = jView?.url || null;
+        if (!viewUrl) return;
+        const rDownload = await fetch(`/api/tags/${encodeURIComponent(ticketId)}/signature-url/${who}?download=1`);
+        const jDownload = await rDownload.json().catch(() => ({}));
+        setMediaCard(
+          prefix,
+          viewUrl,
+          jDownload?.url || viewUrl,
+          who === 'received' ? 'Signed by the receiving party.' : 'Signed by the driver.',
+          `ticket-${ticketId}-signature-${who}`
+        );
+      } catch (e) {
+        console.warn(`signature fetch failed for ${who}`, e);
+      }
     }
 
     // Button loading (spinner on the button itself)
@@ -825,6 +1124,7 @@
       CURRENT_TICKET = ticketId;
       showLoading('Loading ticket…');
       try{
+        clearDriverDetailUI();
         await loadMeta({driver:'#viewDriverSel', trailer:'#viewTrailerSel'});
         const r = await fetch(`/api/admin/tickets/${encodeURIComponent(ticketId)}`);
         if (r.status === 401 || r.status === 403) { location.href = '/'; return; }
@@ -832,6 +1132,13 @@
         if (!j.ok) { alert(j.message || 'Not found'); return; }
         $('#viewId').textContent = ticketId;
         fillViewForm(j.ticket);
+        await Promise.all([
+          loadDriverDetails(ticketId),
+          loadScaleItems(ticketId),
+          loadProof(ticketId),
+          loadSignature(ticketId, 'driver'),
+          loadSignature(ticketId, 'received')
+        ]);
         setViewMode(true);
         setOpen($('#viewModal'), true);
       } finally {
@@ -862,8 +1169,28 @@
       f.city.value        = v(t,'City');
     }
 
+    const VIEW_EDITABLE_SELECTORS = [
+      'input[name="date"]',
+      'input[name="truckStart"]',
+      'input[name="truckNo"]',
+      'input[name="subHauler"]',
+      'input[name="primeCarrier"]',
+      'input[name="shipper"]',
+      'input[name="origin"]',
+      'input[name="originCity"]',
+      'input[name="poNo"]',
+      'input[name="jobName"]',
+      'input[name="jobNo"]',
+      'input[name="destination"]',
+      'input[name="city"]',
+      'select[name="driverName"]',
+      'select[name="trailerType"]'
+    ];
+
     function setViewMode(locked){
-      $$('#viewForm input, #viewForm select').forEach(el => { el.disabled = locked; });
+      VIEW_EDITABLE_SELECTORS.forEach((sel) => {
+        $$(sel, $('#viewForm')).forEach((el) => { el.disabled = locked; });
+      });
       $('#viewForm').ticketNo.disabled = true;
       $('#editBtn').style.display = locked ? 'inline-flex' : 'none';
       $('#saveBtn').style.display = locked ? 'none' : 'inline-flex';
@@ -873,6 +1200,27 @@
     $('#editBtn').addEventListener('click', () => setViewMode(false));
     $('#cancelEditBtn').addEventListener('click', () => { setViewMode(true); if (CURRENT_TICKET) openView(CURRENT_TICKET); });
     $$('#viewModal [data-close]').forEach(el => el.addEventListener('click', () => setOpen($('#viewModal'), false)));
+
+    const lightbox = $('#lightbox');
+    const lightboxImg = $('#lightboxImg');
+    function openLightbox(src){
+      if (!src) return;
+      lightboxImg.src = src;
+      lightbox.classList.add('show');
+      lightbox.setAttribute('aria-hidden', 'false');
+    }
+    function closeLightbox(){
+      lightbox.classList.remove('show');
+      lightbox.setAttribute('aria-hidden', 'true');
+      lightboxImg.removeAttribute('src');
+    }
+    $('#lightbox .close').addEventListener('click', closeLightbox);
+    $('#lightbox').addEventListener('click', (e) => {
+      if (e.target === lightbox) closeLightbox();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && lightbox.classList.contains('show')) closeLightbox();
+    });
 
     $('#viewForm').addEventListener('submit', async (e) => {
       e.preventDefault();
