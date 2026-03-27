@@ -18,12 +18,42 @@
     text-size-adjust: 100%;
   }
 
+  body{
+    overflow-x:hidden;
+  }
+
+  main.container{
+    overflow-x:hidden;
+  }
+
   /* ---------- Layout ---------- */
   .layout{
     display:grid;
     grid-template-columns: minmax(300px, 360px) 1fr;
     gap:16px;
     align-items:start;
+  }
+
+  .layout,
+  .layout > *,
+  .layout .card,
+  .sidebar-card,
+  .kv,
+  .kv li,
+  .form-grid,
+  .form-grid > div,
+  .mini-form,
+  .mini-form > div,
+  .time-row,
+  .time-row > div,
+  .sig-row,
+  .sig-row > *,
+  .actions,
+  .actions > *,
+  .table-wrap,
+  .scroll-area{
+    min-width:0;
+    max-width:100%;
   }
 
   .sidebar-card{
@@ -54,7 +84,7 @@
     background:#fff;
   }
   .kv .k{ font-size:12px; color:var(--muted); display:block; margin-bottom:4px; }
-  .kv .v{ font-weight:600; word-break: break-word; }
+  .kv .v{ font-weight:600; word-break: break-word; overflow-wrap:anywhere; }
 
   .section-title{ margin:18px 0 8px; font-size:16px; font-weight:700 }
   .muted-small{ color:#6b7280; font-size:12px }
@@ -254,19 +284,153 @@
     min-height: var(--tap);
     background:#fff;
   }
+
+  .driver-ticket-header{
+    grid-template-columns:auto 1fr auto;
+    align-items:center;
+    gap:14px;
+    min-height:auto;
+    padding:14px 0 12px;
+  }
+
+  .driver-ticket-header .brand{
+    gap:12px;
+  }
+
+  .driver-ticket-header .brand-text{
+    display:inline;
+  }
+
+  .driver-ticket-header .logo{
+    width:52px;
+    height:52px;
+  }
+
+  .ticket-tip{
+    margin-bottom:16px;
+    padding:20px;
+    display:grid;
+    gap:8px;
+  }
+
+  .ticket-tip-title{
+    margin:0;
+    font-size:clamp(1.55rem, 1.2rem + 1vw, 2rem);
+    line-height:1;
+    letter-spacing:-.04em;
+    font-weight:900;
+    color:var(--text);
+  }
+
+  .ticket-tip-copy{
+    margin:0;
+    max-width:44rem;
+    color:var(--muted);
+    line-height:1.65;
+  }
+
+  @media (max-width: 900px){
+    .sig-row{
+      align-items:stretch;
+      flex-direction:column;
+    }
+
+    .sig-row .btn,
+    .sig-row .sig-chip{
+      width:100%;
+      justify-content:center;
+    }
+  }
+
+  @media (max-width: 760px){
+    .layout{
+      gap:12px;
+    }
+
+    .layout .card{
+      padding:16px;
+    }
+
+    .driver-ticket-header{
+      gap:12px;
+      padding:12px 0 10px;
+    }
+
+    .driver-ticket-header .logo{
+      width:48px;
+      height:48px;
+    }
+
+    .driver-ticket-header .brand{
+      gap:10px;
+    }
+
+    .driver-ticket-header .brand-text{
+      font-size:1rem;
+      line-height:1.15;
+      white-space:normal;
+    }
+
+    .driver-ticket-header .btn{
+      min-height:40px;
+      padding:8px 12px;
+      font-size:14px;
+    }
+
+    .ticket-tip{
+      margin-bottom:14px;
+      padding:18px 16px;
+    }
+
+    .mini-form{
+      grid-template-columns:1fr;
+      grid-template-areas:
+        "tag"
+        "weight"
+        "material"
+        "times"
+        "actions";
+    }
+
+    .time-row{
+      grid-template-columns:1fr;
+    }
+
+    .mf-actions{
+      justify-content:stretch;
+    }
+
+    .mf-actions .btn{
+      width:100%;
+    }
+
+    .actions{
+      gap:8px;
+    }
+
+    .actions .btn,
+    .actions a.btn{
+      width:100%;
+      justify-content:center;
+    }
+
+    .scroll-area{
+      max-width:100%;
+    }
+
+    .scroll-area table{
+      min-width:640px;
+    }
+  }
 </style>
 </head>
 
 <body>
   <header class="site-header">
-    <div class="container header-inner" style="grid-template-columns:auto 1fr auto;">
+    <div class="container header-inner driver-ticket-header">
       <div class="brand">
         <img src="./assets/img/logo.png" class="logo" alt="Sixty – 3 logo">
         <span class="brand-text">Sixty – 3 Trucking Inc</span>
-      </div>
-      <div class="title-wrap" style="justify-content:flex-start;">
-        <h1 class="page-title">Driver Ticket</h1>
-        <p class="subtitle" id="subTitle">Fill and submit your tag</p>
       </div>
       <div>
         <a href="/dashboard" class="btn">← Back to Dashboard</a>
@@ -275,6 +439,11 @@
   </header>
 
   <main class="container" style="padding-bottom:28px;">
+    <section class="card ticket-tip">
+      <h1 class="ticket-tip-title">Driver Ticket</h1>
+      <p class="ticket-tip-copy" id="subTitle">Fill and submit your tag.</p>
+    </section>
+
     <div class="layout">
       <!-- LEFT: Admin ticket details -->
       <aside class="card admin-card sidebar-card">

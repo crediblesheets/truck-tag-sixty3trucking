@@ -3,267 +3,556 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Tag Lists — Sixty-3 Trucking</title>
+  <title>Tag Lists - Sixty-3 Trucking</title>
 
   <link rel="stylesheet" href="./styles.css">
   <link rel="stylesheet" href="./admin.css">
 
   <style>
-    /* Layout */
-    .page-wrap{ display:grid; grid-template-columns: 280px 1fr; gap:16px; align-items:start }
-    .sidebar{ position:sticky; top:16px }
-    .search-box{ display:block; width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px; box-sizing:border-box }
-    .ticket-list{ margin-top:10px; border:1px solid var(--border); border-radius:12px; background:#fff; overflow:hidden; max-height:70vh; display:flex; flex-direction:column }
-    .ticket-list .meta{ padding:8px 10px; font-size:12px; color:#6b7280; border-bottom:1px solid #eef2f7; background:#f8fafc }
-    .ticket-items{ overflow:auto }
+    .taglists-grid{
+      display:grid;
+      grid-template-columns:320px minmax(0, 1fr);
+      gap:18px;
+      align-items:start;
+    }
+
+    .ticket-rail{
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+      position:sticky;
+      top:18px;
+    }
+
+    .ticket-rail-list{
+      position:relative;
+      z-index:1;
+      display:flex;
+      flex-direction:column;
+      min-height:420px;
+      max-height:calc(100vh - 250px);
+      overflow:hidden;
+      border-radius:22px;
+      border:1px solid rgba(199, 213, 228, 0.78);
+      background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(247,250,255,.92));
+      box-shadow:0 14px 24px rgba(15, 23, 42, 0.05);
+    }
+
+    .ticket-rail-head{
+      padding:14px 16px;
+      border-bottom:1px solid rgba(226, 232, 240, 0.9);
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+
+    .ticket-rail-count{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:34px;
+      min-height:28px;
+      padding:0 10px;
+      border-radius:999px;
+      background:rgba(29, 155, 232, 0.1);
+      color:#0369a1;
+      font-size:12px;
+      font-weight:800;
+    }
+
+    .ticket-items{
+      overflow:auto;
+      flex:1;
+    }
+
     .ticket-btn{
-      display:flex; align-items:center; justify-content:space-between;
-      width:100%; padding:10px 12px; border:0; background:#fff; cursor:pointer; text-align:left;
-      border-bottom:1px solid #f1f5f9; font-weight:600;
+      width:100%;
+      padding:14px 16px;
+      border:0;
+      border-bottom:1px solid rgba(226, 232, 240, 0.84);
+      background:transparent;
+      text-align:left;
+      cursor:pointer;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+      transition:background .16s ease, border-color .16s ease;
     }
-    .ticket-btn:hover{ background:#f8fafc }
-    .ticket-btn.active{ background:#eef2ff }
-    .ticket-sub{ font-size:12px; color:#6b7280; font-weight:400 }
 
-    /* Content card */
-    .detail-card{ padding:18px }
-    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:12px }
-    .grid3{ display:grid; grid-template-columns:repeat(3,1fr); gap:12px }
-    label{ font-size:12px; color:#555; display:block; margin-bottom:6px }
-    input,select,textarea{ width:100%; padding:10px 12px; border:1px solid var(--border); border-radius:10px; box-sizing:border-box }
-    .actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:12px }
-    .warn{ background:#f59e0b !important; color:#fff !important; border-color:#f59e0b !important }
-    .danger{ background:#ef4444 !important; color:#fff !important; border-color:#ef4444 !important }
-    .muted{ color:#6b7280 }
+    .ticket-btn:last-child{
+      border-bottom:0;
+    }
 
-    /* Scale table */
-    .table-card{ border:1px solid var(--border); border-radius:12px; overflow:hidden; background:#fff; box-shadow:var(--shadow); margin-top:12px }
-    .scroll-area{ max-height:220px; overflow:auto }
+    .ticket-btn:hover{
+      background:rgba(29, 155, 232, 0.05);
+    }
 
-    /* Proof card */
-    .proof-card{ border:1px solid var(--border); border-radius:12px; background:#fff; box-shadow:var(--shadow); margin-top:12px; }
-    .proof-body{ padding:12px; display:flex; gap:12px; align-items:flex-start; }
+    .ticket-btn.active{
+      background:linear-gradient(90deg, rgba(29, 155, 232, 0.12), rgba(29, 155, 232, 0.04));
+      box-shadow:inset 3px 0 0 #1d9be8;
+    }
+
+    .ticket-btn-main{
+      font-weight:800;
+      color:#0f172a;
+    }
+
+    .ticket-sub{
+      margin-top:4px;
+      font-size:12px;
+      color:#64748b;
+      line-height:1.45;
+    }
+
+    .ticket-status{
+      white-space:nowrap;
+      font-size:11px;
+      font-weight:800;
+      color:#0f6fa6;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .detail-shell{
+      padding:24px;
+      position:relative;
+      z-index:1;
+    }
+
+    .detail-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom:18px;
+      padding-bottom:16px;
+      border-bottom:1px solid rgba(226, 232, 240, 0.88);
+    }
+
+    .detail-title{
+      margin:0;
+      font-size:1.6rem;
+      line-height:1;
+      letter-spacing:-.04em;
+      font-weight:900;
+      color:#0f172a;
+    }
+
+    .status-chip{
+      display:inline-flex;
+      align-items:center;
+      min-height:38px;
+      padding:8px 14px;
+      border-radius:999px;
+      border:1px solid rgba(148, 163, 184, 0.26);
+      background:rgba(255,255,255,.82);
+      color:#475569;
+      font-size:12px;
+      font-weight:700;
+      text-align:right;
+    }
+
+    .detail-stack{
+      display:grid;
+      gap:14px;
+    }
+
+    .detail-surface{
+      padding:18px;
+      border-radius:22px;
+      border:1px solid rgba(199, 213, 228, 0.76);
+      background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(247,250,255,.92));
+      box-shadow:0 14px 24px rgba(15, 23, 42, 0.05);
+    }
+
+    .detail-surface-title{
+      margin:0 0 14px;
+      font-size:1rem;
+      font-weight:900;
+      letter-spacing:-.02em;
+      color:#0f172a;
+    }
+
+    .grid2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .grid3{ display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; }
+
+    label{
+      display:block;
+      margin-bottom:7px;
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:#334155;
+    }
+
+    textarea{
+      min-height:120px;
+      resize:vertical;
+    }
+
+    .proof-card{
+      border-radius:22px;
+      border:1px solid rgba(199, 213, 228, 0.76);
+      background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(247,250,255,.92));
+      box-shadow:0 14px 24px rgba(15, 23, 42, 0.05);
+    }
+
+    .proof-body{
+      padding:18px;
+      display:flex;
+      gap:16px;
+      align-items:flex-start;
+    }
+
     .proof-thumb{
-      width:220px; max-height:160px; object-fit:contain;
-      border:1px solid var(--border); border-radius:10px; background:#fff; cursor:pointer;
+      width:240px;
+      max-height:170px;
+      object-fit:contain;
+      border:1px solid rgba(199, 213, 228, 0.82);
+      border-radius:16px;
+      background:#fff;
+      cursor:pointer;
     }
-    .proof-actions{ display:flex; gap:8px; margin-top:8px }
 
-    /* Loading overlay */
-    .overlay{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; z-index:1200 }
-    .overlay.show{ display:flex }
-    .spinner{
-      width:56px; height:56px; border-radius:50%;
-      border:5px solid #fff; border-top-color: transparent; animation:spin 1s linear infinite
+    .proof-actions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:10px;
     }
-    @keyframes spin{ to{ transform: rotate(360deg) } }
 
-    /* Lightbox for full image */
-    .lightbox{ position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; z-index:1400; align-items:center; justify-content:center; }
+    .table-card{ margin-top:0; }
+    .actions{ display:flex; gap:10px; justify-content:flex-end; margin-top:4px; flex-wrap:wrap; }
+    .warn{ background:#f59e0b !important; color:#fff !important; border-color:#f59e0b !important; }
+    .danger{ background:#ef4444 !important; color:#fff !important; border-color:#ef4444 !important; }
+    .muted{ color:#64748b; }
+
+    .overlay{ position:fixed; inset:0; background:rgba(2, 8, 23, 0.62); backdrop-filter:blur(8px); display:none; align-items:center; justify-content:center; z-index:1200; }
+    .overlay.show{ display:flex; }
+    .spinner{ width:56px; height:56px; border-radius:50%; border:5px solid rgba(255,255,255,.35); border-top-color:#fff; animation:spin 1s linear infinite; }
+    @keyframes spin{ to{ transform:rotate(360deg); } }
+
+    .lightbox{ position:fixed; inset:0; background:rgba(2, 8, 23, 0.88); display:none; z-index:1400; align-items:center; justify-content:center; }
     .lightbox.show{ display:flex; }
-    .lightbox img{ max-width:92vw; max-height:92vh; border-radius:8px; }
-    .lightbox .close{ position:absolute; top:14px; right:18px; font-size:26px; color:#fff; background:transparent; border:0; cursor:pointer }
+    .lightbox img{ max-width:92vw; max-height:92vh; border-radius:12px; }
+    .lightbox .close{ position:absolute; top:14px; right:18px; font-size:26px; color:#fff; background:transparent; border:0; cursor:pointer; }
+
+    @media (max-width: 1120px){
+      .taglists-grid{ grid-template-columns:1fr; }
+      .ticket-rail{ position:static; }
+      .ticket-rail-list{ max-height:360px; }
+    }
 
     @media (max-width: 980px){
-      .page-wrap{ grid-template-columns: 1fr }
-      .sidebar{ position:static }
-      .ticket-list{ max-height:unset }
-      .grid2,.grid3{ grid-template-columns:1fr }
+      .grid2, .grid3{ grid-template-columns:1fr; }
       .proof-body{ flex-direction:column; }
-      .proof-thumb{ width:100%; max-height:240px; }
+      .proof-thumb{ width:100%; max-height:260px; }
+    }
+
+    @media (max-width: 640px){
+      .detail-shell{ padding:18px; }
+      .detail-head{ flex-direction:column; }
+      .ticket-rail-list{ max-height:320px; }
     }
   </style>
 </head>
-<body>
+<body class="admin-body admin-subpage-body">
   <header class="site-header">
-    <div class="container header-inner" style="grid-template-columns:auto 1fr auto;">
-      <div class="brand">
-        <img src="./assets/img/logo.png" class="logo" alt="Sixty – 3 logo">
-        <span class="brand-text">Sixty – 3 Trucking Inc</span>
+    <div class="container subpage-topbar">
+      <div class="subpage-topbar-brand">
+        <img src="./assets/img/logo.png" class="logo" alt="Sixty - 3 logo">
+        <span class="brand-text">Sixty - 3 Trucking Inc</span>
       </div>
-      <div class="title-wrap" style="justify-content:flex-start;">
-        <h1 class="page-title">Tag Lists</h1>
-        <p class="subtitle">Browse tickets and edit Admin Tag details</p>
+      <div class="subpage-topbar-copy">
+        <div class="subpage-topbar-row">
+          <h1 class="subpage-topbar-page">Tag Lists</h1>
+        </div>
       </div>
-      <div>
-        <a href="/admin" class="btn">← Back to Admin</a>
+      <div class="subpage-topbar-actions">
+        <div class="subpage-nav-links">
+          <a href="/admin" class="btn">Back to Admin</a>
+          <button class="btn" type="button" data-admin-logout>Log Out</button>
+        </div>
+
+        <button
+          class="icon-btn subpage-nav-toggle"
+          type="button"
+          data-admin-nav-toggle
+          aria-label="Open admin navigation"
+          aria-expanded="false"
+        >
+          <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+            <path d="M4 6h16M4 12h16M4 18h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
       </div>
     </div>
   </header>
 
-  <main class="container" style="padding-bottom:28px;">
-    <div class="page-wrap">
-      <!-- Sidebar: Search + tickets -->
-      <aside class="sidebar">
-        <div class="card admin-card">
-          <label for="q">Search ticket</label>
-          <input id="q" class="search-box" type="search" placeholder="Ticket # or driver name">
+  <div class="admin-nav-modal" data-admin-nav aria-hidden="true">
+    <button class="admin-nav-backdrop" type="button" data-admin-nav-close aria-label="Close admin navigation"></button>
+    <div class="admin-nav-panel" role="dialog" aria-modal="true" aria-labelledby="adminNavTitle">
+      <div class="admin-nav-head">
+        <div class="admin-nav-head-copy">
+          <div class="admin-nav-overline">Admin Navigation</div>
+          <h2 class="admin-nav-title" id="adminNavTitle">Choose a workspace</h2>
+          <p class="admin-nav-copy">Jump between admin pages without losing the visual style of the console.</p>
         </div>
 
-        <div class="ticket-list" aria-label="Ticket numbers">
-          <div class="meta"><span id="count">0</span> tickets</div>
-          <div id="list" class="ticket-items"></div>
-        </div>
-      </aside>
+        <button class="icon-btn admin-nav-close" type="button" data-admin-nav-close aria-label="Close admin navigation">
+          <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+            <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
 
-      <!-- Single combined form (top ticket fields + driver tags + scale tags) -->
-      <section class="card detail-card">
-        <div style="display:flex;align-items:baseline;gap:10px;justify-content:space-between;margin-bottom:6px;">
+      <div class="admin-nav-list">
+        <a class="admin-nav-link" href="/admin" data-admin-nav-link>
+          <span class="admin-nav-link-copy">
+            <span class="admin-nav-link-title">Admin Dashboard</span>
+            <span class="admin-nav-link-meta">Overview, filters, and ticket operations</span>
+          </span>
+          <span class="admin-nav-link-arrow" aria-hidden="true">→</span>
+        </a>
+
+        <a class="admin-nav-link is-current" href="/tag-lists" data-admin-nav-link>
+          <span class="admin-nav-link-copy">
+            <span class="admin-nav-link-title">Tag Lists</span>
+            <span class="admin-nav-link-meta">Review ticket details and driver tag data</span>
+          </span>
+          <span class="admin-nav-link-arrow" aria-hidden="true">→</span>
+        </a>
+
+        <a class="admin-nav-link" href="/draft-tickets" data-admin-nav-link>
+          <span class="admin-nav-link-copy">
+            <span class="admin-nav-link-title">Draft Tickets</span>
+            <span class="admin-nav-link-meta">Inspect draft submissions before conversion</span>
+          </span>
+          <span class="admin-nav-link-arrow" aria-hidden="true">→</span>
+        </a>
+
+        <a class="admin-nav-link" href="/admin/users" data-admin-nav-link>
+          <span class="admin-nav-link-copy">
+            <span class="admin-nav-link-title">Manage Users</span>
+            <span class="admin-nav-link-meta">Accounts, roles, status, and passwords</span>
+          </span>
+          <span class="admin-nav-link-arrow" aria-hidden="true">→</span>
+        </a>
+      </div>
+
+      <div class="admin-nav-foot">
+        <p class="admin-nav-note">Need to leave the console? You can log out right from this menu.</p>
+        <button class="btn" type="button" data-admin-logout data-admin-nav-close>Log Out</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="container">
+    <div class="subpage-shell">
+      <section class="subpage-hero">
+        <div class="subpage-hero-grid">
           <div>
-            <h2 id="hdr" style="margin:0;">Ticket —</h2>
-            <div class="muted" id="hint">Select a ticket on the left.</div>
+            <div class="subpage-kicker">Ticket Review</div>
+            <h2 class="subpage-title">Tag lists and ticket detail workspace</h2>
+            <p class="subpage-copy">
+              Search tickets from the left rail, inspect driver and ticket metadata on the right, and handle admin edits without losing your place in the queue.
+            </p>
           </div>
-          <div class="muted" id="statusChip" style="font-size:12px;"></div>
+          <div class="subpage-actions">
+            <div class="subpage-chip">Preview, edit, convert PDF, and send work back to drivers</div>
+          </div>
         </div>
+      </section>
 
-        <form id="form" autocomplete="off">
-          <!-- ===== Admin ticket fields ===== -->
-          <div class="grid3">
-            <div><label>Date</label><input type="date" name="date" required disabled></div>
-            <div><label>Ticket No</label><input type="text" name="ticketNo" required disabled></div>
+      <div class="taglists-grid">
+        <aside class="ticket-rail">
+          <section class="subpage-rail-card">
+            <div class="section-kicker">Ticket Explorer</div>
+            <h3 class="subpage-section-title" style="margin-bottom:12px;">Search ticket queue</h3>
+            <div class="field">
+              <label for="q">Search ticket</label>
+              <input id="q" class="search-box" type="search" placeholder="Ticket # or driver name">
+            </div>
+          </section>
+
+          <section class="subpage-rail-card">
+            <div class="ticket-rail-list" aria-label="Ticket numbers">
+              <div class="ticket-rail-head">
+                <div>
+                  <div class="section-kicker" style="margin-bottom:4px;">Results</div>
+                  <div style="font-weight:800; color:#0f172a;">Available tickets</div>
+                </div>
+                <span id="count" class="ticket-rail-count">0</span>
+              </div>
+              <div id="list" class="ticket-items"></div>
+            </div>
+          </section>
+        </aside>
+
+        <section class="subpage-panel detail-shell">
+          <div class="detail-head">
             <div>
-              <label>Driver Name</label>
-              <select name="driverName" id="driverSel" required disabled>
-                <option value="">Loading…</option>
-              </select>
+              <h2 id="hdr" class="detail-title">Ticket -</h2>
+              <div class="muted" id="hint">Select a ticket from the left rail to view its details.</div>
             </div>
+            <div class="status-chip" id="statusChip"></div>
           </div>
 
-          <div class="grid3" style="margin-top:10px;">
-            <div><label>Truck Start</label><input type="text" name="truckStart" disabled></div>
-            <div><label>Truck No</label><input type="text" name="truckNo" disabled></div>
-            <div>
-              <label>Trailer Type</label>
-              <select name="trailerType" id="trailerSel" disabled><option value="">Loading…</option></select>
-            </div>
-          </div>
+          <form id="form" autocomplete="off">
+            <div class="detail-stack">
+              <section class="detail-surface">
+                <h3 class="detail-surface-title">Admin ticket information</h3>
+                <div class="grid3">
+                  <div><label>Date</label><input type="date" name="date" required disabled></div>
+                  <div><label>Ticket No</label><input type="text" name="ticketNo" required disabled></div>
+                  <div>
+                    <label>Driver Name</label>
+                    <select name="driverName" id="driverSel" required disabled>
+                      <option value="">Loading...</option>
+                    </select>
+                  </div>
+                </div>
 
-          <div class="grid3" style="margin-top:10px;">
-            <div><label>Leave Yard Time</label><input id="ds_leaveYardTime" name="leaveYardTime" type="time" disabled></div>
-            <div><label>Truck Stop Time</label><input id="ds_truckStopTime" name="truckStop" type="time" disabled></div>
-            <div></div>
-          </div>
+                <div class="grid3" style="margin-top:14px;">
+                  <div><label>Truck Start</label><input type="text" name="truckStart" disabled></div>
+                  <div><label>Truck No</label><input type="text" name="truckNo" disabled></div>
+                  <div>
+                    <label>Trailer Type</label>
+                    <select name="trailerType" id="trailerSel" disabled><option value="">Loading...</option></select>
+                  </div>
+                </div>
 
+                <div class="grid3" style="margin-top:14px;">
+                  <div><label>Leave Yard Time</label><input id="ds_leaveYardTime" name="leaveYardTime" type="time" disabled></div>
+                  <div><label>Truck Stop Time</label><input id="ds_truckStopTime" name="truckStop" type="time" disabled></div>
+                  <div></div>
+                </div>
 
-          <div class="grid2" style="margin-top:10px;">
-            <div><label>Sub Hauler</label><input type="text" name="subHauler" disabled></div>
-            <div><label>Prime Carrier</label><input type="text" name="primeCarrier" disabled></div>
-          </div>
+                <div class="grid2" style="margin-top:14px;">
+                  <div><label>Sub Hauler</label><input type="text" name="subHauler" disabled></div>
+                  <div><label>Prime Carrier</label><input type="text" name="primeCarrier" disabled></div>
+                </div>
 
-          <div class="grid2" style="margin-top:10px;">
-            <div><label>Shipper</label><input type="text" name="shipper" disabled></div>
-            <div><label>Point of Origin</label><input type="text" name="origin" disabled></div>
-          </div>
+                <div class="grid2" style="margin-top:14px;">
+                  <div><label>Shipper</label><input type="text" name="shipper" disabled></div>
+                  <div><label>Point of Origin</label><input type="text" name="origin" disabled></div>
+                </div>
 
-          <div class="grid3" style="margin-top:10px;">
-            <div><label>Origin City</label><input type="text" name="originCity" disabled></div>
-            <div><label>PO No</label><input type="text" name="poNo" disabled></div>
-            <div><label>Job Name</label><input type="text" name="jobName" disabled></div>
-          </div>
+                <div class="grid3" style="margin-top:14px;">
+                  <div><label>Origin City</label><input type="text" name="originCity" disabled></div>
+                  <div><label>PO No</label><input type="text" name="poNo" disabled></div>
+                  <div><label>Job Name</label><input type="text" name="jobName" disabled></div>
+                </div>
 
-          <div class="grid3" style="margin-top:10px;">
-            <div><label>Job No</label><input type="text" name="jobNo" disabled></div>
-            <div><label>Destination</label><input type="text" name="destination" disabled></div>
-            <div><label>Destination City</label><input type="text" name="city" disabled></div>
-          </div>
+                <div class="grid3" style="margin-top:14px;">
+                  <div><label>Job No</label><input type="text" name="jobNo" disabled></div>
+                  <div><label>Destination</label><input type="text" name="destination" disabled></div>
+                  <div><label>Destination City</label><input type="text" name="city" disabled></div>
+                </div>
+              </section>
 
-          <!-- ===== Driver tags (now editable in Edit mode) ===== -->
-          <div class="grid3" style="margin-top:16px;">
-            <div><label>Bridgefare</label><input id="ds_bridgefare" name="bridgefare" type="text" disabled></div>
-            <div><label>Signed Out Loaded</label><input id="ds_signedOutLoaded" name="signedOutLoaded" type="text" disabled></div>
-            <div><label>How Many Tons/Loads</label><input id="ds_howMany" name="howManyTonsLoads" type="text" disabled></div>
-          </div>
+              <section class="detail-surface">
+                <h3 class="detail-surface-title">Driver tag details</h3>
+                <div class="grid3">
+                  <div><label>Bridgefare</label><input id="ds_bridgefare" name="bridgefare" type="text" disabled></div>
+                  <div><label>Signed Out Loaded</label><input id="ds_signedOutLoaded" name="signedOutLoaded" type="text" disabled></div>
+                  <div><label>How Many Tons/Loads</label><input id="ds_howMany" name="howManyTonsLoads" type="text" disabled></div>
+                </div>
 
-          <div class="grid3" style="margin-top:10px;">
-            <div><label>Downtime & Lunch</label><input id="ds_downtimeLunch" name="downtimeLunch" type="text" disabled></div>
-            <div><label>Sign Out Time</label><input id="ds_signOutTime" name="signOutTime" type="time" disabled></div>
-            <div><label>Received by</label><input id="ds_receivedBy" name="receivedBy" type="text" disabled></div>
-          </div>
+                <div class="grid3" style="margin-top:14px;">
+                  <div><label>Downtime & Lunch</label><input id="ds_downtimeLunch" name="downtimeLunch" type="text" disabled></div>
+                  <div><label>Sign Out Time</label><input id="ds_signOutTime" name="signOutTime" type="time" disabled></div>
+                  <div><label>Received by</label><input id="ds_receivedBy" name="receivedBy" type="text" disabled></div>
+                </div>
 
-          <div class="grid2" style="margin-top:10px;">
-            <div style="grid-column:1/-1;">
-              <label>Notes</label>
-              <textarea id="ds_notes" name="notes" disabled></textarea>
-            </div>
-            <div style="grid-column:1/-1;">
-              <label>Driver Signature</label>
-              <input id="ds_driverSignature" name="driverSignature" type="text" disabled>
-            </div>
-          </div>
+                <div class="grid2" style="margin-top:14px;">
+                  <div style="grid-column:1/-1;">
+                    <label>Notes</label>
+                    <textarea id="ds_notes" name="notes" disabled></textarea>
+                  </div>
+                  <div style="grid-column:1/-1;">
+                    <label>Driver Signature</label>
+                    <input id="ds_driverSignature" name="driverSignature" type="text" disabled>
+                  </div>
+                </div>
+              </section>
 
-          <!-- ===== Proof of Ticket (image) ===== -->
-          <div id="proofCard" class="proof-card" style="display:none;">
-            <div class="proof-body">
-              <img id="proofThumb" class="proof-thumb" alt="Proof image preview">
-              <div>
-                <div class="muted" id="proofMeta">No file attached.</div>
-                <div class="proof-actions">
-                  <a id="proofOpen" class="btn" href="#" target="_blank" rel="noopener" style="display:none">Open full size</a>
-                  <a id="proofDownload" class="btn btn-primary" href="#" download style="display:none">Download</a>
+              <div id="proofCard" class="proof-card" style="display:none;">
+                <div class="proof-body">
+                  <img id="proofThumb" class="proof-thumb" alt="Proof image preview">
+                  <div>
+                    <h3 class="detail-surface-title" style="margin-bottom:8px;">Proof of ticket</h3>
+                    <div class="muted" id="proofMeta">No file attached.</div>
+                    <div class="proof-actions">
+                      <a id="proofOpen" class="btn" href="#" target="_blank" rel="noopener" style="display:none">Open full size</a>
+                      <a id="proofDownload" class="btn btn-primary" href="#" download style="display:none">Download</a>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          </div>
 
-          <!-- ===== Scale tags (read-only table) ===== -->
-          <div class="table-card" id="scaleTable" style="display:none;">
-            <div class="scroll-area">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th id="th_itemName">Scale Tag No</th>
-                    <th>Yard/Weight</th>
-                    <th>Material</th>
-                    <th>Time Arr</th>
-                    <th>Time Leave</th>
-                    <th>Time Arr</th>
-                    <th>Time Leave</th>
-                  </tr>
-                </thead>
-                <tbody id="ds_items">
-                  <tr><td colspan="7" class="muted" style="text-align:center;">No scale tags.</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+              <section class="detail-surface">
+                <h3 class="detail-surface-title">Scale tags</h3>
+                <div class="table-card" id="scaleTable" style="display:none;">
+                  <div class="scroll-area">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th id="th_itemName">Scale Tag No</th>
+                          <th>Yard/Weight</th>
+                          <th>Material</th>
+                          <th>Time Arr</th>
+                          <th>Time Leave</th>
+                          <th>Time Arr</th>
+                          <th>Time Leave</th>
+                        </tr>
+                      </thead>
+                      <tbody id="ds_items">
+                        <tr><td colspan="7" class="subpage-empty">No scale tags.</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
 
-          <div class="actions">
-            <button type="button" id="pdfBtn" class="btn" style="display:none">Convert to PDF</button>
-            <button type="button" id="deleteBtn" class="btn danger" style="display:none">Delete</button>
-            <!-- NEW: send back button -->
-            <button type="button" id="sendBackBtn" class="btn" style="display:none">Send back to driver</button>
-            <span style="flex:1"></span>
-            <button type="button" id="editBtn" class="btn warn" style="display:none">Edit</button>
-            <button type="submit" id="saveBtn" class="btn btn-primary" style="display:none">Save</button>
-            <button type="button" id="cancelBtn" class="btn" style="display:none">Cancel</button>
-          </div>
-        </form>
-      </section>
+              <div class="actions">
+                <button type="button" id="pdfBtn" class="btn" style="display:none">Convert to PDF</button>
+                <button type="button" id="deleteBtn" class="btn danger" style="display:none">Delete</button>
+                <button type="button" id="sendBackBtn" class="btn" style="display:none">Send back to driver</button>
+                <span style="flex:1"></span>
+                <button type="button" id="editBtn" class="btn warn" style="display:none">Edit</button>
+                <button type="submit" id="saveBtn" class="btn btn-primary" style="display:none">Save</button>
+                <button type="button" id="cancelBtn" class="btn" style="display:none">Cancel</button>
+              </div>
+            </div>
+          </form>
+        </section>
+      </div>
     </div>
   </main>
 
   <footer class="site-footer">
     <div class="container">
-      <small>© <span id="y"></span> Sixty – 3 Trucking Inc</small>
+      <small>&copy; <span id="y"></span> Sixty - 3 Trucking Inc</small>
     </div>
   </footer>
 
-  <!-- loading overlay -->
   <div id="overlay" class="overlay" aria-hidden="true">
     <div class="spinner" role="status" aria-label="Loading"></div>
   </div>
 
-  <!-- Lightbox for image preview -->
   <div id="lightbox" class="lightbox" aria-hidden="true">
     <button class="close" aria-label="Close preview">&times;</button>
     <img id="lightboxImg" alt="Full-size proof">
   </div>
 
+  <script src="/admin-nav.js"></script>
   <script>
-  // Footer year
   document.getElementById('y').textContent = new Date().getFullYear();
 
-  // ---------- helpers ----------
   const $  = (s,root=document) => root.querySelector(s);
   const $$ = (s,root=document) => Array.from(root.querySelectorAll(s));
   const ltrim = v => String(v ?? '').trim().toLowerCase();
@@ -302,95 +591,83 @@
   }
 
   function applyScaleHeaderByMode(modeRaw){
-  const mode = String(modeRaw || '').trim().toLowerCase();
-  const th = document.getElementById('th_itemName');
-  if (!th) return;
-
-  // treat anything with equip/material as "Materials/Equipment"
-  const isMaterialsEquip =
-    mode.includes('equip') || mode.includes('material');
-
-  th.textContent = isMaterialsEquip ? 'Materials/Equipment' : 'Scale Tag No';
-}
-
+    const mode = String(modeRaw || '').trim().toLowerCase();
+    const th = document.getElementById('th_itemName');
+    if (!th) return;
+    const isMaterialsEquip = mode.includes('equip') || mode.includes('material');
+    th.textContent = isMaterialsEquip ? 'Materials/Equipment' : 'Scale Tag No';
+  }
 
   function lockForm(lock){
-  const f = $('#form');
+    const f = $('#form');
 
-  // Admin ticket fields
-  const adminSelectors = [
-    'input[name="date"]',
-    'input[name="truckStart"]',
-    'input[name="truckNo"]',
-    'input[name="subHauler"]',
-    'input[name="primeCarrier"]',
-    'input[name="shipper"]',
-    'input[name="origin"]',
-    'input[name="originCity"]',
-    'input[name="poNo"]',
-    'input[name="jobName"]',
-    'input[name="jobNo"]',
-    'input[name="destination"]',
-    'input[name="city"]',
-    'select[name="driverName"]',
-    'select[name="trailerType"]'
-  ];
+    const adminSelectors = [
+      'input[name="date"]',
+      'input[name="truckStart"]',
+      'input[name="truckNo"]',
+      'input[name="subHauler"]',
+      'input[name="primeCarrier"]',
+      'input[name="shipper"]',
+      'input[name="origin"]',
+      'input[name="originCity"]',
+      'input[name="poNo"]',
+      'input[name="jobName"]',
+      'input[name="jobNo"]',
+      'input[name="destination"]',
+      'input[name="city"]',
+      'select[name="driverName"]',
+      'select[name="trailerType"]'
+    ];
 
-  adminSelectors.forEach(sel => {
-    $$(sel, f).forEach(el => {
-      el.disabled = lock;
+    adminSelectors.forEach(sel => {
+      $$(sel, f).forEach(el => {
+        el.disabled = lock;
+      });
     });
-  });
 
-  // Ticket No is always locked
-  if (f && f.ticketNo) f.ticketNo.disabled = true;
+    if (f && f.ticketNo) f.ticketNo.disabled = true;
 
-  // Driver fields follow lock flag (editable only in Edit mode)
-  const driverFieldIds = [
-    'ds_bridgefare',
-    'ds_signedOutLoaded',
-    'ds_howMany',
-    'ds_downtimeLunch',
-    'ds_leaveYardTime',
-    'ds_truckStopTime',
-    'ds_signOutTime',
-    'ds_receivedBy',
-    'ds_notes',
-    'ds_driverSignature'
-  ];
+    const driverFieldIds = [
+      'ds_bridgefare',
+      'ds_signedOutLoaded',
+      'ds_howMany',
+      'ds_downtimeLunch',
+      'ds_leaveYardTime',
+      'ds_truckStopTime',
+      'ds_signOutTime',
+      'ds_receivedBy',
+      'ds_notes',
+      'ds_driverSignature'
+    ];
 
-  driverFieldIds.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.disabled = lock;
-  });
+    driverFieldIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.disabled = lock;
+    });
 
-  const hasCurrent = !!CURRENT;
-  const st = (CURRENT && (CURRENT.status || CURRENT.Status || '') || '')
-    .toString()
-    .toLowerCase();
+    const hasCurrent = !!CURRENT;
+    const st = (CURRENT && (CURRENT.status || CURRENT.Status || '') || '')
+      .toString()
+      .toLowerCase();
 
-  // Only allow "send back" when viewing a ticket whose status is Done/Submitted
-  const canSendBack =
-    hasCurrent &&
-    lock &&
-    (st === 'done' || st === 'submitted' || st === 'complete' || st === 'completed');
+    const canSendBack =
+      hasCurrent &&
+      lock &&
+      (st === 'done' || st === 'submitted' || st === 'complete' || st === 'completed');
 
-  $('#editBtn').style.display     = lock && hasCurrent ? 'inline-flex' : 'none';
-  $('#saveBtn').style.display     = lock ? 'none' : 'inline-flex';
-  $('#cancelBtn').style.display   = lock ? 'none' : 'inline-flex';
-  $('#deleteBtn').style.display   = hasCurrent ? 'inline-flex' : 'none';
-  $('#pdfBtn').style.display      = hasCurrent ? 'inline-flex' : 'none';
-  $('#sendBackBtn').style.display = canSendBack ? 'inline-flex' : 'none';
-}
+    $('#editBtn').style.display     = lock && hasCurrent ? 'inline-flex' : 'none';
+    $('#saveBtn').style.display     = lock ? 'none' : 'inline-flex';
+    $('#cancelBtn').style.display   = lock ? 'none' : 'inline-flex';
+    $('#deleteBtn').style.display   = hasCurrent ? 'inline-flex' : 'none';
+    $('#pdfBtn').style.display      = hasCurrent ? 'inline-flex' : 'none';
+    $('#sendBackBtn').style.display = canSendBack ? 'inline-flex' : 'none';
+  }
 
+  let ALL = [];
+  let VIEW = [];
+  let CURRENT = null;
+  let SELECTED_ID = null;
 
-  // ---------- state ----------
-  let ALL = [];           // from /api/admin/tags
-  let VIEW = [];          // filtered
-  let CURRENT = null;     // current ticket object
-  let SELECTED_ID = null; // ticket id / number
-
-  // ---------- meta dropdowns ----------
   async function loadMeta(){
     try {
       const r = await fetch('/api/admin/meta');
@@ -401,12 +678,13 @@
 
       const dSel = $('#driverSel');
       const tSel = $('#trailerSel');
-      dSel.innerHTML = `<option value="">Select driver…</option>` + drivers.map(n => `<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('');
-      tSel.innerHTML = `<option value="">Select type…</option>` + types.map(n => `<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('');
+      dSel.innerHTML = `<option value="">Select driver...</option>` +
+        drivers.map(n => `<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('');
+      tSel.innerHTML = `<option value="">Select type...</option>` +
+        types.map(n => `<option value="${n.replace(/"/g,'&quot;')}">${n}</option>`).join('');
     } catch {}
   }
 
-  // ---------- list & selection ----------
   function sortTickets(a,b){
     const ax = Number(a.ticketNo||a.id||0), bx = Number(b.ticketNo||b.id||0);
     if (!isNaN(ax) && !isNaN(bx)) return ax - bx;
@@ -416,7 +694,7 @@
   function renderList(){
     const wrap = $('#list');
     if (!VIEW.length){
-      wrap.innerHTML = `<div class="muted" style="padding:12px;">No tickets.</div>`;
+      wrap.innerHTML = `<div class="subpage-empty">No tickets.</div>`;
       $('#count').textContent = 0;
       return;
     }
@@ -426,11 +704,14 @@
       const id = row.ticketNo || row.id || '';
       const driver = row.driverName || '';
       const st = (row.status || '').toString();
-      const sub = [driver, st ? `• ${st}` : ''].filter(Boolean).join(' ');
+      const sub = [driver, st ? st : ''].filter(Boolean).join(' | ');
       return `
         <button class="ticket-btn" data-id="${String(id).replace(/"/g,'&quot;')}">
-          <span>Ticket ${id}</span>
-          <span class="ticket-sub">${sub}</span>
+          <div>
+            <div class="ticket-btn-main">Ticket ${id}</div>
+            <div class="ticket-sub">${sub || 'No driver details yet'}</div>
+          </div>
+          <span class="ticket-status">${st || 'open'}</span>
         </button>
       `;
     }).join('');
@@ -466,7 +747,6 @@
     await openTicket(SELECTED_ID);
   });
 
-  // ---------- load all ----------
   async function loadAll(){
     showOverlay(true);
     try {
@@ -485,7 +765,6 @@
 
       applyFilter();
 
-      // auto-open first if exists
       if (VIEW.length){
         SELECTED_ID = VIEW[0].ticketNo || VIEW[0].id;
         $$('.ticket-btn')[0]?.classList.add('active');
@@ -503,10 +782,9 @@
     }
   }
 
-  // ---------- ticket detail ----------
   function clearFormUI(){
-    $('#hdr').textContent = 'Ticket —';
-    $('#hint').textContent = 'Select a ticket on the left.';
+    $('#hdr').textContent = 'Ticket -';
+    $('#hint').textContent = 'Select a ticket from the left rail to view its details.';
     $('#statusChip').textContent = '';
     $('#form').reset();
     lockForm(true);
@@ -517,7 +795,7 @@
   }
 
   function clearDriverScaleUI(){
-    applyScaleHeaderByMode('scale'); // default label back to Scale Tag No
+    applyScaleHeaderByMode('scale');
     $('#ds_bridgefare').value = '';
     $('#ds_signedOutLoaded').value = '';
     $('#ds_howMany').value = '';
@@ -528,7 +806,7 @@
     $('#ds_truckStopTime').value = '';
     $('#ds_notes').value = '';
     $('#ds_driverSignature').value = '';
-    $('#ds_items').innerHTML = `<tr><td colspan="7" class="muted" style="text-align:center;">No scale tags.</td></tr>`;
+    $('#ds_items').innerHTML = `<tr><td colspan="7" class="subpage-empty">No scale tags.</td></tr>`;
     $('#scaleTable').style.display = 'none';
   }
 
@@ -542,66 +820,50 @@
   }
 
   async function openTicket(id){
-  showOverlay(true);
-  try {
-    // Load dropdown meta (drivers, trailer types)
-    await loadMeta();
+    showOverlay(true);
+    try {
+      await loadMeta();
 
-    // Fetch full ticket (admin + driver side)
-    const r = await fetch(`/api/admin/tickets/${encodeURIComponent(id)}`);
-    if (r.status === 401 || r.status === 403) {
-      location.href = '/';
-      return;
+      const r = await fetch(`/api/admin/tickets/${encodeURIComponent(id)}`);
+      if (r.status === 401 || r.status === 403) {
+        location.href = '/';
+        return;
+      }
+      const j = await r.json();
+      if (!j.ok) {
+        alert(j.message || 'Not found');
+        return;
+      }
+
+      CURRENT = j.ticket || {};
+      const row = ALL.find(x => String(x.ticketNo || x.id) === String(id));
+      const st  = (
+        row?.status ||
+        CURRENT.status ||
+        CURRENT.Status ||
+        ''
+      ).toString();
+
+      CURRENT.status = st;
+
+      fillForm(CURRENT);
+      $('#hdr').textContent = `Ticket ${id}`;
+      $('#statusChip').textContent = st ? `Driver Status: ${st}` : '';
+      $('#hint').textContent = '';
+      lockForm(true);
+
+      fillDriverFieldsFromObject(CURRENT);
+      await loadDriverByTicketId(id);
+      await loadScaleItems(id);
+      await loadProof(id);
+
+    } catch (e){
+      console.error(e);
+      alert('Failed to load ticket.');
+    } finally {
+      showOverlay(false);
     }
-    const j = await r.json();
-    if (!j.ok) {
-      alert(j.message || 'Not found');
-      return;
-    }
-
-    // Main ticket object
-    CURRENT = j.ticket || {};
-
-    // Figure out latest status from the sidebar list (ALL) or the ticket itself
-    const row = ALL.find(x => String(x.ticketNo || x.id) === String(id));
-    const st  = (
-      row?.status ||
-      CURRENT.status ||
-      CURRENT.Status ||
-      ''
-    ).toString();
-
-    // Normalize onto CURRENT so lockForm() can decide whether to show "Send back"
-    CURRENT.status = st;
-
-    // Fill admin fields
-    fillForm(CURRENT);
-
-    // Header + status chip
-    $('#hdr').textContent       = `Ticket ${id}`;
-    $('#statusChip').textContent = st ? `Driver Status: ${st}` : '';
-    $('#hint').textContent      = '';
-
-    // Lock form (view mode). lockForm() will show/hide:
-    // - Edit / Save / Cancel
-    // - Delete / PDF
-    // - Send back to driver (only if status is Done/Submitted/etc.)
-    lockForm(true);
-
-    // Driver fields + scale tags + proof
-    fillDriverFieldsFromObject(CURRENT); // in case driver fields are embedded
-    await loadDriverByTicketId(id);      // fetch latest driver record
-    await loadScaleItems(id);            // scale tags table
-    await loadProof(id);                 // proof image block
-
-  } catch (e){
-    console.error(e);
-    alert('Failed to load ticket.');
-  } finally {
-    showOverlay(false);
   }
-}
-
 
   function fillForm(t = {}){
     const f = $('#form');
@@ -630,7 +892,6 @@
     $('#deleteBtn').style.display = 'inline-flex';
   }
 
-  // ===== normalize time -> "HH:MM"
   function toHHMM(s){
     if (!s) return '';
     const str = String(s).trim();
@@ -658,14 +919,13 @@
     const leaveYardTimeRaw = obj.leaveYardTime ?? obj.leave_yard_time ?? obj['Leave Yard Time'] ?? '';
     const truckStopRaw     = obj.truckStop ?? obj.truck_stop ?? obj['Truck Stop Time'] ?? obj['Truck Stop'] ?? '';
 
-
     $('#ds_bridgefare').value      = bridgefare;
     $('#ds_signedOutLoaded').value = signedOutLoaded;
     $('#ds_howMany').value         = howMany;
     $('#ds_downtimeLunch').value   = downtimeLunch;
     $('#ds_notes').value           = notes;
-    $('#ds_leaveYardTime').value = toHHMM(leaveYardTimeRaw);
-    $('#ds_truckStopTime').value = toHHMM(truckStopRaw);
+    $('#ds_leaveYardTime').value   = toHHMM(leaveYardTimeRaw);
+    $('#ds_truckStopTime').value   = toHHMM(truckStopRaw);
     $('#ds_signOutTime').value     = toHHMM(signOutTimeRaw);
     $('#ds_receivedBy').value      = receivedBy;
     $('#ds_driverSignature').value = driverSignature;
@@ -674,7 +934,7 @@
   async function loadDriverByTicketId(id){
     try{
       const r = await fetch(`/api/tags/${encodeURIComponent(id)}/driver`);
-      const j = await r.json().catch(()=> ({}));
+      const j = await r.json().catch(() => ({}));
 
       let obj = {};
       if (Array.isArray(j)) obj = j[0] || {};
@@ -683,22 +943,18 @@
       else obj = j;
 
       fillDriverFieldsFromObject(obj);
-      // ✅ update header based on tagMode saved in driver_tags
       applyScaleHeaderByMode(obj.tagMode || obj.tag_mode || CURRENT?.tagMode || CURRENT?.tag_mode);
     }catch(e){
       console.warn('driver fetch failed', e);
     }
-    
   }
 
-  // ===== Proof image (thumbnail + actions) =====
   async function loadProof(id){
     clearProofUI();
     const card = $('#proofCard');
     try{
-      // 1) Get the "view" URL (inline)
       const rView = await fetch(`/api/tags/${encodeURIComponent(id)}/proof-url`);
-      const jView = await rView.json().catch(()=> ({}));
+      const jView = await rView.json().catch(() => ({}));
       const viewUrl = jView?.url || null;
 
       if (!viewUrl){
@@ -706,39 +962,33 @@
         return;
       }
 
-      // 2) Get the "download" URL (attachment)
       const rDl = await fetch(`/api/tags/${encodeURIComponent(id)}/proof-url?download=1`);
-      const jDl = await rDl.json().catch(()=> ({}));
-      const downloadUrl = jDl?.url || viewUrl; // fallback just in case
+      const jDl = await rDl.json().catch(() => ({}));
+      const downloadUrl = jDl?.url || viewUrl;
 
-      // 3) Render UI
       $('#proofThumb').src = viewUrl;
       $('#proofOpen').href = viewUrl;
       $('#proofOpen').style.display = 'inline-flex';
 
-      // Give a nice filename for the download
       const niceName = `ticket-${id}-proof`;
-
       const dlBtn = $('#proofDownload');
       dlBtn.style.display = 'inline-flex';
-      dlBtn.removeAttribute('target'); // ensure no new tab
+      dlBtn.removeAttribute('target');
       dlBtn.setAttribute('rel', 'noopener');
       dlBtn.setAttribute('download', niceName);
 
-      // Important: don’t rely on <a download> for cross-origin;
-      // programmatically click an <a> with the signed "attachment" URL.
       dlBtn.onclick = (ev) => {
         ev.preventDefault();
         const a = document.createElement('a');
-        a.href = downloadUrl;          // has Content-Disposition: attachment
-        a.download = niceName;         // nice filename if browser honors it
+        a.href = downloadUrl;
+        a.download = niceName;
         a.rel = 'noopener';
         document.body.appendChild(a);
         a.click();
         a.remove();
       };
 
-      $('#proofMeta').textContent = 'Click the image to preview, or use the buttons to open/download.';
+      $('#proofMeta').textContent = 'Click the preview to inspect the full image, or open and download the file directly.';
       card.style.display = 'block';
     }catch(e){
       console.warn('proof fetch failed', e);
@@ -746,7 +996,6 @@
     }
   }
 
-  // Lightbox behavior
   const lb = $('#lightbox');
   const lbImg = $('#lightboxImg');
   function openLightbox(src){
@@ -771,7 +1020,6 @@
     if (e.key === 'Escape') closeLightbox();
   });
 
-  // ===== Scale items =====
   async function loadScaleItems(id){
     let items = [];
     try {
@@ -782,7 +1030,7 @@
 
     const tbody = $('#ds_items');
     if (!items.length){
-      tbody.innerHTML = `<tr><td colspan="7" class="muted" style="text-align:center;">No scale tags.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="7" class="subpage-empty">No scale tags.</td></tr>`;
       $('#scaleTable').style.display = 'block';
       return;
     }
@@ -800,7 +1048,6 @@
     $('#scaleTable').style.display = 'block';
   }
 
-  // ===== edit & save admin ticket fields =====
   $('#editBtn').addEventListener('click', () => lockForm(false));
   $('#cancelBtn').addEventListener('click', () => {
     lockForm(true);
@@ -819,7 +1066,6 @@
       return;
     }
 
-    // Split payload: admin ticket fields vs driver fields
     const adminPayload = {
       date: body.date,
       driverName: body.driverName,
@@ -851,7 +1097,6 @@
       driverSignature: body.driverSignature || '',
     };
 
-
     showOverlay(true);
     try {
       const [rAdmin, rDriver] = await Promise.all([
@@ -877,7 +1122,7 @@
         throw new Error(jDriver.message || 'Failed to update driver fields.');
       }
 
-      await loadAll(true);   // keep same ticket selected (extra arg ignored by loadAll, safe)
+      await loadAll(true);
       lockForm(true);
       alert('Ticket updated.');
     } catch (err) {
@@ -888,7 +1133,6 @@
     }
   });
 
-  // ===== delete =====
   $('#deleteBtn').addEventListener('click', async () => {
     if (!SELECTED_ID) return;
     if (!confirm(`Delete ticket ${SELECTED_ID}? This also removes its Driver stub.`)) return;
@@ -913,92 +1157,81 @@
     }
   });
 
-  // ===== NEW: send back to driver (set status to Pending) =====
   $('#sendBackBtn').addEventListener('click', async () => {
-  if (!SELECTED_ID || !CURRENT) return;
+    if (!SELECTED_ID || !CURRENT) return;
 
-  const ok = confirm(
-    `Send ticket ${SELECTED_ID} back to the driver?\n\n` +
-    'Status will be set to Pending so the driver can edit and resubmit.'
-  );
-  if (!ok) return;
+    const ok = confirm(
+      `Send ticket ${SELECTED_ID} back to the driver?\n\n` +
+      'Status will be set to Pending so the driver can edit and resubmit.'
+    );
+    if (!ok) return;
 
-  showOverlay(true);
-  try {
-    const r = await fetch(`/api/admin/tags/${encodeURIComponent(SELECTED_ID)}/send-back`, {
-      method: 'POST'
-    });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok || j.ok === false) {
-      throw new Error(j.message || 'Failed to send back ticket.');
+    showOverlay(true);
+    try {
+      const r = await fetch(`/api/admin/tags/${encodeURIComponent(SELECTED_ID)}/send-back`, {
+        method: 'POST'
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) {
+        throw new Error(j.message || 'Failed to send back ticket.');
+      }
+
+      const row = ALL.find(x => String(x.ticketNo||x.id) === String(SELECTED_ID));
+      if (row) row.status = 'Pending';
+      if (CURRENT) CURRENT.status = 'Pending';
+
+      applyFilter();
+      $('#statusChip').textContent = 'Driver Status: Pending';
+      lockForm(true);
+
+      alert('Ticket sent back to driver (status set to Pending).');
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Could not send back ticket.');
+    } finally {
+      showOverlay(false);
     }
+  });
 
-    // Update local status and sidebar list
-    const row = ALL.find(x => String(x.ticketNo||x.id) === String(SELECTED_ID));
-    if (row) row.status = 'Pending';
-    if (CURRENT) CURRENT.status = 'Pending';
-
-    applyFilter();
-    $('#statusChip').textContent = 'Driver Status: Pending';
-
-    // Re-lock form so lockForm hides the button
-    lockForm(true);
-
-    alert('Ticket sent back to driver (status set to Pending).');
-  } catch (err) {
-    console.error(err);
-    alert(err.message || 'Could not send back ticket.');
-  } finally {
-    showOverlay(false);
-  }
-});
-
-
-  // (legacy helper for proof, kept as-is)
-  async function getProofUrl(id, mode /* 'view' | 'download' */ = 'view'){
+  async function getProofUrl(id, mode = 'view'){
     try{
-      const r = await fetch(`/api/tags/${encodeURIComponent(id)}/proof-url${mode==='download' ? '?download=1' : ''}`);
-      const j = await r.json().catch(()=> ({}));
+      const r = await fetch(`/api/tags/${encodeURIComponent(id)}/proof-url${mode === 'download' ? '?download=1' : ''}`);
+      const j = await r.json().catch(() => ({}));
       return j?.url || null;
     }catch{ return null; }
   }
 
-  async function showProofBlock(id){
-    const viewUrl = await getProofUrl(id, 'view');
-    const card = $('#proofCard');
-    if (!viewUrl){
-      card.style.display = 'none';
-      return;
-    }
-    $('#proofThumb').src = viewUrl;    // show thumbnail/full (browser will scale)
-    card.style.display = 'block';
-
-    $('#viewProofBtn').onclick = async () => {
-      const u = await getProofUrl(id, 'view');
-      if (u) window.open(u, '_blank', 'noopener');
-    };
-    $('#downloadProofBtn').onclick = async () => {
-      const u = await getProofUrl(id, 'download'); // has Content-Disposition: attachment
-      if (!u) return;
-      // Trigger download without opening a tab
-      const a = document.createElement('a');
-      a.href = u;
-      a.rel = 'noopener';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    };
-  }
-
-  // ===== convert to PDF & download =====
   $('#pdfBtn').addEventListener('click', () => {
     if (!SELECTED_ID) return;
     window.open(`/api/tags/${encodeURIComponent(SELECTED_ID)}/pdf?download=1`, '_blank');
   });
 
-  // go!
+  async function handleLogoutClick(e){
+    const btn = e.currentTarget;
+    const prev = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Logging out...';
+    try {
+      const r = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) throw new Error(j.message || 'Could not log out.');
+      location.href = '/';
+    } catch (err) {
+      console.error(err);
+      alert(err.message || 'Could not log out.');
+      btn.disabled = false;
+      btn.textContent = prev;
+    }
+  }
+
+  $$('[data-admin-logout]').forEach((btn) => {
+    btn.addEventListener('click', handleLogoutClick);
+  });
+
   loadAll();
   </script>
-
 </body>
 </html>

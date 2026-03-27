@@ -26,11 +26,6 @@
           </div>
         </div>
 
-        <button class="icon-btn sidebar-close" id="sidebarClose" type="button" aria-label="Close sidebar">
-          <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
-            <path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-        </button>
       </div>
 
       <div class="sidebar-section">
@@ -95,6 +90,17 @@
           <div class="who-sub">You’re in Admin mode</div>
         </div>
 
+        <div class="sidebar-foot-actions">
+          <button id="logoutBtn" class="btn btn-sidebar" type="button">
+            <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
+              <path d="M10 17l5-5-5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M15 12H4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M20 4v16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            Log Out
+          </button>
+        </div>
+
         <div class="sidebar-foot-row">
           <div class="muted-small">© <span id="y"></span> Sixty – 3 Trucking Inc</div>
         </div>
@@ -106,15 +112,43 @@
     <!-- Main -->
     <main class="admin-main">
       <header class="admin-topbar">
-        <button class="icon-btn sidebar-toggle" id="sidebarToggle" type="button" aria-label="Open sidebar">
+        <button class="icon-btn sidebar-toggle" id="sidebarToggle" type="button" aria-label="Open admin navigation" aria-expanded="false">
           <svg viewBox="0 0 24 24" class="icon" aria-hidden="true">
             <path d="M4 6h16M4 12h16M4 18h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </button>
 
-        <div class="topbar-title">
-          <div class="topbar-kicker">Driver Tags</div>
-          <div class="topbar-sub">Review, edit, and manage ticket details</div>
+        <div class="topbar-title topbar-title-with-overview">
+          <div>
+            <div class="topbar-overline">Sixty-3 Trucking Admin</div>
+            <div class="topbar-kicker">Driver Tag Operations</div>
+            <div class="topbar-sub">Review active work, manage ticket details, and keep dispatch moving.</div>
+          </div>
+
+          <div class="topbar-overview">
+            <div class="hero-overview hero-overview-wide">
+              <div class="hero-overview-head">
+                <span class="hero-overview-kicker">Live overview</span>
+                <h2 class="hero-overview-title">Driver tag overview</h2>
+                <p class="hero-overview-copy">Stay on top of what still needs attention and what has already been closed out.</p>
+              </div>
+
+              <div class="hero-stats">
+                <div class="hero-stat">
+                  <div class="stat-label">Pending</div>
+                  <div class="stat-value" id="statPending">-</div>
+                </div>
+                <div class="hero-stat">
+                  <div class="stat-label">Done</div>
+                  <div class="stat-value" id="statDone">-</div>
+                </div>
+                <div class="hero-stat">
+                  <div class="stat-label">Total</div>
+                  <div class="stat-value" id="statTotal">-</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="topbar-right">
@@ -122,31 +156,14 @@
         </div>
       </header>
 
-      <section class="card admin-hero">
-        <div class="hero-left">
-          <h2 id="adminName" class="hero-title">Welcome, …</h2>
-          <p class="muted hero-sub">
-            Use filters to review Driver Tags. Click a Ticket # to preview/edit Admin Ticket data.
-          </p>
-        </div>
-
-        <div class="hero-right">
-          <div class="hero-stat">
-            <div class="stat-label">Pending</div>
-            <div class="stat-value" id="statPending">—</div>
-          </div>
-          <div class="hero-stat">
-            <div class="stat-label">Done</div>
-            <div class="stat-value" id="statDone">—</div>
-          </div>
-          <div class="hero-stat">
-            <div class="stat-label">Total</div>
-            <div class="stat-value" id="statTotal">—</div>
-          </div>
-        </div>
-      </section>
-
       <section class="card admin-filters">
+        <div class="section-head section-head-compact">
+          <div>
+            <div class="section-kicker">Filters</div>
+            <h3 class="section-title">Refine driver tag results</h3>
+          </div>
+        </div>
+
         <div class="filters-grid">
           <div class="field">
             <label for="statusSel">Status</label>
@@ -157,7 +174,7 @@
             </select>
           </div>
 
-          <div class="field field-span-2">
+          <div class="field">
             <label for="searchBox">Search (ticket, driver, email, material)</label>
             <input id="searchBox" type="search" placeholder="Search…">
           </div>
@@ -180,6 +197,13 @@
       </section>
 
       <section class="card admin-table">
+        <div class="section-head section-head-tight section-head-compact">
+          <div>
+            <div class="section-kicker">Results</div>
+            <h3 class="section-title">Driver tag activity</h3>
+          </div>
+        </div>
+
         <div class="table-card">
           <div class="scroll-area">
             <table class="data-table" aria-label="Driver tags table">
@@ -527,14 +551,32 @@
 
     // Sidebar (mobile)
     const body = document.body;
-    function openSidebar(){ body.classList.add('sidebar-open'); $('#sidebarBackdrop').setAttribute('aria-hidden','false'); }
-    function closeSidebar(){ body.classList.remove('sidebar-open'); $('#sidebarBackdrop').setAttribute('aria-hidden','true'); }
+    function openSidebar(){
+      body.classList.add('sidebar-open');
+      $('#sidebarBackdrop').setAttribute('aria-hidden','false');
+      $('#sidebarToggle').setAttribute('aria-expanded', 'true');
+    }
+    function closeSidebar(){
+      body.classList.remove('sidebar-open');
+      $('#sidebarBackdrop').setAttribute('aria-hidden','true');
+      $('#sidebarToggle').setAttribute('aria-expanded', 'false');
+    }
     function closeSidebarOnMobile(){
       if (window.matchMedia('(max-width: 980px)').matches) closeSidebar();
     }
-    $('#sidebarToggle').addEventListener('click', openSidebar);
-    $('#sidebarClose').addEventListener('click', closeSidebar);
+    $('#sidebarToggle').addEventListener('click', () => {
+      if (body.classList.contains('sidebar-open')) closeSidebar();
+      else openSidebar();
+    });
+    const sidebarCloseButton = $('#sidebarClose');
+    if (sidebarCloseButton) sidebarCloseButton.addEventListener('click', closeSidebar);
     $('#sidebarBackdrop').addEventListener('click', closeSidebar);
+    window.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeSidebar();
+    });
+    window.addEventListener('resize', () => {
+      if (window.innerWidth > 980) closeSidebar();
+    });
 
     // ---------- state ----------
     let TAGS = [];
@@ -607,15 +649,15 @@
       }
       tb.innerHTML = VIEW.map(r => `
         <tr>
-          <td class="col-ticket">
+          <td class="col-ticket" data-label="Ticket">
             <a href="#" class="ticket-link" data-id="${(r.ticketNo||r.id||'').toString().replace(/"/g,'&quot;')}">
               ${r.ticketNo || r.id || '-'}
             </a>
           </td>
-          <td>${r.driverName || '-'}</td>
-          <td class="col-email">${r.email || '-'}</td>
-          <td class="col-status status-cell">${statusBadge(r.status || '-')}</td>
-          <td class="col-updated">${fmtDateTime(r.updatedAt || r.UpdatedAt || '')}</td>
+          <td data-label="Driver">${r.driverName || '-'}</td>
+          <td class="col-email" data-label="Email">${r.email || '-'}</td>
+          <td class="col-status status-cell" data-label="Status">${statusBadge(r.status || '-')}</td>
+          <td class="col-updated" data-label="Updated">${fmtDateTime(r.updatedAt || r.UpdatedAt || '')}</td>
         </tr>
       `).join('');
       $('#resultMeta').textContent = `Showing ${VIEW.length} result${VIEW.length>1?'s':''}`;
@@ -630,7 +672,6 @@
         const j = await r.json();
         const p = j.profile || {};
         const name = p.fullName || p.name || p.email || 'Admin';
-        $('#adminName').textContent = `Welcome, ${name}`;
         const small = $('#adminNameSmall'); if (small) small.textContent = `Welcome, ${name}`;
 
         TAGS = Array.isArray(j.tags) ? j.tags.map(t => ({
@@ -749,16 +790,13 @@
       }
     });
 
-    $('#openTagLists').addEventListener('click', (e) => {
-      setBtnLoading(e.currentTarget, true);
+    $('#openTagLists').addEventListener('click', () => {
       location.href = '/tag-lists';
     });
-    $('#openUsers').addEventListener('click', (e) => {
-      setBtnLoading(e.currentTarget, true);
+    $('#openUsers').addEventListener('click', () => {
       location.href = '/admin/users';
     });
-    $('#openDraftTickets').addEventListener('click', (e) => {
-      setBtnLoading(e.currentTarget, true);
+    $('#openDraftTickets').addEventListener('click', () => {
       location.href = '/draft-tickets';
     });
 
@@ -888,6 +926,28 @@
 
     // Refresh button: no full overlay, just spinner on the button
     $('#refreshBtn').addEventListener('click', (e) => withBtnLoading(e.currentTarget, () => loadTable({ showOverlay: false })));
+    $('#logoutBtn').addEventListener('click', (e) => withBtnLoading(e.currentTarget, async () => {
+      const r = await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok || j.ok === false) throw new Error(j.message || 'Could not log out.');
+      location.href = '/';
+    }).catch((err) => {
+      console.error(err);
+      alert(err.message || 'Could not log out.');
+    }));
+
+    // Clear any stale button-loading state if the page is restored from cache.
+    window.addEventListener('pageshow', () => {
+      ['#refreshBtn', '#openTagLists', '#openUsers', '#openDraftTickets', '#logoutBtn'].forEach((sel) => {
+        const btn = $(sel);
+        if (!btn) return;
+        btn.removeAttribute('data-loading');
+        btn.disabled = false;
+      });
+    });
 
     // go!
     loadTable({ showOverlay: true });
