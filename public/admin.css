@@ -795,10 +795,14 @@
   inset: 0;
   display: none;
   z-index: 1000;
+  padding: 4vh 16px;
+  overflow: hidden;
 }
 
 .modal.show{
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
 }
 
 .modal .backdrop{
@@ -810,9 +814,10 @@
 
 .modal .sheet{
   position: relative;
+  width: min(1060px, 100%);
   max-width: 1060px;
-  margin: 4vh auto;
-  max-height: calc(100vh - 8vh);
+  margin: 0;
+  max-height: 100%;
   overflow: auto;
   padding: 22px;
   border-radius: 28px;
@@ -1839,8 +1844,8 @@ body.admin-nav-open{
   .modal .sheet{
     width: auto;
     max-width: none;
-    margin: 14px;
-    max-height: calc(100vh - 28px);
+    margin: 0;
+    max-height: 100%;
     overflow: auto;
   }
   .media-grid{ grid-template-columns: 1fr; }

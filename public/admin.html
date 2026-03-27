@@ -633,6 +633,7 @@
     function setOpen(modal, on=true){
       modal.classList.toggle('show', on);
       modal.setAttribute('aria-hidden', on ? 'false' : 'true');
+      document.body.style.overflow = on ? 'hidden' : '';
     }
     function v(obj, ...keys){
       for (const k of keys){
