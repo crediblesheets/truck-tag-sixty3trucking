@@ -9,6 +9,8 @@
   --admin-radius: 22px;
   --admin-radius-sm: 18px;
   --admin-radius-xs: 14px;
+  --admin-blur: 10px;
+  --admin-blur-soft: 8px;
   --admin-line: rgba(148, 163, 184, 0.24);
   --admin-line-strong: rgba(148, 163, 184, 0.38);
   --admin-hover: rgba(214, 228, 244, 0.94);
@@ -234,8 +236,8 @@
   border: 1px solid var(--admin-line);
   background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.76));
   box-shadow: var(--admin-shadow-soft);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(var(--admin-blur));
+  -webkit-backdrop-filter: blur(var(--admin-blur));
 }
 
 .admin-topbar::before,
@@ -681,6 +683,7 @@
 .scroll-area{
   max-height: calc(100vh - 260px);
   overflow: auto;
+  scrollbar-gutter: stable both-edges;
 }
 
 .admin-results-scroll{
@@ -1082,7 +1085,6 @@
   min-height: 100vh;
   background:
     linear-gradient(180deg, #ffffff 0%, #f7fbff 44%, #eef5ff 100%);
-  background-attachment: fixed;
 }
 
 .admin-subpage-body::before{
@@ -1099,8 +1101,8 @@
 .admin-subpage-body .site-header{
   background: rgba(255,255,255,.84);
   border-bottom: 1px solid rgba(199, 213, 228, 0.8);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(var(--admin-blur-soft));
+  -webkit-backdrop-filter: blur(var(--admin-blur-soft));
 }
 
 .subpage-topbar{
@@ -1192,8 +1194,8 @@ body.admin-nav-open{
   border: 0;
   padding: 0;
   background: rgba(7, 14, 28, 0.44);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(var(--admin-blur));
+  -webkit-backdrop-filter: blur(var(--admin-blur));
   cursor: pointer;
 }
 
@@ -1384,6 +1386,18 @@ body.admin-nav-open{
   z-index: 0;
 }
 
+@supports (content-visibility: auto){
+  .admin-hero,
+  .admin-filters,
+  .admin-table,
+  .subpage-hero,
+  .subpage-panel,
+  .subpage-rail-card{
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 520px;
+  }
+}
+
 .subpage-shell{
   position: relative;
   z-index: 1;
@@ -1402,8 +1416,8 @@ body.admin-nav-open{
   border: 1px solid var(--admin-line);
   background: linear-gradient(180deg, rgba(255,255,255,.9), rgba(255,255,255,.78));
   box-shadow: var(--admin-shadow-soft);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(var(--admin-blur));
+  -webkit-backdrop-filter: blur(var(--admin-blur));
 }
 
 .subpage-hero::before,
