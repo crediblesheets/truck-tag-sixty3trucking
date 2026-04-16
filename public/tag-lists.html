@@ -68,8 +68,23 @@
 
     .ticket-filter-grid{
       display:grid;
-      grid-template-columns:1fr 1fr;
+      grid-template-columns:1fr;
       gap:10px;
+    }
+
+    .ticket-filter-item{
+      min-width:0;
+    }
+
+    .ticket-filter-item label{
+      margin-bottom:6px;
+      font-size:11px;
+      color:#64748b;
+    }
+
+    .ticket-filter-item input{
+      width:100%;
+      min-width:0;
     }
 
     .filter-hint{
@@ -285,7 +300,6 @@
       .detail-shell{ padding:18px; }
       .detail-head{ flex-direction:column; }
       .ticket-rail-list{ max-height:320px; }
-      .ticket-filter-grid{ grid-template-columns:1fr; }
     }
 
     @media (hover:hover) and (pointer:fine){
@@ -415,8 +429,14 @@
             <div class="field" style="margin-top:14px;">
               <label for="dateFrom">Date range</label>
               <div class="ticket-filter-grid">
-                <input id="dateFrom" type="date" aria-label="Filter tickets from date">
-                <input id="dateTo" type="date" aria-label="Filter tickets to date">
+                <div class="ticket-filter-item">
+                  <label for="dateFrom">From</label>
+                  <input id="dateFrom" type="date" aria-label="Filter tickets from date">
+                </div>
+                <div class="ticket-filter-item">
+                  <label for="dateTo">To</label>
+                  <input id="dateTo" type="date" aria-label="Filter tickets to date">
+                </div>
               </div>
               <div class="filter-hint">Optional inclusive range. Leave either field empty to filter from just one side.</div>
             </div>
