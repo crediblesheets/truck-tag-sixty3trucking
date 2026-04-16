@@ -29,12 +29,15 @@
 }
 
 *{box-sizing:border-box;}
+*{
+  -ms-overflow-style:none;
+  scrollbar-width:none;
+}
 html,body{height:100%;}
 html{
   -webkit-text-size-adjust:100%;
   text-size-adjust:100%;
   scroll-behavior:smooth;
-  scrollbar-gutter:stable;
 }
 body{
   margin:0;
@@ -43,6 +46,14 @@ body{
   color:var(--text);
   background:#f7faff;
   overflow-x:clip;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar{
+  width:0;
+  height:0;
+  background:transparent;
 }
 
 body::before{
@@ -532,7 +543,6 @@ body.auth-body .btn-primary,
   overflow:hidden;
 }
 .scroll-area{overflow:auto;-webkit-overflow-scrolling:touch;}
-.scroll-area{scrollbar-gutter:stable both-edges;}
 table{width:100%;border-collapse:collapse;}
 thead{background:#f8fbff;}
 th,td{padding:13px 14px;border-bottom:1px solid #edf2f7;text-align:left;font-size:14px;}

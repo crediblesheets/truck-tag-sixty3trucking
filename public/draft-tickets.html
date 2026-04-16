@@ -25,6 +25,29 @@
       z-index:1;
     }
 
+    .draft-date-filter{
+      position:relative;
+      z-index:1;
+      margin-top:14px;
+    }
+
+    .draft-date-grid{
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0, 220px));
+      gap:12px;
+      justify-content:start;
+    }
+
+    .draft-date-item{
+      min-width:0;
+    }
+
+    .draft-date-item label{
+      margin-bottom:6px;
+      font-size:11px;
+      color:#64748b;
+    }
+
     .draft-meta-row{
       position:relative;
       z-index:1;
@@ -278,6 +301,10 @@
         grid-template-columns:1fr;
       }
 
+      .draft-date-grid{
+        grid-template-columns:1fr;
+      }
+
       .draft-modal-head{
         flex-direction:column;
       }
@@ -457,6 +484,21 @@
             <label for="searchBox">Search (driver, email, draft id, converted ticket)</label>
             <input id="searchBox" type="search" placeholder="Search drafts...">
           </div>
+        </div>
+
+        <div class="draft-date-filter">
+          <label for="draftDateFrom">Date range</label>
+          <div class="draft-date-grid">
+            <div class="draft-date-item">
+              <label for="draftDateFrom">From</label>
+              <input id="draftDateFrom" type="date" aria-label="Filter drafts from date">
+            </div>
+            <div class="draft-date-item">
+              <label for="draftDateTo">To</label>
+              <input id="draftDateTo" type="date" aria-label="Filter drafts to date">
+            </div>
+          </div>
+          <div class="mini" style="margin-top:8px;">Optional inclusive range using the draft updated date. Leave either field empty to filter from just one side.</div>
         </div>
 
         <div class="draft-meta-row">
@@ -649,6 +691,11 @@
       return time ? `${base} ${time[1]}:${time[2]}` : base;
     }
 
+    function toISODate(rawValue){
+      const parts = getDateParts(rawValue);
+      return parts ? `${parts.yyyy}-${parts.mm}-${parts.dd}` : '';
+    }
+
     function badge(status){
       const s = String(status || '');
       const k = ltrim(s);
@@ -663,7 +710,17 @@
 
     function applyFilters(){
       const q = ltrim($('#searchBox').value);
+      let dateFrom = toISODate($('#draftDateFrom').value);
+      let dateTo = toISODate($('#draftDateTo').value);
+
+      if (dateFrom && dateTo && dateFrom > dateTo){
+        [dateFrom, dateTo] = [dateTo, dateFrom];
+      }
+
       VIEW = DRAFTS.filter((r) => {
+        const rowDate = toISODate(r.updated_at || r.created_at || '');
+        if (dateFrom && (!rowDate || rowDate < dateFrom)) return false;
+        if (dateTo && (!rowDate || rowDate > dateTo)) return false;
         if (!q) return true;
         const hay = [
           r.id, r.driver_name, r.driver_email, r.status, r.tag_mode, r.converted_ticket_no
@@ -837,6 +894,8 @@
 
     $('#statusSel').addEventListener('change', loadList);
     $('#searchBox').addEventListener('input', applyFilters);
+    $('#draftDateFrom').addEventListener('input', applyFilters);
+    $('#draftDateTo').addEventListener('input', applyFilters);
     $('#refreshBtn').addEventListener('click', loadList);
     $('#backBtn').addEventListener('click', () => { location.href = '/admin'; });
     async function handleLogoutClick(e){

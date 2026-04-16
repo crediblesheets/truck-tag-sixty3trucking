@@ -683,7 +683,6 @@
 .scroll-area{
   max-height: calc(100vh - 260px);
   overflow: auto;
-  scrollbar-gutter: stable both-edges;
 }
 
 .admin-results-scroll{
