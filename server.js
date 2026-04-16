@@ -1801,20 +1801,24 @@ app.get('/api/admin/tags', verifySession, ensureActiveUser, requireAdmin, async 
     if (error) throw error;
 
     const tickets = (rows || []).map((r) => r.ticket_no);
-    let names = new Map();
+    let details = new Map();
     if (tickets.length) {
       const { data: at, error: e2 } = await sb
         .from('admin_tickets')
-        .select('ticket_no, driver_name')
+        .select('ticket_no, driver_name, date')
         .in('ticket_no', tickets);
       if (e2) throw e2;
-      names = new Map(at.map((x) => [x.ticket_no, x.driver_name || '']));
+      details = new Map(at.map((x) => [x.ticket_no, {
+        driverName: x.driver_name || '',
+        date: x.date || '',
+      }]));
     }
 
     const tags = (rows || []).map((r) => ({
       id: r.ticket_no,
       ticketNo: r.ticket_no,
-      driverName: names.get(r.ticket_no) || '',
+      date: details.get(r.ticket_no)?.date || '',
+      driverName: details.get(r.ticket_no)?.driverName || '',
       email: r.email || '',
       status: r.status || 'Pending',
       updatedAt: r.updated_at,

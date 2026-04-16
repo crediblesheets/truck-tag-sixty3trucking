@@ -66,6 +66,19 @@
       flex:1;
     }
 
+    .ticket-filter-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+
+    .filter-hint{
+      margin-top:8px;
+      font-size:12px;
+      color:#64748b;
+      line-height:1.45;
+    }
+
     .ticket-btn{
       width:100%;
       padding:14px 16px;
@@ -272,6 +285,7 @@
       .detail-shell{ padding:18px; }
       .detail-head{ flex-direction:column; }
       .ticket-rail-list{ max-height:320px; }
+      .ticket-filter-grid{ grid-template-columns:1fr; }
     }
 
     @media (hover:hover) and (pointer:fine){
@@ -397,6 +411,14 @@
             <div class="field">
               <label for="q">Search ticket</label>
               <input id="q" class="search-box" type="search" placeholder="Ticket # or driver name">
+            </div>
+            <div class="field" style="margin-top:14px;">
+              <label for="dateFrom">Date range</label>
+              <div class="ticket-filter-grid">
+                <input id="dateFrom" type="date" aria-label="Filter tickets from date">
+                <input id="dateTo" type="date" aria-label="Filter tickets to date">
+              </div>
+              <div class="filter-hint">Optional inclusive range. Leave either field empty to filter from just one side.</div>
             </div>
           </section>
 
@@ -752,6 +774,13 @@
     return String(a.ticketNo||a.id||'').localeCompare(String(b.ticketNo||b.id||''));
   }
 
+  function formatDisplayDate(value){
+    const iso = toISODate(value);
+    if (!iso) return '';
+    const [yyyy, mm, dd] = iso.split('-');
+    return `${mm}/${dd}/${yyyy}`;
+  }
+
   function renderList(){
     const wrap = $('#list');
     if (!VIEW.length){
@@ -765,7 +794,7 @@
       const id = row.ticketNo || row.id || '';
       const driver = row.driverName || '';
       const st = (row.status || '').toString();
-      const sub = [driver, st ? st : ''].filter(Boolean).join(' | ');
+      const sub = [formatDisplayDate(row.date), driver, st ? st : ''].filter(Boolean).join(' | ');
       return `
         <button class="ticket-btn" data-id="${String(id).replace(/"/g,'&quot;')}">
           <div>
@@ -784,7 +813,17 @@
 
   function applyFilter(){
     const q = ltrim($('#q').value);
+    let dateFrom = toISODate($('#dateFrom')?.value);
+    let dateTo = toISODate($('#dateTo')?.value);
+
+    if (dateFrom && dateTo && dateFrom > dateTo){
+      [dateFrom, dateTo] = [dateTo, dateFrom];
+    }
+
     VIEW = ALL.filter(r => {
+      const rowDate = toISODate(r.date);
+      if (dateFrom && (!rowDate || rowDate < dateFrom)) return false;
+      if (dateTo && (!rowDate || rowDate > dateTo)) return false;
       if (!q) return true;
       const hay = [
         r.ticketNo || r.id || '',
@@ -798,7 +837,37 @@
     renderList();
   }
 
-  $('#q').addEventListener('input', applyFilter);
+  async function applyFilterAndSyncSelection(){
+    const previousId = SELECTED_ID;
+    applyFilter();
+
+    if (!VIEW.length){
+      SELECTED_ID = null;
+      clearFormUI();
+      clearDriverScaleUI();
+      clearProofUI();
+      return;
+    }
+
+    const hasPrevious = VIEW.some(r => String(r.ticketNo || r.id) === String(previousId));
+    const nextId = hasPrevious
+      ? previousId
+      : String(VIEW[0].ticketNo || VIEW[0].id || '');
+
+    const currentTicketId = String(CURRENT?.['Ticket No'] || CURRENT?.ticketNo || '');
+    const shouldOpen = !hasPrevious || currentTicketId !== nextId;
+
+    SELECTED_ID = nextId;
+    renderList();
+
+    if (shouldOpen && nextId){
+      await openTicket(nextId);
+    }
+  }
+
+  $('#q').addEventListener('input', () => { void applyFilterAndSyncSelection(); });
+  $('#dateFrom').addEventListener('input', () => { void applyFilterAndSyncSelection(); });
+  $('#dateTo').addEventListener('input', () => { void applyFilterAndSyncSelection(); });
 
   $('#list').addEventListener('click', async (e) => {
     const btn = e.target.closest('.ticket-btn');
@@ -818,23 +887,14 @@
       ALL = (j.tags || []).map(t => ({
         id: t.id || t.ticketNo || t['Ticket No'] || '',
         ticketNo: t.ticketNo || t['Ticket No'] || t.id || '',
+        date: toISODate(t.date || t.Date || ''),
         driverName: t.driverName || t['Driver Name'] || '',
         email: t.email || t.Email || '',
         status: t.status || t.Status || '',
         updatedAt: t.updatedAt || t.UpdatedAt || ''
       })).sort(sortTickets);
 
-      applyFilter();
-
-      if (VIEW.length){
-        SELECTED_ID = VIEW[0].ticketNo || VIEW[0].id;
-        $$('.ticket-btn')[0]?.classList.add('active');
-        await openTicket(SELECTED_ID);
-      } else {
-        clearFormUI();
-        clearDriverScaleUI();
-        clearProofUI();
-      }
+      await applyFilterAndSyncSelection();
     } catch (e){
       console.error(e);
       alert('Failed to load tickets.');
@@ -1257,10 +1317,8 @@
       if (!r.ok || j.ok === false) throw new Error(j.message || 'Failed to delete');
 
       ALL = ALL.filter(x => String(x.ticketNo||x.id) !== String(SELECTED_ID));
-      applyFilter();
-      clearFormUI();
-      clearDriverScaleUI();
-      clearProofUI();
+      CURRENT = null;
+      await applyFilterAndSyncSelection();
       alert('Ticket deleted.');
     } catch (err){
       console.error(err);
